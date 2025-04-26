@@ -1,8 +1,8 @@
 // src/main/java/com/example/users/service/UserService.java
-package com.example.users.service;
+package com.example.products.service;
 
-import com.example.users.dto.UserDto;
-import com.example.users.dto.UpdateUserDto;
+import com.example.products.dto.UserDto;
+import com.example.products.dto.UpdateUserDto;
 // REMOVE Address/Payment DTO imports and List import
 
 public interface UserService {

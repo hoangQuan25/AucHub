@@ -1,4 +1,4 @@
-package com.example.users.dto;
+package com.example.products.dto;
 
 import jakarta.validation.constraints.Size;
 import lombok.Data;

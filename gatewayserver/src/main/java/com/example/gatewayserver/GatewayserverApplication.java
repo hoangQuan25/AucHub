@@ -37,7 +37,17 @@ public class GatewayserverApplication {
 								// Add other filters like CircuitBreaker if needed for this service
 								// Authentication is handled globally by SecurityConfig
 						)
-						.uri("lb://USERS")).build();
+						.uri("lb://USERS"))
+				.route(p -> p
+						.path("/api/products/**") // Define a path prefix for user-related APIs
+						.filters(f -> f
+										// Optional: Remove prefix if User Service endpoints don't expect /api/users
+										.rewritePath("/api/products/(?<segment>.*)", "/${segment}")
+										.addResponseHeader("X-Response-Time", LocalDateTime.now().toString())
+								// Add other filters like CircuitBreaker if needed for this service
+								// Authentication is handled globally by SecurityConfig
+						)
+						.uri("lb://PRODUCTS")).build();
 
 	}
 }

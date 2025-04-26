@@ -1,4 +1,4 @@
-package com.example.users.config; // Or your config package
+package com.example.products.config; // Or your config package
 
 import lombok.Data; // Or use getters/setters
 import org.springframework.boot.context.properties.ConfigurationProperties;

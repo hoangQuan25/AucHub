@@ -21,23 +21,9 @@ public class SecurityConfig {
     @Bean
     public SecurityWebFilterChain springSecurityFilterChain(ServerHttpSecurity security) {
         security.authorizeExchange(exchanges -> exchanges
-                        // Define specific public paths if needed (e.g., viewing auctions)
-                        // .pathMatchers(HttpMethod.GET, "/api/auctions", "/api/auctions/**").permitAll() // Example: Allow anyone to view auctions
-                        // .pathMatchers(HttpMethod.GET, "/api/products", "/api/products/**").permitAll() // Example: Allow anyone to view products
-
-                        // Secure WebSocket connections (handshake needs authentication)
-//                        .pathMatchers("/ws/**").authenticated()
-//
-//                        // Secure user-specific endpoints
-//                        .pathMatchers("/api/users/me/**").authenticated() // Requires login to access own profile
-
-                        // Define other specific rules for auctions, products, orders etc. as you build them
-                        // Example: Only Sellers can create products
-                        // .pathMatchers(HttpMethod.POST, "/api/products").hasRole("SELLER")
-                        // Example: Only authenticated users can bid
-                        // .pathMatchers(HttpMethod.POST, "/api/auctions/**/bids").authenticated()
-
-                        // --- IMPORTANT: Secure everything else by default ---
+                        .pathMatchers(HttpMethod.GET, "api/products/categories").permitAll() // Allow public access
+                        .pathMatchers(HttpMethod.POST, "api/products/new-product").hasRole("SELLER")
+                        .pathMatchers(HttpMethod.GET, "/api/products/my").hasRole("SELLER")
                         .anyExchange().permitAll() // Require authentication for any other request
                 )
                 // Configure JWT validation as before
