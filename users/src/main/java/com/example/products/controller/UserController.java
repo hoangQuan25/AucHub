@@ -1,15 +1,15 @@
 // src/main/java/com/example/users/controller/UserController.java
-package com.example.users.controller;
+package com.example.products.controller;
 
-import com.example.users.dto.UserDto;
-import com.example.users.dto.UpdateUserDto;
-import com.example.users.service.UserService;
+import com.example.products.dto.UserDto;
+import com.example.products.dto.UpdateUserDto;
+import com.example.products.service.UserService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity; // Keep
 import org.springframework.web.bind.annotation.*; // Keep
-import java.util.Map; // Keep for test endpoint
+
 
 @RestController
 @RequestMapping("/") // Keep or change based on Gateway rewrite

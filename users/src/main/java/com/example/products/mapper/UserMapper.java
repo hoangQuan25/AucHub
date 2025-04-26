@@ -1,9 +1,9 @@
 // src/main/java/com/example/users/mapper/UserMapper.java
-package com.example.users.mapper;
+package com.example.products.mapper;
 
-import com.example.users.dto.UserDto;
-import com.example.users.dto.UpdateUserDto;
-import com.example.users.entity.User;
+import com.example.products.dto.UserDto;
+import com.example.products.dto.UpdateUserDto;
+import com.example.products.entity.User;
 
 // NO @Mapper annotation here anymore
 public interface UserMapper {

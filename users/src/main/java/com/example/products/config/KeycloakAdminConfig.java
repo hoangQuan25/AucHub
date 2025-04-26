@@ -1,6 +1,5 @@
-package com.example.users.config;
+package com.example.products.config;
 
-import com.example.users.config.KeycloakAdminClientProperties;
 import lombok.RequiredArgsConstructor;
 import org.keycloak.admin.client.Keycloak;
 import org.keycloak.admin.client.KeycloakBuilder;

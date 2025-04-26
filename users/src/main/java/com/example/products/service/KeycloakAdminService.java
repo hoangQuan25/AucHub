@@ -1,5 +1,5 @@
 // src/main/java/com/example/users/service/KeycloakAdminService.java // Or your actual package
-package com.example.users.service; // Use your actual package
+package com.example.products.service; // Use your actual package
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;

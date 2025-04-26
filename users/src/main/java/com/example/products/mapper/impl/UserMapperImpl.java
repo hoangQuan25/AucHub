@@ -1,12 +1,11 @@
 // src/main/java/com/example/users/mapper/UserMapperManualImpl.java
-package com.example.users.mapper.impl;
+package com.example.products.mapper.impl;
 
-import com.example.users.dto.UserDto;
-import com.example.users.dto.UpdateUserDto;
-import com.example.users.entity.User;
-import com.example.users.mapper.UserMapper;
+import com.example.products.dto.UserDto;
+import com.example.products.dto.UpdateUserDto;
+import com.example.products.entity.User;
+import com.example.products.mapper.UserMapper;
 import org.springframework.stereotype.Component;
-import java.util.Objects; // Import Objects
 
 @Component
 public class UserMapperImpl implements UserMapper {

@@ -1,15 +1,15 @@
 // src/main/java/com/example/users/service/impl/UserServiceImpl.java
-package com.example.users.service.impl;
+package com.example.products.service.impl;
 
 // REMOVE imports for Address/Payment entities, DTOs, mappers, repos, List
-import com.example.users.dto.UpdateUserDto;
-import com.example.users.dto.UserDto;
-import com.example.users.entity.User;
-import com.example.users.exception.UserNotFoundException;
-import com.example.users.mapper.UserMapper;
-import com.example.users.repository.UserRepository;
-import com.example.users.service.KeycloakAdminService;
-import com.example.users.service.UserService;
+import com.example.products.dto.UpdateUserDto;
+import com.example.products.dto.UserDto;
+import com.example.products.entity.User;
+import com.example.products.exception.UserNotFoundException;
+import com.example.products.mapper.UserMapper;
+import com.example.products.repository.UserRepository;
+import com.example.products.service.KeycloakAdminService;
+import com.example.products.service.UserService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.keycloak.representations.idm.UserRepresentation;
