@@ -23,6 +23,8 @@ public class SecurityConfig {
         security.authorizeExchange(exchanges -> exchanges
                         .pathMatchers(HttpMethod.GET, "api/products/categories").permitAll() // Allow public access
                         .pathMatchers(HttpMethod.POST, "api/products/new-product").hasRole("SELLER")
+                        .pathMatchers(HttpMethod.PUT, "/api/products/**").hasRole("SELLER")
+                        .pathMatchers(HttpMethod.DELETE, "/api/products/**").hasRole("SELLER")
                         .pathMatchers(HttpMethod.GET, "/api/products/my").hasRole("SELLER")
                         .anyExchange().permitAll() // Require authentication for any other request
                 )

@@ -4,6 +4,7 @@ package com.example.products.service.impl;
 import com.example.products.dto.CategoryDto;
 import com.example.products.dto.CreateProductDto;
 import com.example.products.dto.ProductDto;
+import com.example.products.dto.UpdateProductDto;
 import com.example.products.entity.Category;
 import com.example.products.entity.Product;
 import com.example.products.mapper.CategoryMapper;
@@ -63,6 +64,75 @@ public class ProductServiceImpl implements ProductService {
         Product savedProduct = productRepository.save(product);
         log.info("Product created successfully with ID: {}", savedProduct.getId());
         return productMapper.toProductDto(savedProduct);
+    }
+
+    @Override
+    @Transactional
+    public ProductDto updateProduct(String sellerId, Long productId, UpdateProductDto dto) {
+        log.info("Updating product ID: {} for seller ID: {}", productId, sellerId);
+
+        // 1. Fetch existing product, ensuring it belongs to the seller
+        Product existingProduct = productRepository.findById(productId)
+                .orElseThrow(() -> {
+                    log.warn("Product not found with ID: {}", productId);
+                    return new RuntimeException("Product not found"); // Use specific exception
+                });
+
+        // 2. Verify ownership
+        if (!existingProduct.getSellerId().equals(sellerId)) {
+            log.error("User {} attempted to update product {} owned by {}", sellerId, productId, existingProduct.getSellerId());
+            // Throw Forbidden or Not Found for security
+            throw new RuntimeException("Product not found or access denied");
+        }
+
+        // 3. Fetch Category entities based on IDs provided in DTO
+        Set<Category> categories = new HashSet<>();
+        if (dto.getCategoryIds() != null && !dto.getCategoryIds().isEmpty()) {
+            categories = new HashSet<>(categoryRepository.findAllById(dto.getCategoryIds()));
+            // Optional: Add check if all requested category IDs were found
+        }
+        if (categories.isEmpty()) {
+            throw new IllegalArgumentException("At least one valid category must be assigned during update.");
+        }
+
+        // 4. Apply updates from DTO to the fetched entity using mapper
+        productMapper.updateProductFromDto(dto, existingProduct);
+
+        // 5. Manually set the updated categories
+        existingProduct.setCategories(categories);
+
+        // 6. Save the updated entity
+        Product updatedProduct = productRepository.save(existingProduct);
+        log.info("Product ID: {} updated successfully for seller ID: {}", productId, sellerId);
+
+        // 7. Map back to DTO and return
+        return productMapper.toProductDto(updatedProduct);
+    }
+
+    @Override
+    @Transactional
+    public void deleteProduct(String sellerId, Long productId) {
+        log.warn("Attempting to delete product ID: {} for seller ID: {}", productId, sellerId); // Warn level for deletion
+
+        // Fetch existing product, ensuring it belongs to the seller
+        Product product = productRepository.findById(productId)
+                .orElseThrow(() -> {
+                    log.warn("Product not found with ID: {} during delete attempt.", productId);
+                    return new RuntimeException("Product not found"); // Use specific exception
+                });
+
+        // Verify ownership before deleting
+        if (!product.getSellerId().equals(sellerId)) {
+            log.error("SECURITY: User {} attempted to delete product {} owned by {}", sellerId, productId, product.getSellerId());
+            throw new RuntimeException("Access denied - You do not own this product"); // Or Forbidden exception
+        }
+
+        // TODO: Add check here - can the product be deleted?
+        // Is it currently in an active auction? If so, should deletion be prevented?
+        // Example: if (isProductInActiveAuction(productId)) { throw new IllegalStateException("Cannot delete product while it is in an active auction."); }
+
+        productRepository.delete(product);
+        log.info("Product ID: {} deleted successfully by seller ID: {}", productId, sellerId);
     }
 
     @Override

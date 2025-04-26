@@ -3,6 +3,7 @@ package com.example.products.mapper.impl;
 
 import com.example.products.dto.CreateProductDto;
 import com.example.products.dto.ProductDto;
+import com.example.products.dto.UpdateProductDto;
 import com.example.products.entity.Product;
 import com.example.products.mapper.CategoryMapper;
 import com.example.products.mapper.ProductMapper;
@@ -63,5 +64,30 @@ public class ProductMapperImpl implements ProductMapper {
         product.setImageUrls(dto.getImageUrls() != null ? new ArrayList<>(dto.getImageUrls()) : new ArrayList<>());
 
         return product;
+    }
+
+    @Override
+    public void updateProductFromDto(UpdateProductDto dto, Product product) {
+        if (dto == null || product == null) {
+            return;
+        }
+
+        // Update fields only if they are provided in the DTO (not null)
+        // This prevents accidentally clearing fields if DTO doesn't include them
+        if (dto.getTitle() != null) {
+            product.setTitle(dto.getTitle());
+        }
+        if (dto.getDescription() != null) {
+            product.setDescription(dto.getDescription());
+        }
+        if (dto.getCondition() != null) {
+            product.setCondition(dto.getCondition());
+        }
+        if (dto.getImageUrls() != null) {
+            // Replace the entire list - simple approach
+            product.setImageUrls(new ArrayList<>(dto.getImageUrls()));
+        }
+        // Note: categoryIds are handled separately in the service layer after fetching entities
+        // Note: sellerId, id, createdAt, updatedAt are not updated from this DTO
     }
 }

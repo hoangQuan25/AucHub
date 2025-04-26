@@ -5,53 +5,19 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="abd8589c-a4c1-4fc9-bf4e-c091f79b0c91" name="Changes" comment="">
-      <change beforePath="$PROJECT_DIR$/.idea/.gitignore" beforeDir="false" />
+      <change afterPath="$PROJECT_DIR$/products/src/main/java/com/example/products/dto/UpdateProductDto.java" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/compiler.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/compiler.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/encodings.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/encodings.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/misc.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/misc.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/vcs.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/vcs.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/frontend/src/components/AddProductModal.jsx" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/components/AddProductModal.jsx" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/frontend/src/components/CategorySelector.jsx" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/components/CategorySelector.jsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/frontend/src/components/ConfirmationModal.jsx" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/components/ConfirmationModal.jsx" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/frontend/src/pages/ProductsPage.jsx" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/pages/ProductsPage.jsx" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/gatewayserver/src/main/java/com/example/gatewayserver/GatewayserverApplication.java" beforeDir="false" afterPath="$PROJECT_DIR$/gatewayserver/src/main/java/com/example/gatewayserver/GatewayserverApplication.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/gatewayserver/src/main/java/com/example/gatewayserver/config/KeycloakRoleConverter.java" beforeDir="false" afterPath="$PROJECT_DIR$/gatewayserver/src/main/java/com/example/gatewayserver/config/KeycloakRoleConverter.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/frontend/src/pages/UserInfoPage.jsx" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/pages/UserInfoPage.jsx" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/gatewayserver/src/main/java/com/example/gatewayserver/config/SecurityConfig.java" beforeDir="false" afterPath="$PROJECT_DIR$/gatewayserver/src/main/java/com/example/gatewayserver/config/SecurityConfig.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/products/src/main/java/com/example/products/controller/CategoryController.java" beforeDir="false" afterPath="$PROJECT_DIR$/products/src/main/java/com/example/products/controller/CategoryController.java" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/products/src/main/java/com/example/products/controller/ProductController.java" beforeDir="false" afterPath="$PROJECT_DIR$/products/src/main/java/com/example/products/controller/ProductController.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/products/src/main/java/com/example/products/dto/CategoryDto.java" beforeDir="false" afterPath="$PROJECT_DIR$/products/src/main/java/com/example/products/dto/CategoryDto.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/products/src/main/java/com/example/products/dto/CreateProductDto.java" beforeDir="false" afterPath="$PROJECT_DIR$/products/src/main/java/com/example/products/dto/CreateProductDto.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/products/src/main/java/com/example/products/dto/ProductDto.java" beforeDir="false" afterPath="$PROJECT_DIR$/products/src/main/java/com/example/products/dto/ProductDto.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/products/src/main/java/com/example/products/entity/Category.java" beforeDir="false" afterPath="$PROJECT_DIR$/products/src/main/java/com/example/products/entity/Category.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/products/src/main/java/com/example/products/entity/Product.java" beforeDir="false" afterPath="$PROJECT_DIR$/products/src/main/java/com/example/products/entity/Product.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/products/src/main/java/com/example/products/entity/ProductCondition.java" beforeDir="false" afterPath="$PROJECT_DIR$/products/src/main/java/com/example/products/entity/ProductCondition.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/products/src/main/java/com/example/products/mapper/CategoryMapper.java" beforeDir="false" afterPath="$PROJECT_DIR$/products/src/main/java/com/example/products/mapper/CategoryMapper.java" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/products/src/main/java/com/example/products/mapper/ProductMapper.java" beforeDir="false" afterPath="$PROJECT_DIR$/products/src/main/java/com/example/products/mapper/ProductMapper.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/products/src/main/java/com/example/products/mapper/impl/CategoryMapperImpl.java" beforeDir="false" afterPath="$PROJECT_DIR$/products/src/main/java/com/example/products/mapper/impl/CategoryMapperImpl.java" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/products/src/main/java/com/example/products/mapper/impl/ProductMapperImpl.java" beforeDir="false" afterPath="$PROJECT_DIR$/products/src/main/java/com/example/products/mapper/impl/ProductMapperImpl.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/products/src/main/java/com/example/products/repository/CategoryRepository.java" beforeDir="false" afterPath="$PROJECT_DIR$/products/src/main/java/com/example/products/repository/CategoryRepository.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/products/src/main/java/com/example/products/repository/ProductRepository.java" beforeDir="false" afterPath="$PROJECT_DIR$/products/src/main/java/com/example/products/repository/ProductRepository.java" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/products/src/main/java/com/example/products/service/ProductService.java" beforeDir="false" afterPath="$PROJECT_DIR$/products/src/main/java/com/example/products/service/ProductService.java" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/products/src/main/java/com/example/products/service/impl/ProductServiceImpl.java" beforeDir="false" afterPath="$PROJECT_DIR$/products/src/main/java/com/example/products/service/impl/ProductServiceImpl.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/users/src/main/java/com/example/products/UsersApplication.java" beforeDir="false" afterPath="$PROJECT_DIR$/users/src/main/java/com/example/products/UsersApplication.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/users/src/main/java/com/example/products/config/KeycloakAdminClientProperties.java" beforeDir="false" afterPath="$PROJECT_DIR$/users/src/main/java/com/example/products/config/KeycloakAdminClientProperties.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/users/src/main/java/com/example/products/config/KeycloakAdminConfig.java" beforeDir="false" afterPath="$PROJECT_DIR$/users/src/main/java/com/example/products/config/KeycloakAdminConfig.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/users/src/main/java/com/example/products/controller/UserController.java" beforeDir="false" afterPath="$PROJECT_DIR$/users/src/main/java/com/example/products/controller/UserController.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/users/src/main/java/com/example/products/dto/AddressDto.java" beforeDir="false" afterPath="$PROJECT_DIR$/users/src/main/java/com/example/products/dto/AddressDto.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/users/src/main/java/com/example/products/dto/UpdateUserDto.java" beforeDir="false" afterPath="$PROJECT_DIR$/users/src/main/java/com/example/products/dto/UpdateUserDto.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/users/src/main/java/com/example/products/dto/UserDto.java" beforeDir="false" afterPath="$PROJECT_DIR$/users/src/main/java/com/example/products/dto/UserDto.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/users/src/main/java/com/example/products/entity/Address.java" beforeDir="false" afterPath="$PROJECT_DIR$/users/src/main/java/com/example/products/entity/Address.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/users/src/main/java/com/example/products/entity/PaymentMethod.java" beforeDir="false" afterPath="$PROJECT_DIR$/users/src/main/java/com/example/products/entity/PaymentMethod.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/users/src/main/java/com/example/products/entity/User.java" beforeDir="false" afterPath="$PROJECT_DIR$/users/src/main/java/com/example/products/entity/User.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/users/src/main/java/com/example/products/exception/AddressNotFoundException.java" beforeDir="false" afterPath="$PROJECT_DIR$/users/src/main/java/com/example/products/exception/AddressNotFoundException.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/users/src/main/java/com/example/products/exception/PaymentMethodNotFoundException.java" beforeDir="false" afterPath="$PROJECT_DIR$/users/src/main/java/com/example/products/exception/PaymentMethodNotFoundException.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/users/src/main/java/com/example/products/exception/UserNotFoundException.java" beforeDir="false" afterPath="$PROJECT_DIR$/users/src/main/java/com/example/products/exception/UserNotFoundException.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/users/src/main/java/com/example/products/mapper/UserMapper.java" beforeDir="false" afterPath="$PROJECT_DIR$/users/src/main/java/com/example/products/mapper/UserMapper.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/users/src/main/java/com/example/products/mapper/impl/UserMapperImpl.java" beforeDir="false" afterPath="$PROJECT_DIR$/users/src/main/java/com/example/products/mapper/impl/UserMapperImpl.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/users/src/main/java/com/example/products/repository/UserRepository.java" beforeDir="false" afterPath="$PROJECT_DIR$/users/src/main/java/com/example/products/repository/UserRepository.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/users/src/main/java/com/example/products/service/KeycloakAdminService.java" beforeDir="false" afterPath="$PROJECT_DIR$/users/src/main/java/com/example/products/service/KeycloakAdminService.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/users/src/main/java/com/example/products/service/UserService.java" beforeDir="false" afterPath="$PROJECT_DIR$/users/src/main/java/com/example/products/service/UserService.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/users/src/main/java/com/example/products/service/impl/UserServiceImpl.java" beforeDir="false" afterPath="$PROJECT_DIR$/users/src/main/java/com/example/products/service/impl/UserServiceImpl.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/users/src/test/java/com/example/products/CardsApplicationTests.java" beforeDir="false" afterPath="$PROJECT_DIR$/users/src/test/java/com/example/products/CardsApplicationTests.java" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -61,8 +27,8 @@
   <component name="FileTemplateManagerImpl">
     <option name="RECENT_TEMPLATES">
       <list>
-        <option value="Class" />
         <option value="Interface" />
+        <option value="Class" />
       </list>
     </option>
   </component>
@@ -92,7 +58,7 @@
     "Spring Boot.ProductsApplication.executor": "Run",
     "Spring Boot.UsersApplication (1).executor": "Run",
     "Spring Boot.UsersApplication.executor": "Run",
-    "git-widget-placeholder": "add-product-service",
+    "git-widget-placeholder": "feat/crud-product",
     "node.js.detected.package.eslint": "true",
     "node.js.detected.package.tslint": "true",
     "node.js.selected.package.eslint": "(autodetect)",
