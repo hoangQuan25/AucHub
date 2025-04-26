@@ -38,7 +38,7 @@ function UserInfoPage() {
           console.log("useEffect: Token ready, fetching profile data...");
           setProfileLoading(true); // Set loading true just before fetch
 
-          const response = await apiClient.get('/api/users/me'); // Use await with async func
+          const response = await apiClient.get('/users/me'); // Use await with async func
           console.log("useEffect: Profile data received:", response.data);
           setProfileData(response.data);
 
@@ -76,7 +76,7 @@ function UserInfoPage() {
      setSellerActivationError("");
      setSellerActivationSuccess("");
      try {
-       await apiClient.post("/api/users/me/activate-seller");
+       await apiClient.post("/users/me/activate-seller");
        setSellerActivationSuccess( "Account successfully upgraded! Reloading page...");
        // Update local state - though reload makes this temporary
        setProfileData((prevData) => ({ ...prevData, isSeller: true }));
@@ -118,7 +118,7 @@ function UserInfoPage() {
          paymentExpiryMonth: updatedData.paymentExpiryMonth,
          paymentExpiryYear: updatedData.paymentExpiryYear,
       };
-      const response = await apiClient.put('/api/users/me', payload);
+      const response = await apiClient.put('/users/me', payload);
       setProfileData(response.data); // Update profile data with response from backend
       setEditSuccess('Profile updated successfully!');
       setIsEditModalOpen(false); // Close modal on success

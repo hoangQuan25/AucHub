@@ -1,175 +1,175 @@
 // src/components/AddProductModal.jsx (Real Cloudinary Upload + Debug Logging)
 import React, { useState, useEffect } from "react";
+import CategorySelector from "./CategorySelector"; // Adjust path as needed
 // Make sure you have axios installed and apiClient configured if you switch fetch to axios
-// import apiClient from '../api/apiClient';
+import apiClient from '../api/apiClient';
+
+const productConditions = [
+  { value: 'NEW_WITH_TAGS', label: 'New with Tags' },
+  { value: 'LIKE_NEW', label: 'Like New (No Tags)' },
+  { value: 'VERY_GOOD', label: 'Very Good' },
+  { value: 'GOOD', label: 'Good' },
+  { value: 'FAIR', label: 'Fair' },
+  { value: 'POOR', label: 'Poor' },
+];
 
 function AddProductModal({ isOpen, onClose, onSuccess }) {
-  const [title, setTitle] = useState("");
-  const [description, setDescription] = useState("");
-  const [images, setImages] = useState([]); // Holds File objects selected by user
-  const [error, setError] = useState("");
+  // Form State
+  const [title, setTitle] = useState('');
+  const [description, setDescription] = useState('');
+  const [condition, setCondition] = useState(''); // State for selected condition
+  const [images, setImages] = useState([]);
+  const [selectedCategoryIds, setSelectedCategoryIds] = useState(new Set()); // Use a Set for unique IDs
+
+  // State for fetching categories
+  const [allCategories, setAllCategories] = useState([]);
+  const [categoryLoading, setCategoryLoading] = useState(false);
+  const [categoryError, setCategoryError] = useState('');
+
+  // General modal state
+  const [error, setError] = useState('');
   const [isUploading, setIsUploading] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
 
-  // --- IMPORTANT: Configure these ---
-  const CLOUDINARY_CLOUD_NAME = "dkw4hauo9"; // Your provided Cloudinary cloud name
-  const CLOUDINARY_UPLOAD_PRESET = "auction_preset"; // Your provided Upload Preset NAME
+  const CLOUDINARY_CLOUD_NAME = "dkw4hauo9"; // Your Cloudinary cloud name
+  const CLOUDINARY_UPLOAD_PRESET = "auction_preset"; // Your Upload Preset NAME
   const CLOUDINARY_UPLOAD_URL = `https://api.cloudinary.com/v1_1/${CLOUDINARY_CLOUD_NAME}/image/upload`;
-  // ---
 
-  // Reset form when modal opens/closes
+  // --- Fetch Categories when Modal Opens ---
   useEffect(() => {
-    if (!isOpen) {
-      setTitle("");
-      setDescription("");
+    if (isOpen) {
+      // Reset form when opening
+      setTitle('');
+      setDescription('');
+      setCondition('');
       setImages([]);
-      setError("");
+      setSelectedCategoryIds(new Set());
+      setError('');
+      setCategoryError('');
       setIsUploading(false);
       setIsSaving(false);
-    }
-  }, [isOpen]);
 
-  // --- MODIFIED handleImageChange with LOGGING ---
+      // Fetch categories
+      setCategoryLoading(true);
+      console.log("Fetching categories...");
+      apiClient.get('/products/categories') // Assuming public endpoint routed by Gateway
+        .then(response => {
+          console.log("Categories received:", response.data);
+          setAllCategories(response.data || []);
+        })
+        .catch(err => {
+          console.error("Failed to fetch categories:", err);
+          setCategoryError("Could not load categories. Please try again.");
+          setAllCategories([]);
+        })
+        .finally(() => {
+          setCategoryLoading(false);
+        });
+    }
+  }, [isOpen]); // Dependency: only run when modal opens
+
+  // --- Image Handler (Allows up to 10 now) ---
   const handleImageChange = (event) => {
-    console.log("--- handleImageChange Triggered ---");
-    setError(""); // Clear previous errors
+     setError('');
+     if (event.target.files) {
+       if (event.target.files.length > 10) { // Increased limit
+         setError('You can upload a maximum of 10 images.');
+         setImages([]);
+         event.target.value = null;
+       } else if (event.target.files.length > 0){
+         setImages(Array.from(event.target.files));
+         console.log("Selected files:", event.target.files);
+       } else {
+         setImages([]);
+       }
+     }
+   };
 
-    if (event.target.files) {
-      console.log("event.target.files object:", event.target.files);
-      const filesArray = Array.from(event.target.files);
-      console.log("Number of files selected:", filesArray.length);
-
-      if (filesArray.length > 5) {
-        console.log("Validation Error: Too many files selected.");
-        setError("You can upload a maximum of 5 images.");
-        setImages([]); // Clear state
-        event.target.value = null; // Reset the input visually
-      } else if (filesArray.length > 0) {
-        console.log("Attempting to set images state with:", filesArray);
-        setImages(filesArray); // Update state
-        // Check state right after setting (won't show update immediately due to async nature)
-        // console.log("images state variable immediately after setImages:", images);
-      } else {
-        console.log("Validation: No files selected or selection cleared.");
-        setImages([]); // Clear state if no files are selected
-      }
-    } else {
-      console.log("handleImageChange: event.target.files is null or undefined");
-    }
-    console.log("--- handleImageChange Finished ---");
+  // --- Category Selection Handler ---
+  const handleCategoryChange = (categoryId) => {
+      setSelectedCategoryIds(prevIds => {
+          const newIds = new Set(prevIds); // Create mutable copy
+          if (newIds.has(categoryId)) {
+              newIds.delete(categoryId); // Toggle off
+          } else {
+              newIds.add(categoryId); // Toggle on
+          }
+          console.log("Selected Category IDs:", newIds);
+          return newIds;
+      });
   };
-  // --- END MODIFIED handleImageChange ---
 
-  // --- MODIFIED handleSubmit with LOGGING and Real Upload ---
+  // --- Submit Handler ---
   const handleSubmit = async (event) => {
     event.preventDefault();
-    setError("");
+    setError('');
+    setCategoryError(''); // Clear category error on submit attempt
 
-    // --- Add log HERE ---
-    console.log("--- handleSubmit Triggered ---");
-    console.log("handleSubmit: Current 'images' state:", images); // Check state value *at submit time*
-    console.log("handleSubmit: Current 'images' state length:", images.length);
-    // --- End log ---
-
-    // Basic Validation
-    if (!title.trim() || !description.trim()) {
-      setError("Title and Description are required.");
+    // --- Validation ---
+    if (!title.trim() || !description.trim() || !condition) {
+      setError('Title, Description, and Condition are required.');
       return;
     }
+     if (selectedCategoryIds.size === 0) {
+       setError('Please select at least one category.');
+       return; // Added category validation
+     }
     if (images.length === 0) {
-      // Check THIS value
-      console.log("Validation Failed: images.length is 0");
-      setError("Please upload at least one image.");
-      return; // <-- If it fails here, the state wasn't updated correctly
+      setError('Please upload at least one image.');
+      return;
     }
-    if (!CLOUDINARY_CLOUD_NAME || CLOUDINARY_CLOUD_NAME === "YOUR_CLOUD_NAME") {
-      /* ... */
-    }
-    if (
-      !CLOUDINARY_UPLOAD_PRESET ||
-      CLOUDINARY_UPLOAD_PRESET === "auction_preset"
-    ) {
-      // Check if preset name is default/placeholder
-      console.warn(
-        "Using default/placeholder Cloudinary Upload Preset name 'auction_preset'. Ensure this is correct."
-      );
-    }
+    // ... Cloudinary config checks ...
     // --- End Validation ---
 
     setIsUploading(true);
-    const uploadedImageUrls = [];
+    let uploadedImageUrls = [];
 
-    // --- Upload files to Cloudinary concurrently ---
-    console.log("Starting real image uploads to Cloudinary...");
-    const uploadPromises = images.map(async (file) => {
-      const formData = new FormData();
-      formData.append("file", file);
-      formData.append("upload_preset", CLOUDINARY_UPLOAD_PRESET);
-
-      console.log(`Uploading ${file.name}...`);
-      try {
-        // Using fetch API
-        const response = await fetch(CLOUDINARY_UPLOAD_URL, {
-          method: "POST",
-          body: formData,
-        });
-        if (!response.ok) {
-          const errorData = await response.json();
-          throw new Error(
-            `Cloudinary upload failed: ${
-              errorData?.error?.message || response.statusText
-            }`
-          );
+    // --- Cloudinary Upload ---
+    console.log('Starting image uploads to Cloudinary...');
+    const uploadPromises = images.map(/* ... same Cloudinary upload logic as before ... */
+        async (file) => {
+            const formData = new FormData();
+            formData.append('file', file);
+            formData.append('upload_preset', CLOUDINARY_UPLOAD_PRESET);
+            const response = await fetch(CLOUDINARY_UPLOAD_URL, { method: 'POST', body: formData });
+            if (!response.ok) throw new Error(`Upload failed for ${file.name}`);
+            const data = await response.json();
+            return data.secure_url;
         }
-        const data = await response.json();
-        console.log(`Uploaded ${file.name} successfully:`, data.secure_url);
-        return data.secure_url; // Return the secure URL
-      } catch (uploadError) {
-        console.error(`Error uploading ${file.name}:`, uploadError);
-        throw uploadError; // Re-throw to make Promise.all fail
-      }
-    });
+    );
 
     try {
-      // Wait for all uploads
-      const urls = await Promise.all(uploadPromises);
-      uploadedImageUrls.push(...urls);
-      console.log("All images uploaded successfully. URLs:", uploadedImageUrls);
+      uploadedImageUrls = await Promise.all(uploadPromises);
+      console.log("Cloudinary Upload Success. URLs:", uploadedImageUrls);
       setIsUploading(false);
 
-      // --- Save product metadata to backend ---
+      // --- Save Metadata to Backend ---
       setIsSaving(true);
-      console.log("Saving product metadata to backend...");
       const productPayload = {
         title: title.trim(),
         description: description.trim(),
+        condition: condition, // Selected condition value
         imageUrls: uploadedImageUrls,
+        categoryIds: Array.from(selectedCategoryIds) // Convert Set to Array
       };
+      console.log("Saving product metadata to backend:", productPayload);
 
-      // !!! --- TODO: Replace console.log with actual API call --- !!!
-      // await apiClient.post('/api/products', productPayload);
-      console.log(
-        "TODO: Replace this log with actual backend API call -> await apiClient.post('/api/products', productPayload);"
-      );
-      await new Promise((resolve) => setTimeout(resolve, 500)); // Simulate backend save delay
-      // !!! --- END TODO --- !!!
+      // Replace with actual API call
+      await apiClient.post('/api/products', productPayload);
 
-      console.log("Product metadata save simulated/completed.");
+      console.log("Product metadata saved successfully!");
       setIsSaving(false);
       onSuccess(productPayload); // Call parent's success handler
       handleClose(); // Close modal
+
     } catch (err) {
-      console.error("Failed during product creation (upload or save):", err);
-      setError(
-        err?.response?.data?.message ||
-          err?.message ||
-          "Failed to create product."
-      );
+      console.error("Failed during product creation:", err);
+      setError(err?.response?.data?.message || err?.message || 'Failed to create product.');
       setIsUploading(false);
       setIsSaving(false);
     }
   };
-  // --- END MODIFIED handleSubmit ---
+  // --- End Submit Handler ---
 
   const handleClose = () => {
     // Reset form state when closing
@@ -234,6 +234,39 @@ function AddProductModal({ isOpen, onClose, onSuccess }) {
               className="w-full p-2 border rounded border-gray-300 focus:outline-none focus:ring-2 focus:ring-indigo-500"
             />
           </div>
+
+          {/* --- Condition Dropdown --- */}
+          <div>
+                <label htmlFor="productCondition" className="block mb-1 font-medium text-sm text-gray-700">Condition:</label>
+                <select
+                    id="productCondition"
+                    name="condition"
+                    value={condition}
+                    onChange={(e) => setCondition(e.target.value)}
+                    required
+                    className="w-full p-2 border rounded border-gray-300 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                >
+                    <option value="" disabled>-- Select Condition --</option>
+                    {productConditions.map(opt => (
+                        <option key={opt.value} value={opt.value}>{opt.label}</option>
+                    ))}
+                </select>
+            </div>
+
+             {/* --- Category Selector --- */}
+             <div>
+                <label className="block mb-1 font-medium text-sm text-gray-700">Categories:</label>
+                <CategorySelector
+                    categories={allCategories}
+                    selectedIds={selectedCategoryIds}
+                    onSelectionChange={setSelectedCategoryIds} // Pass the state setter directly
+                    isLoading={categoryLoading}
+                    error={categoryError}
+                />
+                {/* Display error related to categories specifically if needed */}
+             </div>
+          {/* --- End Category Selector --- */}
+
           {/* Image Input */}
           <div>
             <label
