@@ -1,0 +1,21 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+body {
+  background-image: url('/bg.png'); /* Change to your actual filename */
+  background-size: cover; /* Cover the entire viewport */
+  background-position: center center; /* Center the image */
+  background-repeat: no-repeat; /* Do not repeat the image */
+  background-attachment: fixed; /* Keep background fixed during scroll */
+  min-height: 100vh; /* Ensure body covers full height */
+  color: #333; /* Example: Dark gray text */
+}
+
+body::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  background: rgba(255, 255, 255, 0.97); /* hoặc bất kỳ overlay nào */
+  z-index: -1;
+}

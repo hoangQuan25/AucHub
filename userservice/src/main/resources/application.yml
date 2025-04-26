@@ -1,0 +1,85 @@
+server:
+  port: 8001
+
+spring:
+  application:
+    name: users
+  profiles:
+    active: "prod" # Or make this dynamic based on environment
+  datasource:
+    # === IMPORTANT: Configure MySQL Connection ===
+    url: jdbc:mysql://localhost:3306/user_schema
+    username: users_svc_user
+    password: quan12345656915691
+    driverClassName: com.mysql.cj.jdbc.Driver
+  jpa:
+    database-platform: org.hibernate.dialect.MySQLDialect # Use MySQL dialect
+    hibernate:
+      ddl-auto: update # 'update' for dev, 'validate' or 'none' for prod (use migrations)
+    show-sql: true # Useful for dev, disable in prod
+  config:
+    import: "optional:configserver:http://localhost:8071/" # Get config from Config Server
+
+  # === OAUTH2 Resource Server config (for validating tokens IF service needs to call others) ===
+  # If User Service ONLY receives calls from Gateway (which validates), this might not be strictly needed
+  # But good practice to include if it might call other protected services later.
+  # security:
+  #   oauth2:
+  #     resourceserver:
+  #       jwt:
+  #         jwk-set-uri: "http://localhost:7080/realms/auction-realm/protocol/openid-connect/certs" # Point to Keycloak JWKS
+
+management: # Standard Actuator/Monitoring config
+  endpoints:
+    web:
+      exposure:
+        include: "*"
+  health:
+    readiness-state:
+      enabled: true
+    liveness-state:
+      enabled: true
+  endpoint:
+    shutdown:
+      access: unrestricted
+    health:
+      probes:
+        enabled: true
+  info:
+    env:
+      enabled: true
+  metrics:
+    tags:
+      application: ${spring.application.name}
+
+eureka: # Standard Eureka client config
+  instance:
+    preferIpAddress: true
+  client:
+    fetchRegistry: true
+    registerWithEureka: true
+    serviceUrl:
+      defaultZone: http://localhost:8070/eureka/ # Point to your Eureka Server
+
+logging: # Standard Logging config
+  level:
+    com: # Replace 'com.example' with your actual base package
+      example:
+        userservice: DEBUG
+  pattern:
+    level: "%5p [${spring.application.name}, %X{trace_id}, %X{span_id}]"
+
+info: # Custom app info
+  app:
+    name: "User Service"
+    description: "Auction Platform User Service"
+    version: "1.0.0"
+
+# === Keycloak Admin Client Configuration ===
+# Required for the User Service to modify user roles in Keycloak
+keycloak:
+  realm: auction-realm
+  auth-server-url: http://localhost:7080
+  resource: userservice-admin-client # Client ID for THIS service account in Keycloak
+  credentials:
+    secret: jRFpwICd7VbOOq1IBnqlNp40ygmt6wLA

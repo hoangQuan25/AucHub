@@ -1,0 +1,63 @@
+import React, { useEffect } from 'react';
+import { useKeycloak } from '@react-keycloak/web';
+import { BrowserRouter, Route, Routes, Navigate } from 'react-router-dom';
+import HomePage from './pages/HomePage';
+import LoginPage from './pages/LoginPage';
+import UserInfoPage from './pages/UserInfoPage'; // Renamed/New page
+import ProductsPage from './pages/ProductsPage'; // New page for sellers
+import MainLayout from './layouts/MainLayout';   // Import the layout
+import apiClient, { setupAuthInterceptor } from './api/apiClient';
+
+// PrivateRoute now just checks auth, Layout handles UI structure
+const PrivateRoute = ({ children }) => {
+  const { keycloak } = useKeycloak();
+  return keycloak.authenticated ? children : <Navigate to="/login" />;
+};
+
+// Component to specifically check for Seller role
+const SellerRoute = ({ children }) => {
+    const { keycloak } = useKeycloak();
+    // Must be authenticated AND have the seller role
+    return keycloak.authenticated && keycloak.hasRealmRole('ROLE_SELLER')
+           ? children
+           : <Navigate to="/" />; // Or redirect to an "unauthorized" page
+};
+
+
+function App() {
+  const { keycloak, initialized } = useKeycloak();
+
+  useEffect(() => {
+    if (initialized && keycloak) {
+      setupAuthInterceptor(keycloak);
+    }
+  }, [initialized, keycloak]);
+
+  if (!initialized) {
+    return <div>Loading...</div>;
+  }
+
+  return (
+    <BrowserRouter>
+      <Routes>
+        {/* Public Login Route */}
+        <Route path="/login" element={!keycloak.authenticated ? <LoginPage /> : <Navigate to="/" />} />
+
+        {/* Protected Routes using MainLayout */}
+        <Route element={<PrivateRoute><MainLayout /></PrivateRoute>}>
+          <Route path="/" element={<HomePage />} />
+          <Route path="/live-auctions" element={<HomePage />} /> {/* Example: reuse HomePage for now */}
+          <Route path="/profile" element={<UserInfoPage />} />
+          {/* Seller-specific Route */}
+          <Route path="/my-products" element={<SellerRoute><ProductsPage /></SellerRoute>} />
+          {/* Add other protected routes here */}
+        </Route>
+
+        {/* Optional: Catch-all route for 404 */}
+        {/* <Route path="*" element={<NotFoundPage />} /> */}
+      </Routes>
+    </BrowserRouter>
+  );
+}
+
+export default App;
