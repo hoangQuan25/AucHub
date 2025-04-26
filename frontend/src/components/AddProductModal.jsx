@@ -155,7 +155,7 @@ function AddProductModal({ isOpen, onClose, onSuccess }) {
       console.log("Saving product metadata to backend:", productPayload);
 
       // Replace with actual API call
-      await apiClient.post('/api/products', productPayload);
+      await apiClient.post('/products/new-product', productPayload);
 
       console.log("Product metadata saved successfully!");
       setIsSaving(false);
