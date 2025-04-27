@@ -5,7 +5,6 @@ import org.springframework.context.annotation.Configuration;
 import org.springframework.core.convert.converter.Converter;
 import org.springframework.http.HttpMethod;
 import org.springframework.security.authentication.AbstractAuthenticationToken;
-import org.springframework.security.config.Customizer;
 import org.springframework.security.config.annotation.web.reactive.EnableWebFluxSecurity;
 import org.springframework.security.config.web.server.ServerHttpSecurity;
 import org.springframework.security.oauth2.jwt.Jwt;
@@ -22,10 +21,20 @@ public class SecurityConfig {
     public SecurityWebFilterChain springSecurityFilterChain(ServerHttpSecurity security) {
         security.authorizeExchange(exchanges -> exchanges
                         .pathMatchers(HttpMethod.GET, "api/products/categories").permitAll() // Allow public access
+                        .pathMatchers("/ws/**").authenticated()
                         .pathMatchers(HttpMethod.POST, "api/products/new-product").hasRole("SELLER")
                         .pathMatchers(HttpMethod.PUT, "/api/products/**").hasRole("SELLER")
                         .pathMatchers(HttpMethod.DELETE, "/api/products/**").hasRole("SELLER")
                         .pathMatchers(HttpMethod.GET, "/api/products/my").hasRole("SELLER")
+
+                        // --- NEW LiveAuction Rules ---
+                        .pathMatchers(HttpMethod.POST, "/api/liveauctions/new-auction").hasRole("SELLER") // Only sellers create
+                        .pathMatchers(HttpMethod.POST, "/api/liveauctions/{auctionId}/bids").authenticated() // Must be logged in to bid
+                        .pathMatchers(HttpMethod.GET, "/api/liveauctions/{auctionId}/details").authenticated() // Require login to see details (safer default)
+                        .pathMatchers(HttpMethod.GET, "/api/liveauctions").permitAll() // Public listing is okay
+
+                        // --- WebSocket Rule ---
+                        .pathMatchers("/ws/**").authenticated() // Keep this rule
                         .anyExchange().permitAll() // Require authentication for any other request
                 )
                 // Configure JWT validation as before

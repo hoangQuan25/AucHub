@@ -4,20 +4,75 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="abd8589c-a4c1-4fc9-bf4e-c091f79b0c91" name="Changes" comment="">
-      <change afterPath="$PROJECT_DIR$/products/src/main/java/com/example/products/dto/UpdateProductDto.java" afterDir="false" />
+    <list default="true" id="e72edef0-0b14-4f3d-8bd4-9379eb9dd286" name="Changes" comment="">
+      <change afterPath="$PROJECT_DIR$/liveauctions/src/main/java/com/example/liveauctions/client/ProductServiceClient.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/liveauctions/src/main/java/com/example/liveauctions/client/UserServiceClient.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/liveauctions/src/main/java/com/example/liveauctions/client/dto/CategoryDto.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/liveauctions/src/main/java/com/example/liveauctions/client/dto/ProductCondition.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/liveauctions/src/main/java/com/example/liveauctions/client/dto/ProductDto.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/liveauctions/src/main/java/com/example/liveauctions/client/dto/UserBasicInfoDto.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/liveauctions/src/main/java/com/example/liveauctions/commands/AuctionLifecycleCommands.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/liveauctions/src/main/java/com/example/liveauctions/config/RabbitMqConfig.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/liveauctions/src/main/java/com/example/liveauctions/config/WebSocketConfig.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/liveauctions/src/main/java/com/example/liveauctions/controller/LiveAuctionController.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/liveauctions/src/main/java/com/example/liveauctions/dto/BidDto.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/liveauctions/src/main/java/com/example/liveauctions/dto/CategoryDto.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/liveauctions/src/main/java/com/example/liveauctions/dto/CreateLiveAuctionDto.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/liveauctions/src/main/java/com/example/liveauctions/dto/LiveAuctionDetailsDto.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/liveauctions/src/main/java/com/example/liveauctions/dto/LiveAuctionStateDto.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/liveauctions/src/main/java/com/example/liveauctions/dto/LiveAuctionSummaryDto.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/liveauctions/src/main/java/com/example/liveauctions/dto/PlaceBidDto.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/liveauctions/src/main/java/com/example/liveauctions/entity/AuctionStatus.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/liveauctions/src/main/java/com/example/liveauctions/entity/Bid.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/liveauctions/src/main/java/com/example/liveauctions/entity/LiveAuction.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/liveauctions/src/main/java/com/example/liveauctions/exception/AuctionNotFoundException.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/liveauctions/src/main/java/com/example/liveauctions/exception/InvalidAuctionStateException.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/liveauctions/src/main/java/com/example/liveauctions/exception/InvalidBidException.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/liveauctions/src/main/java/com/example/liveauctions/exception/ProductNotFoundException.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/liveauctions/src/main/java/com/example/liveauctions/exception/UserNotFoundException.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/liveauctions/src/main/java/com/example/liveauctions/listener/AuctionEventListener.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/liveauctions/src/main/java/com/example/liveauctions/manager/AuctionLifecycleManager.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/liveauctions/src/main/java/com/example/liveauctions/mapper/AuctionMapper.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/liveauctions/src/main/java/com/example/liveauctions/repository/BidRepository.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/liveauctions/src/main/java/com/example/liveauctions/repository/LiveAuctionRepository.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/liveauctions/src/main/java/com/example/liveauctions/service/LiveAuctionService.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/liveauctions/src/main/java/com/example/liveauctions/service/WebSocketEventPublisher.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/liveauctions/src/main/java/com/example/liveauctions/service/impl/LiveAuctionServiceImpl.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/liveauctions/src/main/java/com/example/liveauctions/service/impl/WebSocketEventPublisherImpl.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/liveauctions/src/main/java/com/example/liveauctions/websocket/AuctionWebSocketHandler.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/liveauctions/src/main/java/com/example/liveauctions/websocket/WebSocketSessionManager.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/users/src/main/java/com/example/users/dto/UserBasicInfoDto.java" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/compiler.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/compiler.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/encodings.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/encodings.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/misc.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/misc.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/frontend/src/components/AddProductModal.jsx" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/components/AddProductModal.jsx" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/frontend/src/components/ConfirmationModal.jsx" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/components/ConfirmationModal.jsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/frontend/src/App.jsx" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/App.jsx" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/frontend/src/pages/ProductsPage.jsx" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/pages/ProductsPage.jsx" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/frontend/src/pages/UserInfoPage.jsx" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/pages/UserInfoPage.jsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/gatewayserver/pom.xml" beforeDir="false" afterPath="$PROJECT_DIR$/gatewayserver/pom.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/gatewayserver/src/main/java/com/example/gatewayserver/GatewayserverApplication.java" beforeDir="false" afterPath="$PROJECT_DIR$/gatewayserver/src/main/java/com/example/gatewayserver/GatewayserverApplication.java" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/gatewayserver/src/main/java/com/example/gatewayserver/config/SecurityConfig.java" beforeDir="false" afterPath="$PROJECT_DIR$/gatewayserver/src/main/java/com/example/gatewayserver/config/SecurityConfig.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/products/src/main/java/com/example/products/controller/ProductController.java" beforeDir="false" afterPath="$PROJECT_DIR$/products/src/main/java/com/example/products/controller/ProductController.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/products/src/main/java/com/example/products/mapper/ProductMapper.java" beforeDir="false" afterPath="$PROJECT_DIR$/products/src/main/java/com/example/products/mapper/ProductMapper.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/products/src/main/java/com/example/products/mapper/impl/ProductMapperImpl.java" beforeDir="false" afterPath="$PROJECT_DIR$/products/src/main/java/com/example/products/mapper/impl/ProductMapperImpl.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/products/src/main/java/com/example/products/service/ProductService.java" beforeDir="false" afterPath="$PROJECT_DIR$/products/src/main/java/com/example/products/service/ProductService.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/products/src/main/java/com/example/products/service/impl/ProductServiceImpl.java" beforeDir="false" afterPath="$PROJECT_DIR$/products/src/main/java/com/example/products/service/impl/ProductServiceImpl.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/gatewayserver/src/main/java/com/example/gatewayserver/filters/UserInfoHeaderFilter.java" beforeDir="false" afterPath="$PROJECT_DIR$/gatewayserver/src/main/java/com/example/gatewayserver/filters/UserInfoHeaderFilter.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/gatewayserver/src/main/resources/application.yml" beforeDir="false" afterPath="$PROJECT_DIR$/gatewayserver/src/main/resources/application.yml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/users/src/main/java/com/example/products/UsersApplication.java" beforeDir="false" afterPath="$PROJECT_DIR$/users/src/main/java/com/example/users/UsersApplication.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/users/src/main/java/com/example/products/config/KeycloakAdminClientProperties.java" beforeDir="false" afterPath="$PROJECT_DIR$/users/src/main/java/com/example/users/config/KeycloakAdminClientProperties.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/users/src/main/java/com/example/products/config/KeycloakAdminConfig.java" beforeDir="false" afterPath="$PROJECT_DIR$/users/src/main/java/com/example/users/config/KeycloakAdminConfig.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/users/src/main/java/com/example/products/controller/UserController.java" beforeDir="false" afterPath="$PROJECT_DIR$/users/src/main/java/com/example/users/controller/UserController.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/users/src/main/java/com/example/products/dto/AddressDto.java" beforeDir="false" afterPath="$PROJECT_DIR$/users/src/main/java/com/example/users/dto/AddressDto.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/users/src/main/java/com/example/products/dto/UpdateUserDto.java" beforeDir="false" afterPath="$PROJECT_DIR$/users/src/main/java/com/example/users/dto/UpdateUserDto.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/users/src/main/java/com/example/products/dto/UserDto.java" beforeDir="false" afterPath="$PROJECT_DIR$/users/src/main/java/com/example/users/dto/UserDto.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/users/src/main/java/com/example/products/entity/Address.java" beforeDir="false" afterPath="$PROJECT_DIR$/users/src/main/java/com/example/users/entity/Address.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/users/src/main/java/com/example/products/entity/PaymentMethod.java" beforeDir="false" afterPath="$PROJECT_DIR$/users/src/main/java/com/example/users/entity/PaymentMethod.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/users/src/main/java/com/example/products/entity/User.java" beforeDir="false" afterPath="$PROJECT_DIR$/users/src/main/java/com/example/users/entity/User.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/users/src/main/java/com/example/products/exception/AddressNotFoundException.java" beforeDir="false" afterPath="$PROJECT_DIR$/users/src/main/java/com/example/users/exception/AddressNotFoundException.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/users/src/main/java/com/example/products/exception/PaymentMethodNotFoundException.java" beforeDir="false" afterPath="$PROJECT_DIR$/users/src/main/java/com/example/users/exception/PaymentMethodNotFoundException.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/users/src/main/java/com/example/products/exception/UserNotFoundException.java" beforeDir="false" afterPath="$PROJECT_DIR$/users/src/main/java/com/example/users/exception/UserNotFoundException.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/users/src/main/java/com/example/products/mapper/UserMapper.java" beforeDir="false" afterPath="$PROJECT_DIR$/users/src/main/java/com/example/users/mapper/UserMapper.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/users/src/main/java/com/example/products/mapper/impl/UserMapperImpl.java" beforeDir="false" afterPath="$PROJECT_DIR$/users/src/main/java/com/example/users/mapper/impl/UserMapperImpl.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/users/src/main/java/com/example/products/repository/UserRepository.java" beforeDir="false" afterPath="$PROJECT_DIR$/users/src/main/java/com/example/users/repository/UserRepository.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/users/src/main/java/com/example/products/service/KeycloakAdminService.java" beforeDir="false" afterPath="$PROJECT_DIR$/users/src/main/java/com/example/users/service/KeycloakAdminService.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/users/src/main/java/com/example/products/service/UserService.java" beforeDir="false" afterPath="$PROJECT_DIR$/users/src/main/java/com/example/users/service/UserService.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/users/src/main/java/com/example/products/service/impl/UserServiceImpl.java" beforeDir="false" afterPath="$PROJECT_DIR$/users/src/main/java/com/example/users/service/impl/UserServiceImpl.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/users/src/test/java/com/example/products/CardsApplicationTests.java" beforeDir="false" afterPath="$PROJECT_DIR$/users/src/test/java/com/example/users/CardsApplicationTests.java" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -27,6 +82,8 @@
   <component name="FileTemplateManagerImpl">
     <option name="RECENT_TEMPLATES">
       <list>
+        <option value="Enum" />
+        <option value="Exception" />
         <option value="Interface" />
         <option value="Class" />
       </list>
@@ -35,11 +92,17 @@
   <component name="Git.Settings">
     <option name="RECENT_GIT_ROOT_PATH" value="$PROJECT_DIR$" />
   </component>
+  <component name="ProblemsViewState">
+    <option name="selectedTabId" value="CurrentFile" />
+  </component>
   <component name="ProjectColorInfo">{
   &quot;customColor&quot;: &quot;&quot;,
   &quot;associatedIndex&quot;: 1
 }</component>
-  <component name="ProjectId" id="2wGHd4nRq5vyzwq7Zll3bddcNYs" />
+  <component name="ProjectId" id="2wIn031O7XexY0hHDhCDP9AtbP4" />
+  <component name="ProjectLevelVcsManager">
+    <ConfirmationsSetting value="2" id="Add" />
+  </component>
   <component name="ProjectViewState">
     <option name="hideEmptyMiddlePackages" value="true" />
     <option name="showLibraryContents" value="true" />
@@ -54,24 +117,25 @@
     "RunOnceActivity.git.unshallow": "true",
     "Spring Boot.ConfigserverApplication.executor": "Run",
     "Spring Boot.EurekaserverApplication.executor": "Run",
+    "Spring Boot.GatewayserverApplication (1).executor": "Run",
     "Spring Boot.GatewayserverApplication.executor": "Run",
+    "Spring Boot.LiveAuctionsApplication.executor": "Run",
     "Spring Boot.ProductsApplication.executor": "Run",
-    "Spring Boot.UsersApplication (1).executor": "Run",
     "Spring Boot.UsersApplication.executor": "Run",
-    "git-widget-placeholder": "feat/crud-product",
+    "git-widget-placeholder": "live-auction",
     "node.js.detected.package.eslint": "true",
     "node.js.detected.package.tslint": "true",
     "node.js.selected.package.eslint": "(autodetect)",
     "node.js.selected.package.tslint": "(autodetect)",
     "nodejs_package_manager_path": "npm",
-    "project.structure.last.edited": "Modules",
-    "project.structure.proportion": "0.0",
-    "project.structure.side.proportion": "0.0",
     "run.configurations.included.in.services": "true",
     "vue.rearranger.settings.migration": "true"
   }
 }]]></component>
-  <component name="RunManager" selected="Spring Boot.GatewayserverApplication">
+  <component name="ReactorSettings">
+    <option name="notificationShown" value="true" />
+  </component>
+  <component name="RunManager" selected="Spring Boot.UsersApplication">
     <configuration name="ConfigserverApplication" type="SpringBootApplicationConfigurationType" factoryName="Spring Boot" nameIsGenerated="true">
       <module name="configserver" />
       <option name="SPRING_BOOT_MAIN_CLASS" value="com.example.configserver.ConfigserverApplication" />
@@ -86,10 +150,19 @@
         <option name="Make" enabled="true" />
       </method>
     </configuration>
-    <configuration name="GatewayserverApplication" type="SpringBootApplicationConfigurationType" factoryName="Spring Boot" nameIsGenerated="true">
-      <option name="FRAME_DEACTIVATION_UPDATE_POLICY" value="UpdateClassesAndResources" />
+    <configuration name="GatewayserverApplication" type="SpringBootApplicationConfigurationType" factoryName="Spring Boot">
+      <option name="ALTERNATIVE_JRE_PATH" value="17" />
+      <option name="ALTERNATIVE_JRE_PATH_ENABLED" value="true" />
       <module name="gatewayserver" />
       <option name="SPRING_BOOT_MAIN_CLASS" value="com.example.gatewayserver.GatewayserverApplication" />
+      <method v="2">
+        <option name="Make" enabled="true" />
+      </method>
+    </configuration>
+    <configuration name="LiveAuctionsApplication" type="SpringBootApplicationConfigurationType" factoryName="Spring Boot" nameIsGenerated="true">
+      <option name="FRAME_DEACTIVATION_UPDATE_POLICY" value="UpdateClassesAndResources" />
+      <module name="liveauctions" />
+      <option name="SPRING_BOOT_MAIN_CLASS" value="com.example.liveauctions.LiveAuctionsApplication" />
       <method v="2">
         <option name="Make" enabled="true" />
       </method>
@@ -102,14 +175,23 @@
         <option name="Make" enabled="true" />
       </method>
     </configuration>
-    <configuration name="UsersApplication" type="SpringBootApplicationConfigurationType" factoryName="Spring Boot" nameIsGenerated="true">
-      <option name="FRAME_DEACTIVATION_UPDATE_POLICY" value="UpdateClassesAndResources" />
+    <configuration name="UsersApplication" type="SpringBootApplicationConfigurationType" factoryName="Spring Boot">
+      <option name="ALTERNATIVE_JRE_PATH" value="17" />
+      <option name="ALTERNATIVE_JRE_PATH_ENABLED" value="true" />
       <module name="users" />
-      <option name="SPRING_BOOT_MAIN_CLASS" value="com.example.products.UsersApplication" />
+      <option name="SPRING_BOOT_MAIN_CLASS" value="com.example.users.UsersApplication" />
       <method v="2">
         <option name="Make" enabled="true" />
       </method>
     </configuration>
+    <list>
+      <item itemvalue="Spring Boot.UsersApplication" />
+      <item itemvalue="Spring Boot.GatewayserverApplication" />
+      <item itemvalue="Spring Boot.ConfigserverApplication" />
+      <item itemvalue="Spring Boot.EurekaserverApplication" />
+      <item itemvalue="Spring Boot.LiveAuctionsApplication" />
+      <item itemvalue="Spring Boot.ProductsApplication" />
+    </list>
   </component>
   <component name="SharedIndexes">
     <attachedChunks>
@@ -122,13 +204,13 @@
   <component name="SpellCheckerSettings" RuntimeDictionaries="0" Folders="0" CustomDictionaries="0" DefaultDictionary="application-level" UseSingleDictionary="true" transferred="true" />
   <component name="TaskManager">
     <task active="true" id="Default" summary="Default task">
-      <changelist id="abd8589c-a4c1-4fc9-bf4e-c091f79b0c91" name="Changes" comment="" />
-      <created>1745661078622</created>
+      <changelist id="e72edef0-0b14-4f3d-8bd4-9379eb9dd286" name="Changes" comment="" />
+      <created>1745737732381</created>
       <option name="number" value="Default" />
       <option name="presentableId" value="Default" />
-      <updated>1745661078622</updated>
-      <workItem from="1745661079210" duration="6286000" />
-      <workItem from="1745680612715" duration="3873000" />
+      <updated>1745737732381</updated>
+      <workItem from="1745737734517" duration="13649000" />
+      <workItem from="1745751407296" duration="15033000" />
     </task>
     <servers />
   </component>

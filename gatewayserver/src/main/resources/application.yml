@@ -5,6 +5,8 @@ spring:
     import: "optional:configserver:http://localhost:8071/"
   cloud:
     gateway:
+      websocket:
+        enabled: true
       discovery:
         locator:
           enabled: false

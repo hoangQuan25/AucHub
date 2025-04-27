@@ -6,6 +6,7 @@ import AddProductModal from "../components/AddProductModal";
 import CategorySelector from "../components/CategorySelector"; // Component that handles hierarchy
 import ProductDetailModal from "../components/ProductDetailModal"; // Assuming this exists
 import ConfirmationModal from "../components/ConfirmationModal"; // Assuming this exists
+import StartAuctionModal from "../components/StartAuctionModal"; // New component for auction
 import { FaEdit, FaTrashAlt, FaRocket } from "react-icons/fa"; // Icons for actions
 
 function ProductsPage() {
@@ -37,6 +38,13 @@ function ProductsPage() {
   const [categoryLoading, setCategoryLoading] = useState(false);
   const [categoryError, setCategoryError] = useState("");
   const [filterCategoryIds, setFilterCategoryIds] = useState(new Set()); // Store selected filter IDs
+
+  // --- NEW STATE for Start Auction Modal ---
+  const [isStartAuctionModalOpen, setIsStartAuctionModalOpen] = useState(false);
+  const [productToAuction, setProductToAuction] = useState(null);
+  const [startAuctionError, setStartAuctionError] = useState('');
+  const [startAuctionLoading, setStartAuctionLoading] = useState(false);
+  // ---
 
   // --- Data Fetching Callbacks ---
   const fetchMyProducts = useCallback(
@@ -149,13 +157,45 @@ function ProductsPage() {
       productId
     ); /* Confirmation -> API Call -> fetchMyProducts */
   };
-  const handleStartAuction = (e, productId) => {
-    e.stopPropagation();
-    console.log(
-      "TODO: Start Auction for Product:",
-      productId
-    ); /* Open Start Auction Modal */
+
+  // --- MODIFIED: Handler to open Start Auction Modal ---
+    const handleStartAuction = (e, product) => {
+        e.stopPropagation(); // Prevent card click if called from card
+        console.log("Opening Start Auction Modal for Product:", product);
+        setProductToAuction(product);        // Set the product context
+        setStartAuctionError('');            // Clear previous errors
+        setIsStartAuctionModalOpen(true);    // Open the modal
+    };
+    // --- END MODIFICATION ---
+
+    // --- NEW: Handler for submitting the Start Auction Modal form ---
+    const handleStartAuctionSubmit = async (auctionData) => {
+      console.log("Submitting auction configuration:", auctionData);
+      setStartAuctionLoading(true);
+      setStartAuctionError('');
+      try {
+          // TODO: Replace with actual API call to backend
+          // Example: const response = await apiClient.post('/api/liveauctions', auctionData);
+          await new Promise(resolve => setTimeout(resolve, 1000)); // Simulate API call
+          console.log("Mock auction started successfully for product:", auctionData.productId);
+
+          setIsStartAuctionModalOpen(false); // Close modal on success
+          setProductToAuction(null);        // Clear selected product
+          // Maybe show a success notification?
+          // Optionally refetch products if status changes: fetchMyProducts(filterCategoryIds);
+
+      } catch (err) {
+          console.error("Failed to start auction:", err);
+          // Set error state to display within the modal or page
+          setStartAuctionError(err.response?.data?.message || "Failed to start auction.");
+          // Keep modal open on error? Or re-throw to let modal handle? Let's keep open.
+          // setIsStartAuctionModalOpen(false); // Decide if modal should close on error
+          // setProductToAuction(null);
+      } finally {
+          setStartAuctionLoading(false);
+      }
   };
+  // --- END NEW HANDLER ---
 
   // --- DELETE HANDLERS ---
   // Opens the delete confirmation modal
@@ -198,6 +238,8 @@ function ProductsPage() {
     }
   };
   // --- END DELETE HANDLERS ---
+
+  
 
   // Display loading until Keycloak is initialized
   if (!initialized) {
@@ -359,6 +401,20 @@ function ProductsPage() {
           isLoading={isDeleting} // Pass loading state
           error={deleteError} // Pass error state
       />
+
+      {/* --- NEW: Render Start Auction Modal --- */}
+      {productToAuction && ( // Render only when a product is selected
+              <StartAuctionModal
+                isOpen={isStartAuctionModalOpen}
+                onClose={() => { setIsStartAuctionModalOpen(false); setProductToAuction(null); }}
+                product={productToAuction}
+                onStartAuctionSubmit={handleStartAuctionSubmit} // Pass the handler
+                // Pass loading/error states if you want modal to display them:
+                // isLoading={startAuctionLoading}
+                // error={startAuctionError}
+              />
+            )}
+            {/* --- END --- */}
     </div>
   );
 }
