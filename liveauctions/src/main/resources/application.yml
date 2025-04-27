@@ -1,0 +1,92 @@
+# application.yml for 'liveauctionservice'
+
+server:
+  port: 8003
+
+spring:
+  application:
+    name: liveauctions
+  profiles:
+    # Set default profile for local development
+    active: "dev"
+  # === Database Configuration ===
+  datasource:
+    url: jdbc:mysql://localhost:3306/live_auction_schema
+    # Use placeholders for credentials - set values in .env or environment variables
+    username: live_auctions_svc_user
+    password: quan12345656915691
+    driverClassName: com.mysql.cj.jdbc.Driver
+  jpa:
+    database-platform: org.hibernate.dialect.MySQLDialect
+    hibernate:
+      ddl-auto: update # 'update' for dev, switch to 'validate' or 'none' later
+    show-sql: true # Log SQL for dev
+  rabbitmq:
+    host: localhost # Or 'rabbitmq' if using docker-compose service name
+    port: 5672      # Default RabbitMQ port
+    username: guest
+    password: guest
+
+  # === Redis Configuration ===
+  data:
+    redis:
+      # Use 'localhost' if Redis container port 6379 is mapped to host
+      # Use 'auction-redis' (or your container/service name) if on same Docker network
+      host: localhost
+      port: 6379
+      redisson:
+        # Single node example
+        single-server-config:
+          address: "redis://127.0.0.1:6379"
+      # password: ${REDIS_PASSWORD:} # Uncomment and set via placeholder if your Redis requires a password
+
+  # === Configuration Server ===
+  config:
+    import: "optional:configserver:http://localhost:8071/" # Point to your Config Server
+
+# === Eureka Client Configuration ===
+eureka:
+  instance:
+    preferIpAddress: true
+  client:
+    fetchRegistry: true
+    registerWithEureka: true
+    serviceUrl:
+      defaultZone: http://localhost:8070/eureka/ # Point to your Eureka Server
+
+# === Management & Actuator ===
+management:
+  endpoints:
+    web:
+      exposure:
+        include: "*" # Expose all actuator endpoints
+  health:
+    readiness-state:
+      enabled: true
+    liveness-state:
+      enabled: true
+  endpoint:
+    health:
+      probes:
+        enabled: true
+  info:
+    env:
+      enabled: true
+  metrics:
+    tags:
+      application: ${spring.application.name}
+
+# === Logging ===
+logging:
+  level:
+    com.example.liveauctionservice: DEBUG # Adjust base package
+  pattern:
+    level: "%5p [${spring.application.name},%X{trace_id},%X{span_id}] %m%n"
+
+# === Custom App Info ===
+info:
+  app:
+    name: "Live Auction Service"
+    description: "Handles real-time live auctions"
+    version: "1.0.0"
+

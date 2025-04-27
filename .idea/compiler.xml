@@ -8,8 +8,17 @@
         <sourceTestOutputDir name="target/generated-test-sources/test-annotations" />
         <outputRelativeToContentRoot value="true" />
         <module name="eurekaserver" />
-        <module name="gatewayserver" />
         <module name="configserver" />
+      </profile>
+      <profile name="Annotation profile for liveauctions" enabled="true">
+        <sourceOutputDir name="target/generated-sources/annotations" />
+        <sourceTestOutputDir name="target/generated-test-sources/test-annotations" />
+        <outputRelativeToContentRoot value="true" />
+        <processorPath useClasspath="false">
+          <entry name="$MAVEN_REPOSITORY$/org/projectlombok/lombok/1.18.36/lombok-1.18.36.jar" />
+        </processorPath>
+        <module name="gatewayserver" />
+        <module name="liveauctions" />
       </profile>
       <profile name="Annotation profile for users" enabled="true">
         <sourceOutputDir name="target/generated-sources/annotations" />
@@ -30,6 +39,7 @@
       <module name="configserver" options="-parameters" />
       <module name="eurekaserver" options="-parameters" />
       <module name="gatewayserver" options="-parameters" />
+      <module name="liveauctions" options="-parameters" />
       <module name="products" options="-parameters" />
       <module name="users" options="-parameters" />
     </option>

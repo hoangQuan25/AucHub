@@ -1,0 +1,445 @@
+package com.example.liveauctions.service.impl;
+
+import com.example.liveauctions.client.ProductServiceClient; // Feign Client for Products
+import com.example.liveauctions.client.UserServiceClient; // Feign Client for Users
+import com.example.liveauctions.client.dto.ProductDto; // DTO from Products service
+import com.example.liveauctions.client.dto.UserBasicInfoDto; // DTO from Users service
+import com.example.liveauctions.commands.AuctionLifecycleCommands.StartAuctionCommand; // Our command record
+import com.example.liveauctions.config.RabbitMqConfig; // Constants for RabbitMQ
+import com.example.liveauctions.dto.*;
+import com.example.liveauctions.entity.AuctionStatus;
+import com.example.liveauctions.entity.Bid;
+import com.example.liveauctions.entity.LiveAuction;
+import com.example.liveauctions.exception.*;
+import com.example.liveauctions.mapper.AuctionMapper;
+import com.example.liveauctions.repository.BidRepository;
+import com.example.liveauctions.repository.LiveAuctionRepository;
+import com.example.liveauctions.service.LiveAuctionService;
+import com.example.liveauctions.service.WebSocketEventPublisher; // For WebSocket events
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.redisson.api.RLock;
+import org.redisson.api.RedissonClient;
+import org.springframework.amqp.rabbit.core.RabbitTemplate;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional; // Import Transactional
+
+import java.math.BigDecimal;
+import java.time.Duration;
+import java.time.LocalDateTime;
+import java.util.Collections;
+import java.util.List;
+import java.util.Map;
+import java.util.UUID;
+import java.util.concurrent.TimeUnit;
+
+@Service
+@RequiredArgsConstructor
+@Slf4j
+public class LiveAuctionServiceImpl implements LiveAuctionService {
+
+    private final LiveAuctionRepository liveAuctionRepository;
+    private final ProductServiceClient productServiceClient; // Feign client
+    private final UserServiceClient userServiceClient;     // Feign client
+    private final RabbitTemplate rabbitTemplate;
+    private final AuctionMapper auctionMapper; // Your MapStruct or similar mapper
+
+    private final BidRepository bidRepository; // Add BidRepository dependency
+    private final RedissonClient redissonClient; // Add RedissonClient dependency
+    private final WebSocketEventPublisher webSocketEventPublisher; // For publishing events
+
+    // Assume getIncrement is available, maybe in a helper class or static method
+    // private final AuctionHelper auctionHelper;
+
+    @Override
+    @Transactional // Make the creation process transactional
+    public LiveAuctionDetailsDto createAuction(String sellerId, CreateLiveAuctionDto createDto) {
+        log.info("Attempting to create auction for product ID: {} by seller: {}", createDto.getProductId(), sellerId);
+
+        // 1. Fetch Product Details via Feign
+        ProductDto product = fetchProductDetails(createDto.getProductId());
+
+        // 2. Fetch Seller Username via Feign
+        String sellerUsername = fetchSellerUsername(sellerId);
+
+        // 3. Determine Timing and Status
+        LocalDateTime now = LocalDateTime.now();
+        LocalDateTime startTime = createDto.getStartTime() != null ? createDto.getStartTime() : now;
+        LocalDateTime endTime = startTime.plusMinutes(createDto.getDurationMinutes());
+        AuctionStatus initialStatus = startTime.isAfter(now) ? AuctionStatus.SCHEDULED : AuctionStatus.ACTIVE;
+
+        // Prevent scheduling in the past if startTime was provided but already passed
+        if (initialStatus == AuctionStatus.SCHEDULED && startTime.isBefore(now)) {
+            log.warn("Provided start time {} for product {} is in the past. Starting auction now.", startTime, product.getId());
+            startTime = now; // Correct start time to now
+            endTime = startTime.plusMinutes(createDto.getDurationMinutes()); // Recalculate end time
+            initialStatus = AuctionStatus.ACTIVE;
+        }
+
+
+        // 4. Calculate Initial Increment
+        BigDecimal initialIncrement = getIncrement(createDto.getStartPrice());
+
+        // 5. Build LiveAuction Entity
+        LiveAuction auction = LiveAuction.builder()
+                .productId(product.getId())
+                .sellerId(sellerId)
+                .productTitleSnapshot(product.getTitle()) // Snapshot
+                .productImageUrlSnapshot(product.getImageUrls() != null && !product.getImageUrls().isEmpty() ? product.getImageUrls().get(0) : null) // Snapshot main image
+                .sellerUsernameSnapshot(sellerUsername) // Snapshot
+                .startPrice(createDto.getStartPrice())
+                .reservePrice(createDto.getReservePrice())
+                .currentBid(null) // No bids initially
+                .highestBidderId(null)
+                .highestBidderUsernameSnapshot(null)
+                .currentBidIncrement(initialIncrement) // Set initial increment
+                .startTime(startTime)
+                .endTime(endTime)
+                .status(initialStatus)
+                .reserveMet(false)
+                .build();
+
+        // 6. Save the Auction Entity
+        LiveAuction savedAuction = liveAuctionRepository.save(auction);
+        log.info("Auction entity saved with ID: {} and status: {}", savedAuction.getId(), savedAuction.getStatus());
+
+        // 7. Schedule Start or Handle Immediate Start
+        if (savedAuction.getStatus() == AuctionStatus.SCHEDULED) {
+            long delayMillis = Duration.between(now, savedAuction.getStartTime()).toMillis();
+            if (delayMillis > 0) {
+                StartAuctionCommand command = new StartAuctionCommand(savedAuction.getId());
+                rabbitTemplate.convertAndSend(
+                        // Use the DELAYED exchange here
+                        RabbitMqConfig.AUCTION_SCHEDULE_EXCHANGE,
+                        RabbitMqConfig.START_ROUTING_KEY,
+                        command,
+                        message -> {
+                            // CORRECT WAY: Set the 'x-delay' header
+                            // Clamp delay to Integer.MAX_VALUE as header value might be expected as Integer
+                            int delayHeaderValue = (int) Math.min(delayMillis, Integer.MAX_VALUE);
+
+                            // Set the header only if the delay is positive
+                            if (delayHeaderValue > 0) {
+                                message.getMessageProperties().setHeader("x-delay", delayHeaderValue);
+                            }
+                            return message;
+                        }
+                );
+            } else {
+                // Should not happen due to check above, but as fallback handle immediate start
+                log.warn("Scheduled auction {} start time is not in the future, handling immediate start.", savedAuction.getId());
+                startAuctionInternal(savedAuction); // Handle immediate start (schedules end, publishes event)
+            }
+        } else if (savedAuction.getStatus() == AuctionStatus.ACTIVE) {
+            // Auction starts immediately
+            log.info("Auction {} starting immediately.", savedAuction.getId());
+            startAuctionInternal(savedAuction); // Handle immediate start (schedules end, publishes event)
+        }
+
+        // 8. Map to Details DTO and Return (enrichment happens in getAuctionDetails)
+        // For the create response, we might return a simpler DTO or the full one.
+        // Let's assume we can build the details DTO here *without* extra Feign calls for now,
+        // using the data we already fetched/snapshotted.
+        // The full enrichment happens when GET /details is called.
+        return auctionMapper.mapToLiveAuctionDetailsDto(
+                savedAuction,
+                product, // Pass the fetched product
+                Collections.emptyList(), // No bids yet
+                Duration.between(LocalDateTime.now(), savedAuction.getEndTime()).toMillis(), // Initial time left
+                savedAuction.getCurrentBidIncrement() == null ? savedAuction.getStartPrice() : savedAuction.getCurrentBidIncrement().add(savedAuction.getStartPrice()) // Initial next bid
+        );
+        // Alternative: Return simpler DTO with just ID and key info.
+        // return auctionMapper.toLiveAuctionCreatedDto(savedAuction);
+    }
+
+    // --- Helper Methods ---
+
+    private ProductDto fetchProductDetails(Long productId) {
+        try {
+            log.debug("Fetching product details for ID: {}", productId);
+            // Assuming Feign client returns ResponseEntity or throws exception on error
+            return productServiceClient.getProductById(productId);
+        } catch (Exception e) { // Catch specific Feign exceptions ideally
+            log.error("Failed to fetch product details for ID: {}", productId, e);
+            throw new ProductNotFoundException("Product not found with ID: " + productId);
+        }
+    }
+
+    private String fetchSellerUsername(String sellerId) {
+        try {
+            log.debug("Fetching username for seller ID: {}", sellerId);
+            Map<String, UserBasicInfoDto> users = userServiceClient.getUsersBasicInfoByIds(Collections.singletonList(sellerId));
+            UserBasicInfoDto sellerInfo = users.get(sellerId);
+            if (sellerInfo == null) {
+                throw new UserNotFoundException("Seller info not found for ID: " + sellerId);
+            }
+            return sellerInfo.getUsername();
+        } catch (Exception e) { // Catch specific Feign exceptions ideally
+            log.error("Failed to fetch seller username for ID: {}", sellerId, e);
+            // Decide if this is critical - maybe return null or default? For now, throw.
+            throw new UserNotFoundException("Seller info not found for ID: " + sellerId);
+        }
+    }
+
+    // Placeholder for the logic needed when an auction becomes ACTIVE
+    private void startAuctionInternal(LiveAuction auction) {
+        log.info("Executing internal start logic for auction {}", auction.getId());
+        // 1. Schedule the auction end using RabbitMQ delayed message
+        scheduleAuctionEnd(auction); // Same logic as used in the start listener later
+
+        // 2. Publish AuctionStartedEvent (or initial state update) to RabbitMQ for WebSocket broadcast
+        publishAuctionStateUpdate(auction); // Helper method needed
+    }
+
+
+    // Placeholder: Schedules the end via RabbitMQ delayed message
+    private void scheduleAuctionEnd(LiveAuction auction) {
+        // ... Logic to calculate delay and publish EndAuctionCommand ...
+        // (Will be implemented fully in AuctionLifecycleManager later, but called from here too)
+        log.info("Placeholder: scheduleAuctionEnd called for auction {}", auction.getId());
+        // Similar rabbitTemplate.convertAndSend logic as for start command
+        long delayMillis = Duration.between(LocalDateTime.now(), auction.getEndTime()).toMillis();
+        if (delayMillis > 0) {
+            // ... publish EndAuctionCommand with delay ...
+        } else {
+            // ... handle immediate end ...
+        }
+    }
+
+    // Placeholder: Publishes state update event via RabbitMQ
+    private void publishAuctionStateUpdate(LiveAuction auction) {
+        // ... Logic to build event DTO and publish to AUCTION_EVENTS_EXCHANGE ...
+        log.info("Placeholder: publishAuctionStateUpdate called for auction {}", auction.getId());
+    }
+
+
+    // Placeholder for the getIncrement logic
+    private BigDecimal getIncrement(BigDecimal currentBid) {
+        // ... implement the tiered logic provided earlier ...
+        if (currentBid == null) currentBid = BigDecimal.ZERO;
+        if (currentBid.compareTo(BigDecimal.valueOf(10_000_000)) >= 0) return BigDecimal.valueOf(2_000_000);
+        // ... rest of the logic ...
+        return BigDecimal.valueOf(5_000);
+    }
+
+    // --- Implement other LiveAuctionService methods (getAuctionDetails, placeBid, getActiveAuctions) ---
+    // ...
+    @Override
+    @Transactional(readOnly = true) // Read-only transaction is appropriate here
+    public LiveAuctionDetailsDto getAuctionDetails(UUID auctionId) {
+        log.debug("Fetching details for auction: {}", auctionId);
+
+        // 1. Fetch Auction Entity
+        LiveAuction auction = liveAuctionRepository.findById(auctionId)
+                .orElseThrow(() -> new AuctionNotFoundException("Auction not found: " + auctionId));
+
+        // 2. Fetch Product Details (Enrichment via Feign)
+        ProductDto productDto = null;
+        try {
+            productDto = productServiceClient.getProductById(auction.getProductId());
+        } catch (Exception e) {
+            // Log error but continue, returning details with only snapshot data
+            log.error("Failed to fetch product details via Feign for product ID {} (auction {}). Proceeding with snapshot data.",
+                    auction.getProductId(), auctionId, e);
+            // productDto remains null
+        }
+
+        // 3. Fetch Recent Bids
+        // Fetch, for example, the top 20 most recent bids
+        Pageable bidPageable = PageRequest.of(0, 20, Sort.by(Sort.Direction.DESC, "bidTime"));
+        Page<Bid> recentBidsPage = bidRepository.findByLiveAuctionId(auctionId, bidPageable);
+        List<BidDto> recentBidDtos = recentBidsPage.getContent().stream()
+                .map(auctionMapper::mapToBidDto) // Use mapper for Bid -> BidDto
+                .toList();
+
+        // 4. Calculate Dynamic State (Time Left, Next Bid Amount)
+        long timeLeftMs = 0;
+        if (auction.getStatus() == AuctionStatus.ACTIVE && auction.getEndTime() != null) {
+            timeLeftMs = Duration.between(LocalDateTime.now(), auction.getEndTime()).toMillis();
+            timeLeftMs = Math.max(0, timeLeftMs);
+        }
+
+        BigDecimal nextBidAmount = null;
+        if (auction.getStatus() == AuctionStatus.ACTIVE) {
+            BigDecimal currentBid = auction.getCurrentBid() == null ? BigDecimal.ZERO : auction.getCurrentBid();
+            if (auction.getHighestBidderId() == null) {
+                nextBidAmount = auction.getStartPrice();
+            } else if (auction.getCurrentBidIncrement() != null) {
+                nextBidAmount = currentBid.add(auction.getCurrentBidIncrement());
+            } else {
+                // Fallback needed? Should not happen if increment is always calculated
+                log.warn("currentBidIncrement is null for active auction {} during details fetch.", auctionId);
+                nextBidAmount = currentBid; // Default or error indicator?
+            }
+        }
+
+
+        // 5. Map to Details DTO using Mapper
+        // The mapper needs to handle combining LiveAuction, optional ProductDto, List<BidDto>, and calculated values
+        return auctionMapper.mapToLiveAuctionDetailsDto(
+                auction,
+                productDto,
+                recentBidDtos,
+                timeLeftMs,
+                nextBidAmount
+        );
+    }
+
+    @Override
+    @Transactional // Ensure DB operations are atomic
+    public void placeBid(UUID auctionId, String bidderId, PlaceBidDto bidDto) {
+        // Define lock key specific to this auction
+        String lockKey = "auction_lock:" + auctionId;
+        RLock lock = redissonClient.getLock(lockKey);
+        boolean lockAcquired = false;
+
+        try {
+            // Try to acquire the lock with a wait time and lease time
+            // Wait max 5 seconds, hold lock max 10 seconds (adjust as needed)
+            lockAcquired = lock.tryLock(5, 10, TimeUnit.SECONDS);
+
+            if (!lockAcquired) {
+                log.warn("Failed to acquire lock for auction {} within timeout", auctionId);
+                throw new IllegalStateException("Could not process bid at this time, please try again."); // Or a custom exception
+            }
+
+            log.info("Lock acquired for auction {}. Processing bid from bidder {}", auctionId, bidderId);
+
+            // --- Operations inside the lock ---
+
+            // 1. Fetch Auction
+            LiveAuction auction = liveAuctionRepository.findById(auctionId)
+                    .orElseThrow(() -> new AuctionNotFoundException("Auction not found: " + auctionId));
+
+            // 2. Validate Auction State & Time
+            if (auction.getStatus() != AuctionStatus.ACTIVE) {
+                throw new InvalidAuctionStateException("Auction is not active. Status: " + auction.getStatus());
+            }
+            if (LocalDateTime.now().isAfter(auction.getEndTime())) {
+                // Optional: Could trigger end logic here if missed by scheduler, but safer to let scheduler handle it
+                throw new InvalidAuctionStateException("Auction has already ended.");
+            }
+
+            // 3. Validate Bidder
+            if (auction.getSellerId().equals(bidderId)) {
+                throw new InvalidBidException("Seller cannot bid on their own auction.");
+            }
+            if (bidderId.equals(auction.getHighestBidderId())) {
+                throw new InvalidBidException("You are already the highest bidder.");
+            }
+
+            // 4. Validate Bid Amount
+            BigDecimal currentBid = auction.getCurrentBid() == null ? BigDecimal.ZERO : auction.getCurrentBid();
+            // If no bids yet, the first bid must meet or exceed startPrice
+            BigDecimal requiredAmount;
+            if (auction.getHighestBidderId() == null) {
+                requiredAmount = auction.getStartPrice();
+                log.debug("First bid for auction {}. Required amount >= {}", auctionId, requiredAmount);
+            } else {
+                requiredAmount = currentBid.add(auction.getCurrentBidIncrement());
+                log.debug("Subsequent bid for auction {}. Current: {}, Increment: {}. Required amount >= {}",
+                        auctionId, currentBid, auction.getCurrentBidIncrement(), requiredAmount);
+            }
+
+
+            if (bidDto.getAmount().compareTo(requiredAmount) < 0) {
+                throw new InvalidBidException("Bid amount is too low. Minimum required: " + requiredAmount);
+            }
+
+            // --- All Validations Passed ---
+
+            // 5. Fetch Bidder Username (Optional but good for snapshot)
+            String bidderUsername = fetchBidderUsername(bidderId); // Similar Feign helper as fetchSellerUsername
+
+            // 6. Create and Save Bid Entity
+            Bid newBid = Bid.builder()
+                    .liveAuctionId(auctionId)
+                    .bidderId(bidderId)
+                    .bidderUsernameSnapshot(bidderUsername) // Store snapshot
+                    .amount(bidDto.getAmount())
+                    // bidTime is set automatically by @CreationTimestamp
+                    .build();
+            bidRepository.save(newBid);
+            log.info("New bid saved for auction {}. Bidder: {}, Amount: {}", auctionId, bidderId, bidDto.getAmount());
+
+            // 7. Update LiveAuction Entity
+            auction.setCurrentBid(bidDto.getAmount());
+            auction.setHighestBidderId(bidderId);
+            auction.setHighestBidderUsernameSnapshot(bidderUsername);
+
+            // Check reserve price
+            if (!auction.isReserveMet() && auction.getReservePrice() != null &&
+                    auction.getCurrentBid().compareTo(auction.getReservePrice()) >= 0) {
+                auction.setReserveMet(true);
+                log.info("Reserve price met for auction {}", auctionId);
+                // Future: Could potentially extend auction end time slightly here if desired ("sniping prevention")
+            }
+
+            // Recalculate next increment based on the *new* current bid
+            auction.setCurrentBidIncrement(getIncrement(auction.getCurrentBid()));
+            log.debug("Recalculated next bid increment for auction {} to {}", auctionId, auction.getCurrentBidIncrement());
+
+            // 8. Save Updated Auction
+            LiveAuction updatedAuction = liveAuctionRepository.save(auction);
+
+            // 9. Publish State Update Event via Publisher (after DB commit ideally)
+            // Spring's @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT) on a separate listener bean
+            // is the robust way. For simplicity here, we call the publisher directly, assuming
+            // the transaction management and message broker handle commit order reasonably.
+            webSocketEventPublisher.publishAuctionStateUpdate(updatedAuction);
+            log.info("Published auction state update event for auction {}", auctionId);
+
+            // --- End of operations inside the lock ---
+
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            log.error("Lock acquisition interrupted for auction {}", auctionId, e);
+            throw new IllegalStateException("Bid processing interrupted.");
+        } catch (AuctionNotFoundException | InvalidAuctionStateException | InvalidBidException e) {
+            // Log specific validation errors
+            log.warn("Bid validation failed for auction {}: {}", auctionId, e.getMessage());
+            throw e; // Re-throw specific exceptions for controller advice to handle
+        } catch (Exception e) {
+            // Catch broader exceptions during the process
+            log.error("An unexpected error occurred while placing bid for auction {}", auctionId, e);
+            throw new RuntimeException("Failed to place bid due to an internal error."); // Generic error
+        }
+        finally {
+            // VERY IMPORTANT: Release the lock in a finally block
+            if (lockAcquired && lock.isHeldByCurrentThread()) {
+                lock.unlock();
+                log.info("Lock released for auction {}", auctionId);
+            }
+        }
+    }
+
+    // Helper to fetch bidder username (similar to fetchSellerUsername)
+    private String fetchBidderUsername(String bidderId) {
+        // ... Implementation using userServiceClient.getUsersBasicInfoByIds ...
+        // Handle UserNotFoundException etc.
+        try {
+            Map<String, UserBasicInfoDto> users = userServiceClient.getUsersBasicInfoByIds(Collections.singletonList(bidderId));
+            UserBasicInfoDto bidderInfo = users.get(bidderId);
+            if (bidderInfo == null) { throw new UserNotFoundException("Bidder not found: " + bidderId); }
+            return bidderInfo.getUsername();
+        } catch (Exception e) {
+            log.error("Failed to fetch username for bidder {}", bidderId, e);
+            throw new UserNotFoundException("Bidder not found: " + bidderId);
+        }
+    }
+
+
+    @Override
+    @Transactional(readOnly = true)
+    public Page<LiveAuctionSummaryDto> getActiveAuctions(Pageable pageable) {
+        // ... fetch auctionPage ...
+        Page<LiveAuction> auctionPage = liveAuctionRepository.findByStatus(AuctionStatus.ACTIVE, pageable);
+
+        // Use manual mapper with page.map()
+        return auctionPage.map(auctionMapper::mapToLiveAuctionSummaryDto);
+    }
+}
