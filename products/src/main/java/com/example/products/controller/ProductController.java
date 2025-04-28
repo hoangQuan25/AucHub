@@ -57,6 +57,16 @@ public class ProductController {
         return ResponseEntity.ok(products);
     }
 
+    @GetMapping("/{productId}")
+    public ResponseEntity<ProductDto> getProductById(
+            @PathVariable Long productId) {
+        log.info("Received GET /api/products/{} request", productId);
+        // Assuming ProductService has a method getProductById that returns ProductDto
+        // and throws ProductNotFoundException if not found (handled by global exception handler)
+        ProductDto product = productService.getProductById(productId);
+        return ResponseEntity.ok(product);
+    }
+
     // TODO: Add endpoints later for GET /api/products/{id}, PUT /api/products/{id}, DELETE /api/products/{id}
     // Make sure to check ownership (sellerId) in update/delete operations!
 

@@ -1,6 +1,6 @@
 package com.example.liveauctions.client.dto; // Example package within liveauctions
 
-import com.example.liveauctions.client.enums.ProductCondition; // Need enum too
+import com.example.liveauctions.client.dto.ProductCondition; // Need enum too
 
 import lombok.Data;
 import java.time.LocalDateTime;

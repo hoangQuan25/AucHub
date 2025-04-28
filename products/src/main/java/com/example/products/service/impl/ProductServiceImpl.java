@@ -7,6 +7,7 @@ import com.example.products.dto.ProductDto;
 import com.example.products.dto.UpdateProductDto;
 import com.example.products.entity.Category;
 import com.example.products.entity.Product;
+import com.example.products.exception.ProductNotFoundException;
 import com.example.products.mapper.CategoryMapper;
 import com.example.products.mapper.ProductMapper;
 import com.example.products.repository.CategoryRepository;
@@ -133,6 +134,20 @@ public class ProductServiceImpl implements ProductService {
 
         productRepository.delete(product);
         log.info("Product ID: {} deleted successfully by seller ID: {}", productId, sellerId);
+    }
+
+    @Override
+    @Transactional(readOnly = true) // Mark as read-only transaction
+    public ProductDto getProductById(Long productId) {
+        log.debug("Fetching product by ID: {}", productId);
+        Product product = productRepository.findById(productId)
+                .orElseThrow(() -> {
+                    log.warn("Product not found with ID: {}", productId);
+                    return new ProductNotFoundException("Product not found with ID: " + productId);
+                });
+
+        // Map the found entity to DTO
+        return productMapper.toProductDto(product);
     }
 
     @Override

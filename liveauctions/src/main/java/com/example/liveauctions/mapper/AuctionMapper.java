@@ -1,7 +1,10 @@
 package com.example.liveauctions.mapper; // Or a suitable package
 
 import com.example.liveauctions.client.dto.ProductDto; // DTO from Products service
-import com.example.liveauctions.dto.*; // Your auction DTOs
+import com.example.liveauctions.client.dto.CategoryDto; // Assuming this is the correct package
+import com.example.liveauctions.dto.BidDto;
+import com.example.liveauctions.dto.LiveAuctionDetailsDto;
+import com.example.liveauctions.dto.LiveAuctionSummaryDto;
 import com.example.liveauctions.entity.Bid;
 import com.example.liveauctions.entity.LiveAuction;
 import org.springframework.stereotype.Component;
@@ -93,15 +96,17 @@ public class AuctionMapper {
         // Map enriched fields from ProductDto *if available*
         if (productDto != null) {
             builder.productDescription(productDto.getDescription());
-            builder.productCondition(productDto.getCondition()); // Assumes enum type matches
+            builder.productCondition(String.valueOf(productDto.getCondition())); // Assumes enum type matches
             // Assuming ProductDto already has Set<CategoryDto> matching our definition
             builder.productCategories(productDto.getCategories());
+            builder.productImageUrls(productDto.getImageUrls());
             // Map other product fields if needed
         } else {
             // Optionally set defaults or leave null if productDto is null
             builder.productDescription(null); // Or "Details unavailable"
             builder.productCondition(null);
             builder.productCategories(Collections.emptySet());
+            builder.productImageUrls(Collections.emptyList());
         }
 
 

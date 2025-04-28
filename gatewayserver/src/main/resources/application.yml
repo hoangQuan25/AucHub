@@ -5,8 +5,6 @@ spring:
     import: "optional:configserver:http://localhost:8071/"
   cloud:
     gateway:
-      websocket:
-        enabled: true
       discovery:
         locator:
           enabled: false
@@ -14,19 +12,6 @@ spring:
       httpclient:
         connect-timeout: 1000
         response-timeout: 10s
-      globalcors:
-        cors-configurations:
-          '[/**]':
-            allowedOrigins: "http://localhost:5173"
-            allowedMethods:
-              - GET
-              - POST
-              - PUT
-              - DELETE
-              - OPTIONS
-            allowedHeaders: "*"
-            allowCredentials: true
-            maxAge: 3600 # e.g., 1 hour
   security:
     oauth2:
       resourceserver:
@@ -56,9 +41,15 @@ info:
 
 logging:
   level:
-    com:
-      example:
-        gatewayserver: DEBUG
+    # Set default level higher (e.g., INFO) to avoid too much noise
+    root: INFO
+    # Enable DEBUG for specific components related to Gateway, WebSockets, Security, Netty
+    org.springframework.cloud.gateway: DEBUG
+    org.springframework.web.reactive: DEBUG
+    org.springframework.security: DEBUG
+    reactor.netty: DEBUG
+    io.netty: INFO # Optional: Netty can be very verbose, start with INFO
+    com.example.gatewayserver: DEBUG # Your gateway's base package (for custom filters etc.)
   pattern:
     level: "%5p [${spring.application.name}, %X{trace_id}, %X{span_id}]"
 

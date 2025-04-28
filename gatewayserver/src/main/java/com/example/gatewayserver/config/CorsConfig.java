@@ -1,3 +1,4 @@
+// src/main/java/com/example/gatewayserver/config/CorsConfig.java
 package com.example.gatewayserver.config;
 
 import org.springframework.context.annotation.Bean;
@@ -5,27 +6,26 @@ import org.springframework.context.annotation.Configuration;
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.reactive.CorsWebFilter;
 import org.springframework.web.cors.reactive.UrlBasedCorsConfigurationSource;
-import org.springframework.web.reactive.config.EnableWebFlux;
-
-import java.util.Arrays;
 import java.util.Collections;
+import java.util.List;
 
 @Configuration
-@EnableWebFlux // Needed for Spring WebFlux
 public class CorsConfig {
 
     @Bean
     public CorsWebFilter corsWebFilter() {
-        CorsConfiguration corsConfig = new CorsConfiguration();
-        corsConfig.setAllowedOrigins(Collections.singletonList("http://localhost:5173")); // Or use a list: Arrays.asList("http://example.com", "http://anotherexample.com")
-        corsConfig.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "OPTIONS"));
-        corsConfig.setAllowedHeaders(Collections.singletonList("*"));
-        corsConfig.setAllowCredentials(true);
-        corsConfig.setMaxAge(3600L);
+        CorsConfiguration config = new CorsConfiguration();
+
+        config.setAllowCredentials(true);
+        // config.setAllowCredentials(true); // Usually needed with Authentication
+        config.setAllowedOrigins(List.of("http://localhost:5173")); // Your FE origin ONLY
+        config.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS", "HEAD"));
+        config.setAllowedHeaders(List.of("*")); // Allow all standard/custom headers
+        // Optional: config.setMaxAge(3600L);
 
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
-        source.registerCorsConfiguration("/**", corsConfig); // Apply to all paths
+        source.registerCorsConfiguration("/api/**", config); // Apply CORS to all paths gateway handles
+
         return new CorsWebFilter(source);
     }
 }
-

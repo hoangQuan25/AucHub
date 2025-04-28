@@ -17,37 +17,38 @@ public class GatewayserverApplication {
 
 	@Bean
 	public RouteLocator customRouteLocator(RouteLocatorBuilder builder) {
+		LocalDateTime responseTime = LocalDateTime.now(); // Calculate once for potentially better consistency per startup
+
 		return builder.routes()
-				.route(p -> p
-						.path("/api/users/**") // Define a path prefix for user-related APIs
+				.route("users_route", p -> p // Give routes IDs for easier management/debugging
+						.path("/api/users/**")
 						.filters(f -> f
-										// Optional: Remove prefix if User Service endpoints don't expect /api/users
-										.rewritePath("/api/users/(?<segment>.*)", "/${segment}")
-										.addResponseHeader("X-Response-Time", LocalDateTime.now().toString())
-								// Add other filters like CircuitBreaker if needed for this service
-								// Authentication is handled globally by SecurityConfig
+								.rewritePath("/api/users/(?<segment>.*)", "/${segment}")
+								.addResponseHeader("X-Response-Time", responseTime.toString())
 						)
 						.uri("lb://USERS"))
-				.route(p -> p
-						.path("/api/products/**") // Define a path prefix for user-related APIs
+				.route("products_route", p -> p
+						.path("/api/products/**")
 						.filters(f -> f
-										// Optional: Remove prefix if User Service endpoints don't expect /api/users
-										.rewritePath("/api/products/(?<segment>.*)", "/${segment}")
-										.addResponseHeader("X-Response-Time", LocalDateTime.now().toString())
-								// Add other filters like CircuitBreaker if needed for this service
-								// Authentication is handled globally by SecurityConfig
+								.rewritePath("/api/products/(?<segment>.*)", "/${segment}")
+								.addResponseHeader("X-Response-Time", responseTime.toString())
 						)
 						.uri("lb://PRODUCTS"))
-				.route(p -> p
-						.path("/api/liveauctions/**") // Define a path prefix for user-related APIs
+				.route("liveauctions_api_route", p -> p // Specific ID for the API route
+						.path("/api/liveauctions/**")
 						.filters(f -> f
-										// Optional: Remove prefix if User Service endpoints don't expect /api/users
-										.rewritePath("/api/liveauctions/(?<segment>.*)", "/${segment}")
-										.addResponseHeader("X-Response-Time", LocalDateTime.now().toString())
-								// Add other filters like CircuitBreaker if needed for this service
-								// Authentication is handled globally by SecurityConfig
+								.rewritePath("/api/liveauctions/(?<segment>.*)", "/${segment}")
+								.addResponseHeader("X-Response-Time", responseTime.toString())
 						)
-						.uri("lb://LIVEAUCTIONS")).build();
+						.uri("lb://LIVEAUCTIONS"))
 
+				// --- ADD THIS ROUTE FOR WEBSOCKETS ---
+				.route("liveauctions_ws_route", p -> p // ID for the WebSocket route
+						.path("/ws/**") // Match the specific WebSocket path
+						// NO rewritePath filter here - backend expects the full path
+						.uri("lb://LIVEAUCTIONS")) // Route to the same backend service
+				// --- END OF ADDED ROUTE ---
+
+				.build();
 	}
 }

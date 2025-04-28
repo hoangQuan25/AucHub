@@ -50,7 +50,7 @@ public class AuctionLifecycleManager {
             scheduleAuctionEnd(updatedAuction);
 
             // Publish the state update for WebSocket clients
-            webSocketEventPublisher.publishAuctionStateUpdate(updatedAuction);
+            webSocketEventPublisher.publishAuctionStateUpdate(updatedAuction, null);
 
         } else {
             log.warn("Auction {} was not in SCHEDULED state when start command received. Current state: {}. No action taken.",
@@ -73,8 +73,12 @@ public class AuctionLifecycleManager {
             auction.setActualEndTime(LocalDateTime.now());
 
             // Determine final status and winner
-            if (auction.getHighestBidderId() != null) { // Check if there were any bids
-                if (auction.isReserveMet()) {
+            // AuctionLifecycleManager.handleEndAuctionCommand()
+            if (auction.getHighestBidderId() != null) {
+                boolean reserveSatisfied = auction.isReserveMet()
+                        || auction.getReservePrice() == null; // NEW
+
+                if (reserveSatisfied) {
                     auction.setStatus(AuctionStatus.SOLD);
                     auction.setWinnerId(auction.getHighestBidderId());
                     auction.setWinningBid(auction.getCurrentBid());
@@ -84,16 +88,12 @@ public class AuctionLifecycleManager {
                     auction.setStatus(AuctionStatus.RESERVE_NOT_MET);
                     log.info("Auction {} ended. Status: RESERVE_NOT_MET.", auctionId);
                 }
-            } else {
-                // No bids were placed
-                auction.setStatus(AuctionStatus.RESERVE_NOT_MET); // Or a dedicated NO_BIDS status
-                log.info("Auction {} ended. Status: RESERVE_NOT_MET (No bids).", auctionId);
             }
 
             LiveAuction endedAuction = auctionRepository.save(auction);
 
             // Publish the final state update for WebSocket clients
-            webSocketEventPublisher.publishAuctionStateUpdate(endedAuction);
+            webSocketEventPublisher.publishAuctionStateUpdate(endedAuction, null);
 
             // TODO (Future): Publish a different event (e.g., AuctionConcludedEvent)
             // to trigger post-auction logic like notifications, payment processing etc.
@@ -106,7 +106,7 @@ public class AuctionLifecycleManager {
     }
 
     // Helper to schedule the end command (called from handleStartAuctionCommand)
-    private void scheduleAuctionEnd(LiveAuction auction) {
+    public void scheduleAuctionEnd(LiveAuction auction) {
         LocalDateTime now = LocalDateTime.now();
         long delayMillis = Duration.between(now, auction.getEndTime()).toMillis();
 
@@ -117,7 +117,16 @@ public class AuctionLifecycleManager {
                     RabbitMqConfig.END_ROUTING_KEY,
                     command,
                     message -> {
-                        message.getMessageProperties().setDelay((int) Math.min(delayMillis, Integer.MAX_VALUE));
+                        // --- CORRECTED LINE ---
+                        // Set the 'x-delay' header for the plugin
+                        int delayHeaderValue = (int) Math.min(delayMillis, Integer.MAX_VALUE);
+                        if (delayHeaderValue > 0) {
+                            message.getMessageProperties().setHeader("x-delay", delayHeaderValue);
+                            log.debug("Setting x-delay header for END command routingKey {}: {}", RabbitMqConfig.END_ROUTING_KEY, delayHeaderValue);
+                        } else {
+                            log.warn("Calculated end delay for auction {} is not positive ({}ms), not setting x-delay header.", auction.getId(), delayMillis);
+                        }
+                        // --- END CORRECTION ---
                         return message;
                     }
             );

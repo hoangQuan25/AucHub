@@ -1,6 +1,7 @@
 package com.example.liveauctions.dto;
 
 import com.example.liveauctions.entity.AuctionStatus;
+import com.example.liveauctions.client.dto.CategoryDto;
 // Assuming ProductCondition enum is accessible, perhaps from a shared module or Products client library
 // import com.example.products.entity.ProductCondition;
 import lombok.Builder;

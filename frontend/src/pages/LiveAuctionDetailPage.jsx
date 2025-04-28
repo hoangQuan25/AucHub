@@ -1,323 +1,613 @@
-// src/pages/LiveAuctionDetailPage.jsx (Real-time Implementation)
-import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
-import { useKeycloak } from '@react-keycloak/web';
-import apiClient from '../api/apiClient'; // Adjust path
-// Assuming you have a DTO definition shared or copied from backend
-// import { LiveAuctionStateDto } from '../dto/LiveAuctionStateDto';
-
-// --- Simple Countdown Timer Component ---
-const CountdownTimer = ({ endTimeMillis, onEnd }) => {
-    const calculateTimeLeft = useCallback(() => {
-        const now = Date.now();
-        const difference = endTimeMillis - now;
-        let timeLeft = {};
-
-        if (difference > 0) {
-            timeLeft = {
-                // total: difference, // Optional: total milliseconds
-                minutes: Math.floor((difference / 1000 / 60) % 60),
-                seconds: Math.floor((difference / 1000) % 60)
-            };
-        } else {
-            timeLeft = { minutes: 0, seconds: 0 };
-        }
-        return timeLeft;
-    }, [endTimeMillis]);
-
-    const [timeLeft, setTimeLeft] = useState(calculateTimeLeft());
-    const [isEnded, setIsEnded] = useState(false);
-
-    useEffect(() => {
-        // Exit early if already ended
-        if (isEnded) return;
-        // Reset ended state if end time changes
-        setIsEnded(Date.now() >= endTimeMillis);
-
-        const timer = setTimeout(() => {
-            const newTimeLeft = calculateTimeLeft();
-            setTimeLeft(newTimeLeft);
-            if (newTimeLeft.minutes === 0 && newTimeLeft.seconds === 0) {
-                 console.log("Countdown Timer Ended.");
-                 setIsEnded(true);
-                 if(onEnd) onEnd(); // Call callback if provided
-            }
-        }, 1000); // Update every second
-
-        // Cleanup timeout on unmount or when endTimeMillis changes
-        return () => clearTimeout(timer);
-    }, [timeLeft, endTimeMillis, calculateTimeLeft, isEnded, onEnd]); // Rerun effect when timeLeft or endTimeMillis changes
-
-    const displayMinutes = String(timeLeft.minutes || 0).padStart(2, '0');
-    const displaySeconds = String(timeLeft.seconds || 0).padStart(2, '0');
-    const critical = (timeLeft.minutes === 0 && (timeLeft.seconds || 0) <= 20); // Example: critical under 20s
-
-    return (
-         <span className={`font-bold text-xl ${critical ? 'text-red-600 animate-pulse' : 'text-gray-800'}`}>
-            {displayMinutes}:{displaySeconds}
-         </span>
-    );
-};
-// --- End Countdown Timer Component ---
-
+// src/pages/LiveAuctionDetailPage.jsx
+import React, { useState, useEffect, useRef, useCallback } from "react";
+import { useParams, useNavigate } from "react-router-dom";
+import { useKeycloak } from "@react-keycloak/web";
+import apiClient from "../api/apiClient";
+import CountdownTimer from "../components/CountdownTimer"; // Assuming extracted
+import { FaChevronLeft, FaChevronRight } from "react-icons/fa"; // Icons for arrows
+import SockJS from "sockjs-client/dist/sockjs"; // Use specific path for wider compatibility
+import { Client } from "@stomp/stompjs";
+import Confetti from 'react-confetti';
+import { useWindowSize } from '@react-hook/window-size';
 
 function LiveAuctionDetailPage() {
-  const { auctionId } = useParams(); // Get auction ID from route parameter
-  const { keycloak, initialized } = useKeycloak(); // For user info
+  const { auctionId } = useParams();
+  const { keycloak, initialized } = useKeycloak();
   const navigate = useNavigate();
 
-  const [auctionDetails, setAuctionDetails] = useState(null); // Holds combined details
-  const [bidHistory, setBidHistory] = useState([]); // Separate state for bid history updates
+  const [auctionDetails, setAuctionDetails] = useState(null);
+  const [bidHistory, setBidHistory] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState('');
-  const [isBidding, setIsBidding] = useState(false); // Loading state for placing a bid
-  const [bidError, setBidError] = useState(''); // Error specific to placing a bid
-  const [wsStatus, setWsStatus] = useState('Connecting...'); // WebSocket status
+  const [error, setError] = useState("");
+  const [isBidding, setIsBidding] = useState(false);
+  const [bidError, setBidError] = useState("");
+  const [wsStatus, setWsStatus] = useState("Connecting...");
+  const ws = useRef(null);
+  const loggedInUserId = initialized ? keycloak.subject : null;
 
-  const ws = useRef(null); // Ref to hold the WebSocket instance
+  // --- Ref to hold the STOMP client instance ---
+  const stompClientRef = useRef(null);
+  // Ref to hold the subscription object to allow unsubscribing
+  const subscriptionRef = useRef(null);
 
-  const loggedInUserId = initialized ? keycloak.subject : null; // Get logged-in user's ID (sub claim)
+  // --- State for Image Carousel ---
+  const [currentImageIndex, setCurrentImageIndex] = useState(0);
 
-
-  // --- Fetch Initial Auction Details ---
+  // --- Fetch Initial Auction Details (useEffect) ---
   useEffect(() => {
-    if (!auctionId || !initialized) return; // Wait for ID and Keycloak init
-
+    // Reset state when auctionId changes or component mounts
+    setAuctionDetails(null);
+    setBidHistory([]);
+    setCurrentImageIndex(0);
     setIsLoading(true);
-    setError('');
-    console.log(`Workspaceing initial details for auction ${auctionId}`);
+    setError("");
+    setWsStatus("Connecting..."); // Reset WS status too
 
-    apiClient.get(`/liveauctions/${auctionId}/details`)
-      .then(response => {
-        console.log("Initial details received:", response.data);
-        setAuctionDetails(response.data); // Set initial full state
-        setBidHistory(response.data.recentBids || []); // Set initial bid history
-      })
-      .catch(err => {
-        console.error("Failed to fetch auction details:", err);
-        setError(err.response?.data?.message || `Could not load auction ${auctionId}.`);
-      })
-      .finally(() => setIsLoading(false));
-
-  }, [auctionId, initialized]); // Fetch when ID or init status changes
-
-
-  // --- WebSocket Connection ---
-  useEffect(() => {
-    // Only connect if we have an auction ID, user is authenticated, and WebSocket isn't already connecting/open
-    if (!auctionId || !initialized || !keycloak.authenticated || ws.current) {
-        // If WebSocket exists but conditions are no longer met, close it
-        if (ws.current && (!initialized || !keycloak.authenticated)) {
-             console.log("Closing WebSocket due to auth/init change.");
-             ws.current.close();
-             ws.current = null;
-             setWsStatus('Disconnected');
-        }
-        return;
+    if (!auctionId || !initialized) {
+      setIsLoading(false); // Stop loading if we can't fetch yet
+      return;
     }
 
-    // Construct WebSocket URL (use wss:// for production with HTTPS)
-    const wsUrl = `ws://localhost:8072/ws/liveauctions/${auctionId}`; // Use Gateway port
-    console.log(`Attempting WebSocket connection to: ${wsUrl}`);
-    setWsStatus('Connecting...');
+    console.log(`FETCHING initial details for auction ${auctionId}...`);
+    apiClient
+      .get(`/liveauctions/${auctionId}/details`)
+      .then((response) => {
+        console.log(
+          "FETCH SUCCESS: Initial details raw response.data:",
+          JSON.stringify(response.data, null, 2)
+        );
+        if (response.data && response.data.id) {
+          // Check if data looks valid
+          setAuctionDetails(response.data);
+          setBidHistory(response.data.recentBids || []);
+          // setCurrentImageIndex(0); // Already reset above
+          console.log("FETCH SUCCESS: auctionDetails state SHOULD BE set.");
+        } else {
+          console.error(
+            "FETCH SUCCESS BUT INVALID DATA: Response data is missing key fields or empty."
+          );
+          setError("Received invalid or empty data for auction details.");
+          setAuctionDetails(null);
+        }
+      })
+      .catch((err) => {
+        console.error("FETCH FAILED:", err);
+        if (err.response) {
+          console.error("FETCH FAILED - Response Data:", err.response.data);
+          console.error("FETCH FAILED - Response Status:", err.response.status);
+          console.error(
+            "FETCH FAILED - Response Headers:",
+            err.response.headers
+          );
+        } else if (err.request) {
+          console.error("FETCH FAILED - No response received:", err.request);
+        } else {
+          console.error(
+            "FETCH FAILED - Error setting up request:",
+            err.message
+          );
+        }
+        setError(
+          err.response?.data?.message ||
+            `Could not load auction ${auctionId}. Details in console.`
+        );
+        setAuctionDetails(null);
+      })
+      .finally(() => {
+        setIsLoading(false);
+        console.log("FETCH finished.");
+      });
+  }, [auctionId, initialized]); // Rerun when auctionId or initialized status changes
 
-    // Create WebSocket instance
-    ws.current = new WebSocket(wsUrl); // NOTE: Authentication usually happens via cookies or query params if needed, standard WebSocket API doesn't easily send Bearer tokens. Ensure Gateway allows authenticated handshake.
+  // --- WebSocket Connection (useEffect) ---
+  // --- MODIFIED: WebSocket/STOMP Connection (useEffect) ---
+  useEffect(() => {
+    // Connect only if we have auctionId and user is authenticated
+    if (!auctionId || !initialized || !keycloak.authenticated) {
+      setWsStatus("Not Connected (Prerequisites not met)");
+      // Ensure any existing client is deactivated if auth state changes
+      if (stompClientRef.current?.active) {
+        console.log(
+          "Deactivating existing STOMP client due to unmet prerequisites."
+        );
+        stompClientRef.current.deactivate();
+      }
+      return;
+    }
 
-    ws.current.onopen = () => {
-      console.log(`WebSocket connected for auction ${auctionId}`);
-      setWsStatus('Connected');
-    };
+    // Prevent multiple connections if one is already active/activating
+    if (stompClientRef.current?.active) {
+      console.log("STOMP client already active.");
+      return;
+    }
 
-    ws.current.onmessage = (event) => {
-      try {
-        const stateUpdate = JSON.parse(event.data); // Expecting LiveAuctionStateDto JSON
-        console.log('WebSocket message received:', stateUpdate);
+    console.log(`Setting up STOMP connection for auction ${auctionId}...`);
+    setWsStatus("Connecting...");
 
-        // Update relevant parts of the auction details state
-        setAuctionDetails(prevDetails => {
-            if (!prevDetails || prevDetails.id !== stateUpdate.auctionId) return prevDetails; // Check if update is for the correct auction
+    // --- STOMP Client Configuration ---
+    const client = new Client({
+      // Use SockJS as the transport
+      webSocketFactory: () => {
+        // URL points to the STOMP endpoint configured in the backend WebSocketStompConfig
+        // Typically served by the backend service itself (or Gateway if proxying STOMP)
+        // We connect to the Gateway which proxies to LiveAuctions' /ws endpoint
+        const gatewayHost = "localhost:8072"; // Your Gateway host/port
+        const sockjsUrl = `${window.location.protocol}//${gatewayHost}/ws`; // Use http/https based on current page
+        console.log(`Creating SockJS connection to: ${sockjsUrl}`);
+        return new SockJS(sockjsUrl);
+      },
+      // Optional: Headers sent during STOMP CONNECT frame
+      // Authentication often handled via cookies or query params in SockJS URL,
+      // but connect headers can sometimes be used if backend is configured.
+      // connectHeaders: {
+      //   Authorization: `Bearer ${keycloak.token}`, // MAY NOT WORK depending on server config
+      // },
+      debug: (str) => {
+        // Optional: Enable STOMP protocol debugging
+        console.log("STOMP DEBUG:", str);
+      },
+      reconnectDelay: 5000, // Attempt reconnect every 5 seconds
+      heartbeatIncoming: 4000, // Expect server heartbeats
+      heartbeatOutgoing: 4000, // Send client heartbeats
+    });
+
+    // --- STOMP Event Handlers ---
+    client.onConnect = (frame) => {
+      console.log(`STOMP Connected: ${frame}`);
+      setWsStatus("Connected");
+
+      // Define the destination topic to subscribe to
+      const destination = `/topic/auctions/${auctionId}`;
+      console.log(`Subscribing to STOMP destination: ${destination}`);
+
+      // Subscribe and store the subscription reference
+      subscriptionRef.current = client.subscribe(destination, (message) => {
+        try {
+          const stateUpdate = JSON.parse(message.body); // LiveAuctionStateDto
+          console.log("STOMP message received:", stateUpdate);
+
+          /* 1️⃣  Merge the aggregate auction fields  */
+          setAuctionDetails((prev) => {
+            if (!prev || prev.id !== stateUpdate.auctionId) return prev; // ignore stray msgs
+
             return {
-                ...prevDetails,
-                currentBid: stateUpdate.currentBid,
-                highestBidderUsername: stateUpdate.highestBidderUsername,
-                timeLeftMs: stateUpdate.timeLeftMs,
-                reserveMet: stateUpdate.reserveMet,
-                nextBidAmount: stateUpdate.nextBidAmount, // Update next bid amount
-                status: stateUpdate.status,
-                // Optionally update recent bids if sent via WebSocket
-                // recentBids: stateUpdate.recentBids || prevDetails.recentBids
+              ...prev,
+              status: stateUpdate.status,
+              currentBid: stateUpdate.currentBid,
+              highestBidderId: stateUpdate.highestBidderId,
+              highestBidderUsernameSnapshot: stateUpdate.highestBidderUsername,
+              nextBidAmount: stateUpdate.nextBidAmount,
+              timeLeftMs: stateUpdate.timeLeftMs,
+              reserveMet: stateUpdate.reserveMet,
+
+              // NEW winner info (populated when status === "SOLD")
+              winnerId: stateUpdate.winnerId ?? prev.winnerId,
+              winningBid: stateUpdate.winningBid ?? prev.winningBid,
             };
-        });
+          });
 
-        // --- TODO: More robust bid history update ---
-        // If stateUpdate contains the *newest* bid, prepend it.
-        // If stateUpdate contains the *full* recent history, replace it.
-        // Example assuming stateUpdate doesn't directly contain bids,
-        // but maybe a NewBidEvent could be sent separately?
-        // For now, we only update history when WE place a bid in handlePlaceBid mock.
-        // ---
+          /* 2️⃣  Append the new bid (if the event carried one) */
+          if (stateUpdate.newBid) {
+            setBidHistory((prev) => [stateUpdate.newBid, ...prev].slice(0, 20));
+          }
+        } catch (e) {
+          console.error("Failed to parse STOMP message body:", message.body, e);
+        }
+      });
 
-      } catch (e) {
-        console.error("Failed to parse WebSocket message:", event.data, e);
-      }
+      console.log("STOMP subscription active.");
     };
 
-    ws.current.onerror = (error) => {
-      console.error(`WebSocket error for auction ${auctionId}:`, error);
-      setWsStatus('Error');
-      // TODO: Implement reconnection logic?
+    client.onStompError = (frame) => {
+      console.error("STOMP Broker reported error: " + frame.headers["message"]);
+      console.error("STOMP Additional details: " + frame.body);
+      setWsStatus(`Error (STOMP: ${frame.headers["message"]})`);
+      // Optionally attempt reconnect or display error to user
     };
 
-    ws.current.onclose = (event) => {
-      console.log(`WebSocket closed for auction ${auctionId}. Code: ${event.code}, Reason: ${event.reason}`);
-      setWsStatus(`Closed (${event.code})`);
-      ws.current = null; // Clear the ref
-      // TODO: Implement reconnection logic?
+    client.onWebSocketError = (error) => {
+      console.error("WebSocket Error: ", error);
+      setWsStatus("Error (WebSocket)");
+      // Underlying transport error
     };
 
-    // Cleanup function: Close WebSocket when component unmounts or auctionId changes
+    client.onWebSocketClose = (event) => {
+      console.log(
+        `WebSocket Closed: Code=${event?.code}, Reason=${event?.reason}, Clean=${event?.wasClean}`
+      );
+      setWsStatus(`Closed (${event?.code || "Unknown"})`);
+      // Client will attempt to reconnect automatically based on reconnectDelay
+      // Clear subscription ref if connection is closed
+      subscriptionRef.current = null;
+      stompClientRef.current = null; // Clear client ref on close? Or let reconnect handle? Let's clear.
+    };
+
+    // --- Activate the client ---
+    client.activate();
+
+    // Store client instance in ref
+    stompClientRef.current = client;
+
+    // --- Cleanup function ---
     return () => {
-      if (ws.current) {
-        console.log(`Closing WebSocket for auction ${auctionId} on component unmount/cleanup.`);
-        ws.current.close();
-        ws.current = null;
+      console.log("Running STOMP cleanup effect...");
+      if (subscriptionRef.current) {
+        console.log(
+          `Unsubscribing from STOMP destination (sub id: ${subscriptionRef.current.id})`
+        );
+        try {
+          subscriptionRef.current.unsubscribe();
+        } catch (e) {
+          console.error("Error during unsubscribe:", e);
+        }
+        subscriptionRef.current = null;
       }
+      if (stompClientRef.current?.active) {
+        console.log("Deactivating STOMP client...");
+        try {
+          stompClientRef.current.deactivate();
+          console.log("STOMP client deactivated.");
+        } catch (e) {
+          console.error("Error during STOMP client deactivation:", e);
+        }
+      } else {
+        console.log("STOMP client already inactive or null.");
+      }
+      stompClientRef.current = null; // Clear ref on cleanup
     };
+    // Dependencies: Rerun effect if auctionId changes or user auth status changes
+  }, [auctionId, initialized, keycloak.authenticated]);
 
-  }, [auctionId, initialized, keycloak.authenticated]); // Dependencies for WebSocket effect
-
-
-  // --- Place Bid Handler ---
+  // --- Place Bid Handler (handlePlaceBid) ---
   const handlePlaceBid = async () => {
-      if (!auctionDetails || isBidding || auctionDetails.status !== 'ACTIVE') return;
-      // Check if user is currently the highest bidder
-      if (auctionDetails.highestBidderUsername === keycloak.tokenParsed?.preferred_username) {
-           setBidError("You are already the highest bidder.");
-           setTimeout(() => setBidError(''), 3000); // Clear error after 3s
-           return;
-      }
+    if (!auctionDetails || isBidding || !keycloak.authenticated) {
+      console.warn(
+        "Bid attempt prevented: Missing details, already bidding, or not authenticated."
+      );
+      return;
+    }
+    if (auctionDetails.status !== "ACTIVE") {
+      setBidError("Auction is not currently active.");
+      setTimeout(() => setBidError(""), 3000);
+      return;
+    }
+    const currentUsername = keycloak.tokenParsed?.preferred_username;
+    if (auctionDetails.highestBidderUsername === currentUsername) {
+      setBidError("You are already the highest bidder.");
+      setTimeout(() => setBidError(""), 3000);
+      return;
+    }
+    if (!auctionDetails.nextBidAmount) {
+      setBidError("Next bid amount is not available.");
+      setTimeout(() => setBidError(""), 3000);
+      return;
+    }
 
-      setIsBidding(true);
-      setBidError('');
-      const bidAmount = auctionDetails.nextBidAmount; // Bid the suggested next amount
+    setIsBidding(true);
+    setBidError("");
+    const bidAmount = auctionDetails.nextBidAmount;
+    const payload = { amount: bidAmount };
+    console.log(
+      `Attempting to place bid: ${bidAmount} for auction ${auctionId}`
+    );
+    try {
+      await apiClient.post(`/liveauctions/${auctionId}/bids`, payload);
+      console.log(`Bid placement request for ${bidAmount} sent successfully.`);
+      // UI update comes via WebSocket
+    } catch (err) {
+      console.error("Failed to place bid:", err);
+      const message =
+        err.response?.data?.message || err.message || "Failed to place bid.";
+      setBidError(message);
+    } finally {
+      setIsBidding(false);
+    }
+  };
 
-      console.log(`Attempting to place bid: ${bidAmount} for auction ${auctionId}`);
-      try {
-          const payload = { amount: bidAmount };
-          // Call the backend REST endpoint
-          await apiClient.post(`/liveauctions/${auctionId}/bids`, payload);
-          console.log(`Bid placement request for ${bidAmount} sent successfully.`);
-          // DO NOT update state here. Wait for the WebSocket message broadcast.
-          // You could optionally show a temporary "Bid Placed!" message.
-
-      } catch (err) {
-          console.error("Failed to place bid:", err);
-          setBidError(err.response?.data?.message || err.message || 'Failed to place bid.');
-           // Clear error after a few seconds
-          setTimeout(() => setBidError(''), 5000);
-      } finally {
-          setIsBidding(false);
-      }
+  // --- Image Carousel Handlers ---
+  const handleNextImage = (e) => {
+    e.stopPropagation();
+    if (auctionDetails?.productImageUrls?.length > 0) {
+      setCurrentImageIndex(
+        (prevIndex) => (prevIndex + 1) % auctionDetails.productImageUrls.length
+      );
+    }
+  };
+  const handlePrevImage = (e) => {
+    e.stopPropagation();
+    if (auctionDetails?.productImageUrls?.length > 0) {
+      setCurrentImageIndex(
+        (prevIndex) =>
+          (prevIndex - 1 + auctionDetails.productImageUrls.length) %
+          auctionDetails.productImageUrls.length
+      );
+    }
   };
 
   // --- Render Logic ---
+  if (isLoading)
+    return <div className="text-center p-10">Loading Auction Details...</div>;
+  if (error)
+    return <div className="text-center p-10 text-red-600">{error}</div>;
+  // Check if auctionDetails is loaded before trying to access its properties
+  if (!auctionDetails)
+    return (
+      <div className="text-center p-10">
+        Auction data not available or invalid.
+      </div>
+    );
 
-  if (isLoading) return <div className="text-center p-10">Loading Auction Details...</div>;
-  if (error) return <div className="text-center p-10 text-red-600">{error}</div>;
-  if (!auctionDetails) return <div className="text-center p-10">Auction data not available.</div>; // Should be caught by error typically
+  // Derived state for rendering checks
+  const isUserHighestBidder =
+    initialized &&
+    keycloak.authenticated &&
+    auctionDetails.highestBidderUsername ===
+      keycloak.tokenParsed?.preferred_username;
+  const canBid =
+    initialized &&
+    keycloak.authenticated &&
+    auctionDetails.status === "ACTIVE" &&
+    !isUserHighestBidder &&
+    auctionDetails.nextBidAmount != null;
+  // Use the correct field for images from the DTO
+  const images = auctionDetails.productImageUrls || []; // Ensure images is an array
 
-  const isUserHighestBidder = initialized && keycloak.authenticated && auctionDetails.highestBidderUsername === keycloak.tokenParsed?.preferred_username;
-  const canBid = initialized && keycloak.authenticated && auctionDetails.status === 'ACTIVE' && !isUserHighestBidder;
-
+  // --- ** THIS IS THE UPDATED RENDER LOGIC ** ---
   return (
     <div className="flex flex-col md:flex-row gap-6 p-4 max-w-7xl mx-auto">
+      {/* Left Side: Product Info */}
+      <div className="w-full md:w-1/2 lg:w-2/5">
+        {/* Use title snapshot from auctionDetails */}
+        <h2 className="text-2xl font-bold mb-3">
+          {auctionDetails.productTitleSnapshot || "Product Title Missing"}
+        </h2>
 
-        {/* Left Side: Product Info */}
-        <div className="w-full md:w-1/2 lg:w-2/5">
-             <h2 className="text-2xl font-bold mb-3">{auctionDetails.product?.title || 'Product Title Missing'}</h2>
-             <div className="bg-gray-200 h-80 rounded mb-4 flex items-center justify-center">
-                 <img src={auctionDetails.product?.imageUrls?.[0] || '/placeholder.png'} alt={auctionDetails.product?.title} className="max-h-full max-w-full object-contain"/>
-             </div>
-             <div className="bg-white p-4 rounded shadow-sm border text-sm">
-                 <h4 className="font-semibold mb-2 border-b pb-1">Details</h4>
-                 <p className="mb-2 whitespace-pre-wrap">{auctionDetails.product?.description || 'No description.'}</p>
-                 <p className="mb-2"><strong>Condition:</strong> {auctionDetails.product?.condition?.replace('_',' ') || 'N/A'}</p>
-                 <p className="mb-2"><strong>Categories:</strong> {auctionDetails.product?.categories?.map(c => c.name).join(', ') || 'N/A'}</p>
-                 <p className="text-xs text-gray-600">Seller: {auctionDetails.sellerId || 'N/A'}</p> {/* TODO: Get seller username? */}
-             </div>
+        {/* Image Carousel using auctionDetails.allProductImageUrls */}
+        <div className="relative h-80 rounded mb-4 bg-gray-100 border">
+          {images.length > 0 ? (
+            <>
+              <img
+                key={currentImageIndex}
+                src={images[currentImageIndex]}
+                alt={`${
+                  auctionDetails.productTitleSnapshot || "Auction Item"
+                } - Image ${currentImageIndex + 1}`}
+                className="w-full h-full object-contain rounded"
+                onError={(e) => {
+                  e.target.onerror = null;
+                  e.target.src = "/placeholder.png";
+                }}
+              />
+              {images.length > 1 && (
+                <>
+                  <button
+                    onClick={handlePrevImage}
+                    className="absolute top-1/2 left-2 transform -translate-y-1/2 bg-black bg-opacity-40 text-white p-2 rounded-full hover:bg-opacity-60 focus:outline-none transition-opacity"
+                    aria-label="Previous Image"
+                  >
+                    <FaChevronLeft size="1em" />
+                  </button>
+                  <button
+                    onClick={handleNextImage}
+                    className="absolute top-1/2 right-2 transform -translate-y-1/2 bg-black bg-opacity-40 text-white p-2 rounded-full hover:bg-opacity-60 focus:outline-none transition-opacity"
+                    aria-label="Next Image"
+                  >
+                    <FaChevronRight size="1em" />
+                  </button>
+                  <div className="absolute bottom-2 left-1/2 transform -translate-x-1/2 bg-black bg-opacity-50 text-white text-xs px-2 py-0.5 rounded">
+                    {currentImageIndex + 1} / {images.length}
+                  </div>
+                </>
+              )}
+            </>
+          ) : (
+            <div className="flex items-center justify-center h-full text-gray-500">
+              No Image Available
+            </div>
+          )}
         </div>
 
-         {/* Right Side: Bidding Info & Actions */}
-         <div className="w-full md:w-1/2 lg:w-3/5">
-             {/* WebSocket Status Indicator */}
-             <div className="text-xs text-right mb-1 text-gray-500">WebSocket: {wsStatus}</div>
+        {/* Product Details Section using auctionDetails */}
+        <div className="bg-white p-4 rounded shadow-sm border text-sm">
+          <h4 className="font-semibold mb-2 border-b pb-1">Details</h4>
+          <p className="mb-2 whitespace-pre-wrap">
+            {auctionDetails.productDescription || "No description."}
+          </p>
+          {/* Ensure productCondition exists before calling replace */}
+          <p className="mb-2">
+            <strong>Condition:</strong>{" "}
+            {auctionDetails.productCondition
+              ? auctionDetails.productCondition.replace("_", " ")
+              : "N/A"}
+          </p>
+          <p className="mb-2">
+            <strong>Categories:</strong>{" "}
+            {auctionDetails.productCategories &&
+            auctionDetails.productCategories.length > 0
+              ? auctionDetails.productCategories.map((c) => c.name).join(", ")
+              : "N/A"}
+          </p>
+          <p className="text-xs text-gray-600">
+            Seller: {auctionDetails.sellerUsernameSnapshot || "N/A"}
+          </p>
+        </div>
+      </div>
 
-             <div className="bg-white p-4 rounded shadow-sm border mb-4">
-                  {/* Status Bar */}
-                 <div className="flex justify-between items-center border-b pb-2 mb-3">
-                     <span className={`text-sm font-medium ${auctionDetails.reserveMet ? 'text-green-600' : 'text-orange-600'}`}>
-                         {auctionDetails.reserveMet ? '✔ Reserve Met' : (auctionDetails.reservePrice ? 'Reserve Not Met' : 'No Reserve')}
-                     </span>
-                     <div className="text-right">
-                         <div className="text-xs text-gray-500">
-                             {auctionDetails.status !== 'ACTIVE' ? 'Auction Ended' : 'Time Remaining'}
-                          </div>
-                         {auctionDetails.status === 'ACTIVE' ? (
-                             <CountdownTimer endTimeMillis={Date.now() + (auctionDetails.timeLeftMs || 0)} onEnd={() => console.log("Timer visually ended - waiting for server state")} />
-                         ) : (
-                              <span className="font-bold text-xl text-gray-500">--:--</span>
-                         )}
-                     </div>
-                 </div>
+      {/* Right Side: Bidding Info & Actions */}
+      <div className="w-full md:w-1/2 lg:w-3/5">
+        {/* WebSocket Status Indicator */}
+        <div className="text-xs text-right mb-1 text-gray-500">
+          WebSocket: {wsStatus}
+        </div>
 
-                 {/* Bidding Area */}
-                 <div className="text-center my-4">
-                     <p className="text-sm text-gray-600 mb-1">Current Bid</p>
-                     <p className="text-4xl font-bold text-indigo-700">
-                         {auctionDetails.currentBid?.toLocaleString('vi-VN') || auctionDetails.startPrice?.toLocaleString('vi-VN') || '0'} VNĐ
-                     </p>
-                     <p className="text-xs text-gray-500 mt-1">
-                         Leading: {
-                             !auctionDetails.highestBidderUsername ? 'No bids yet' :
-                             isUserHighestBidder ? <span className="text-green-600 font-semibold">You!</span> :
-                             auctionDetails.highestBidderUsername
-                         }
-                     </p>
-                 </div>
+        <div className="bg-white p-4 rounded shadow-sm border mb-4">
+          {/* Status Bar */}
+          <div className="flex justify-between items-center border-b pb-2 mb-3">
+            <span
+              className={`text-sm font-medium ${
+                auctionDetails.reserveMet ? "text-green-600" : "text-orange-600"
+              }`}
+            >
+              {auctionDetails.reserveMet
+                ? "✔ Reserve Met"
+                : auctionDetails.reservePrice
+                ? "Reserve Not Met"
+                : "No Reserve"}
+            </span>
+            <div className="text-right">
+              <div className="text-xs text-gray-500">
+                {auctionDetails.status !== "ACTIVE"
+                  ? "Auction Ended"
+                  : "Time Remaining"}
+              </div>
+              {auctionDetails.status === "ACTIVE" ? (
+                <CountdownTimer
+                  endTimeMillis={Date.now() + (auctionDetails.timeLeftMs || 0)}
+                  onEnd={() =>
+                    console.log(
+                      "Timer visually ended - waiting for server state"
+                    )
+                  }
+                />
+              ) : (
+                <span className="font-bold text-xl text-gray-500">
+                  {/* Display final status if ended */}
+                  {auctionDetails.status === "SOLD"
+                    ? "SOLD"
+                    : auctionDetails.status === "RESERVE_NOT_MET"
+                    ? "NOT SOLD"
+                    : auctionDetails.status === "CANCELLED"
+                    ? "CANCELLED"
+                    : "--:--"}
+                </span>
+              )}
+            </div>
+          </div>
 
-                 {/* Bidding Button */}
-                 <button
-                    onClick={handlePlaceBid}
-                    disabled={!canBid || isBidding} // Disable based on state
-                    className="w-full py-3 px-4 bg-green-600 hover:bg-green-700 text-white font-bold rounded text-lg disabled:opacity-60 disabled:cursor-not-allowed transition duration-150"
-                 >
-                     {isBidding ? 'Placing Bid...' : `Bid ${auctionDetails.nextBidAmount?.toLocaleString('vi-VN') || 'N/A'} VNĐ`}
-                 </button>
-                 {bidError && <p className="text-center text-xs text-red-500 mt-2">{bidError}</p>}
-                 <p className="text-center text-xs text-gray-500 mt-2">
-                     (Next required bid: {auctionDetails.nextBidAmount?.toLocaleString('vi-VN') || 'N/A'} VNĐ)
-                 </p>
-             </div>
+          {/* Bidding Area */}
+          <div className="text-center my-4">
+            <p className="text-sm text-gray-600 mb-1">Current Bid</p>
+            <p className="text-4xl font-bold text-indigo-700">
+              {/* Display winning bid if sold, otherwise current/start */}
+              {(auctionDetails.status === "SOLD"
+                ? auctionDetails.winningBid
+                : auctionDetails.currentBid ?? auctionDetails.startPrice ?? 0
+              ).toLocaleString("vi-VN")}{" "}
+              VNĐ
+            </p>
+            <p className="text-xs text-gray-500 mt-1">
+              Leading:{" "}
+              {!auctionDetails.highestBidderUsername ? (
+                "No bids yet"
+              ) : isUserHighestBidder ? (
+                <span className="text-green-600 font-semibold">You!</span>
+              ) : (
+                auctionDetails.highestBidderUsername
+              )}
+            </p>
+          </div>
 
-             {/* Bid History */}
-             <div className="bg-white p-4 rounded shadow-sm border max-h-60 overflow-y-auto">
-                 <h4 className="font-semibold mb-2 text-sm border-b pb-1">Bid History</h4>
-                 {bidHistory.length === 0 ? (
-                     <p className="text-xs text-gray-500">No bids placed yet.</p>
-                 ) : (
-                    <ul className="space-y-1 text-xs">
-                        {bidHistory.map((bid, index) => (
-                            <li key={bid.id || index} className="flex justify-between border-b border-dashed border-gray-200 py-0.5">
-                                <span>{bid.bidderUsername === keycloak.tokenParsed?.preferred_username ? <span className="font-semibold text-blue-600">You</span> : bid.bidderUsername}</span>
-                                <span className="font-medium">{bid.amount.toLocaleString('vi-VN')} VNĐ</span>
-                                <span className="text-gray-500">{new Date(bid.bidTime).toLocaleTimeString()}</span> {/* Format time */}
-                            </li>
-                        ))}
-                    </ul>
-                 )}
-             </div>
-         </div>
+          {/* Bidding Button */}
+          <button
+            onClick={handlePlaceBid}
+            disabled={!canBid || isBidding} // Disable based on calculated state
+            className="w-full py-3 px-4 bg-green-600 hover:bg-green-700 text-white font-bold rounded text-lg disabled:opacity-60 disabled:cursor-not-allowed transition duration-150"
+          >
+            {isBidding
+              ? "Placing Bid..."
+              : !auctionDetails?.nextBidAmount
+              ? "Bidding Unavailable"
+              : `Bid ${auctionDetails.nextBidAmount.toLocaleString(
+                  "vi-VN"
+                )} VNĐ`}
+          </button>
+          {bidError && (
+            <p className="text-center text-xs text-red-500 mt-2">{bidError}</p>
+          )}
+          <p className="text-center text-xs text-gray-500 mt-2">
+            (Next required bid:{" "}
+            {auctionDetails?.nextBidAmount?.toLocaleString("vi-VN") || "N/A"}{" "}
+            VNĐ)
+          </p>
+        </div>
+        
+
+        {auctionDetails.status === "SOLD" && (
+          <div className="flex items-center gap-3 mt-4 p-4 bg-green-50 border border-green-300 rounded-lg shadow-sm">
+            <div className="flex-shrink-0">
+              {/* Trophy Icon (emoji or replace with real icon if you want) */}
+              🏆
+            </div>
+            <div className="flex-1">
+              <p className="text-green-800 font-semibold">
+                Congratulations
+                {auctionDetails.winnerId === keycloak.subject
+                  ? ", you won!"
+                  : "!"}
+              </p>
+              <p className="text-green-700 text-sm">
+                {auctionDetails.winnerId === keycloak.subject ? (
+                  <>
+                    You won with{" "}
+                    <strong>
+                      {auctionDetails.winningBid.toLocaleString("vi-VN")}
+                    </strong>{" "}
+                    VNĐ!
+                  </>
+                ) : (
+                  <>
+                    Winner:{" "}
+                    <strong>
+                      {auctionDetails.highestBidderUsernameSnapshot}
+                    </strong>{" "}
+                    with{" "}
+                    <strong>
+                      {auctionDetails.winningBid.toLocaleString("vi-VN")}
+                    </strong>{" "}
+                    VNĐ
+                  </>
+                )}
+              </p>
+            </div>
+          </div>
+        )}
+
+        {/* Bid History */}
+        <div className="bg-white p-4 rounded shadow-sm border max-h-60 overflow-y-auto">
+          <h4 className="font-semibold mb-2 text-sm border-b pb-1">
+            Bid History
+          </h4>
+          {bidHistory.length === 0 ? (
+            <p className="text-xs text-gray-500">No bids placed yet.</p>
+          ) : (
+            <ul className="space-y-1 text-xs">
+              {/* Use bidHistory state */}
+              {bidHistory.map((bid, index) => (
+                <li
+                  key={bid.id || index}
+                  className="flex justify-between border-b border-dashed border-gray-200 py-0.5"
+                >
+                  <span>
+                    {/* Compare bidderUsername from bid history */}
+                    {bid.bidderUsername ===
+                    keycloak.tokenParsed?.preferred_username ? (
+                      <span className="font-semibold text-blue-600">You</span>
+                    ) : (
+                      bid.bidderUsername
+                    )}
+                  </span>
+                  <span className="font-medium">
+                    {bid.amount.toLocaleString("vi-VN")} VNĐ
+                  </span>
+                  <span className="text-gray-500">
+                    {new Date(bid.bidTime).toLocaleTimeString()}
+                  </span>
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+      </div>
     </div>
   );
 }
