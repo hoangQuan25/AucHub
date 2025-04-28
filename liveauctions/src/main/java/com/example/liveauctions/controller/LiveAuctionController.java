@@ -1,17 +1,20 @@
 package com.example.liveauctions.controller;
 
 import com.example.liveauctions.dto.*;
-import com.example.liveauctions.service.LiveAuctionService; // To be created
+import com.example.liveauctions.service.LiveAuctionService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
-import org.springframework.data.web.PageableDefault; // For default pagination
+import org.springframework.data.web.PageableDefault; // Use this again
+import org.springframework.data.domain.Sort; // Keep Sort import
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+// No Mono/Reactor imports needed here
 
+import java.security.Principal; // Keep Principal if needed for direct access (though header is preferred)
 import java.util.UUID;
 
 @RestController
@@ -19,60 +22,61 @@ import java.util.UUID;
 @Slf4j
 public class LiveAuctionController {
 
-    private final LiveAuctionService liveAuctionService; // Inject the service
-    private static final String USER_ID_HEADER = "X-User-ID"; // Standard header name
+    private final LiveAuctionService liveAuctionService;
+    private static final String USER_ID_HEADER = "X-User-ID";
 
-    // Endpoint to Create a New Auction
-    // Gateway enforces SELLER role
     @PostMapping("/new-auction")
     public ResponseEntity<LiveAuctionDetailsDto> createAuction(
             @RequestHeader(USER_ID_HEADER) String sellerId,
             @Valid @RequestBody CreateLiveAuctionDto createDto) {
         log.info("Received request to create auction from seller: {}", sellerId);
-        // Delegate to service, passing sellerId and DTO
+        // Direct call to service method
         LiveAuctionDetailsDto createdAuction = liveAuctionService.createAuction(sellerId, createDto);
-        // Return 201 Created status with details of the created auction
         return ResponseEntity.status(HttpStatus.CREATED).body(createdAuction);
     }
 
-    // Endpoint to Get Details of a Specific Auction
-    // Gateway enforces authenticated() - TBC if needs stricter role? Likely not.
     @GetMapping("/{auctionId}/details")
     public ResponseEntity<LiveAuctionDetailsDto> getAuctionDetails(
             @PathVariable UUID auctionId) {
         log.info("Received request for details of auction: {}", auctionId);
+        // Direct call to service method
         LiveAuctionDetailsDto details = liveAuctionService.getAuctionDetails(auctionId);
-        return ResponseEntity.ok(details); // Return 200 OK with details
+        return ResponseEntity.ok(details);
     }
 
-    // Endpoint for a User to Place a Bid on an Auction
-    // Gateway enforces authenticated()
     @PostMapping("/{auctionId}/bids")
     public ResponseEntity<Void> placeBid(
             @PathVariable UUID auctionId,
             @RequestHeader(USER_ID_HEADER) String bidderId,
             @Valid @RequestBody PlaceBidDto bidDto) {
         log.info("Received bid placement request for auction: {} from bidder: {}", auctionId, bidderId);
+        // Direct call to service method
         liveAuctionService.placeBid(auctionId, bidderId, bidDto);
-        // Return 200 OK on successful validation and initial processing.
-        // Actual state update confirmation happens via WebSocket.
-        return ResponseEntity.ok().build();
+        return ResponseEntity.ok().build(); // Return 200 OK
     }
 
-    // Endpoint to Get a List of Active (or relevant) Auctions
-    // Gateway enforces permitAll() - TBC
-    @GetMapping
+    // --- REVERTED getActiveAuctions to use Pageable injection ---
+    @GetMapping("/live-auctions")
     public ResponseEntity<Page<LiveAuctionSummaryDto>> getActiveAuctions(
-            @PageableDefault(size = 12, sort = "endTime") Pageable pageable) { // Default page size 12, sort by end time
+            // Use @PageableDefault for default size and sort
+            @PageableDefault(size = 12, sort = "endTime", direction = Sort.Direction.ASC) Pageable pageable) {
         log.info("Received request for active auctions list with pagination: {}", pageable);
+        // Direct call to service method with automatically resolved Pageable
         Page<LiveAuctionSummaryDto> auctionPage = liveAuctionService.getActiveAuctions(pageable);
         return ResponseEntity.ok(auctionPage);
     }
+    // --- END REVERT ---
 
-    // --- Other Potential Endpoints (Consider later) ---
-    // GET /my-bids (Get auctions the user has bid on)
-    // GET /my-wins (Get auctions the user has won)
-    // POST /{auctionId}/cancel (If sellers/admins can cancel)
-    // ... etc.
+    // --- TestController methods would also change back to ResponseEntity ---
+    /*
+    @RestController
+    @RequestMapping("/api/liveauctions/test")
+    public class TestController {
+        @GetMapping("/ping")
+        public ResponseEntity<String> ping() { ... return ResponseEntity.ok(...); }
 
+        @PostMapping("/echo")
+        public ResponseEntity<Map<String, Object>> echoPost(...) { ... return ResponseEntity.ok(...); }
+    }
+    */
 }

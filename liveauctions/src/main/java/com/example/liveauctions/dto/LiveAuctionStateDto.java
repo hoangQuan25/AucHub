@@ -19,8 +19,7 @@ public class LiveAuctionStateDto {
     long timeLeftMs; // Milliseconds remaining
     boolean reserveMet;
 
-    // Consider adding auction title/image snapshot here if needed frequently by WS clients,
-    // though typically static info is loaded once via REST.
-    // String productTitleSnapshot;
-    // String productImageUrlSnapshot;
+    BidDto newBid;           // present only on “bid placed” events
+    String winnerId;         // present when status = SOLD
+    BigDecimal winningBid;
 }

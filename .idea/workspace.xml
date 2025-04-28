@@ -5,74 +5,42 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="e72edef0-0b14-4f3d-8bd4-9379eb9dd286" name="Changes" comment="">
-      <change afterPath="$PROJECT_DIR$/liveauctions/src/main/java/com/example/liveauctions/client/ProductServiceClient.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/liveauctions/src/main/java/com/example/liveauctions/client/UserServiceClient.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/liveauctions/src/main/java/com/example/liveauctions/client/dto/CategoryDto.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/liveauctions/src/main/java/com/example/liveauctions/client/dto/ProductCondition.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/liveauctions/src/main/java/com/example/liveauctions/client/dto/ProductDto.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/liveauctions/src/main/java/com/example/liveauctions/client/dto/UserBasicInfoDto.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/liveauctions/src/main/java/com/example/liveauctions/commands/AuctionLifecycleCommands.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/liveauctions/src/main/java/com/example/liveauctions/config/RabbitMqConfig.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/liveauctions/src/main/java/com/example/liveauctions/config/WebSocketConfig.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/liveauctions/src/main/java/com/example/liveauctions/controller/LiveAuctionController.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/liveauctions/src/main/java/com/example/liveauctions/dto/BidDto.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/liveauctions/src/main/java/com/example/liveauctions/dto/CategoryDto.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/liveauctions/src/main/java/com/example/liveauctions/dto/CreateLiveAuctionDto.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/liveauctions/src/main/java/com/example/liveauctions/dto/LiveAuctionDetailsDto.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/liveauctions/src/main/java/com/example/liveauctions/dto/LiveAuctionStateDto.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/liveauctions/src/main/java/com/example/liveauctions/dto/LiveAuctionSummaryDto.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/liveauctions/src/main/java/com/example/liveauctions/dto/PlaceBidDto.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/liveauctions/src/main/java/com/example/liveauctions/entity/AuctionStatus.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/liveauctions/src/main/java/com/example/liveauctions/entity/Bid.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/liveauctions/src/main/java/com/example/liveauctions/entity/LiveAuction.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/liveauctions/src/main/java/com/example/liveauctions/exception/AuctionNotFoundException.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/liveauctions/src/main/java/com/example/liveauctions/exception/InvalidAuctionStateException.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/liveauctions/src/main/java/com/example/liveauctions/exception/InvalidBidException.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/liveauctions/src/main/java/com/example/liveauctions/exception/ProductNotFoundException.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/liveauctions/src/main/java/com/example/liveauctions/exception/UserNotFoundException.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/liveauctions/src/main/java/com/example/liveauctions/listener/AuctionEventListener.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/liveauctions/src/main/java/com/example/liveauctions/manager/AuctionLifecycleManager.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/liveauctions/src/main/java/com/example/liveauctions/mapper/AuctionMapper.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/liveauctions/src/main/java/com/example/liveauctions/repository/BidRepository.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/liveauctions/src/main/java/com/example/liveauctions/repository/LiveAuctionRepository.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/liveauctions/src/main/java/com/example/liveauctions/service/LiveAuctionService.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/liveauctions/src/main/java/com/example/liveauctions/service/WebSocketEventPublisher.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/liveauctions/src/main/java/com/example/liveauctions/service/impl/LiveAuctionServiceImpl.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/liveauctions/src/main/java/com/example/liveauctions/service/impl/WebSocketEventPublisherImpl.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/liveauctions/src/main/java/com/example/liveauctions/websocket/AuctionWebSocketHandler.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/liveauctions/src/main/java/com/example/liveauctions/websocket/WebSocketSessionManager.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/users/src/main/java/com/example/users/dto/UserBasicInfoDto.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/compiler.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/compiler.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/encodings.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/encodings.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/misc.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/misc.xml" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/liveauctions/src/main/java/com/example/liveauctions/config/WebSocketStompConfig.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/liveauctions/src/main/java/com/example/liveauctions/controller/TestController.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/liveauctions/src/main/java/com/example/liveauctions/event/AuctionStateUpdateEvent.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/products/src/main/java/com/example/products/exception/ProductNotFoundException.java" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/frontend/package-lock.json" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/package-lock.json" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/frontend/package.json" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/package.json" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/frontend/src/App.jsx" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/App.jsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/frontend/src/pages/LiveAuctionDetailPage.jsx" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/pages/LiveAuctionDetailPage.jsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/frontend/src/pages/LiveAuctionsPage.jsx" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/pages/LiveAuctionsPage.jsx" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/frontend/src/pages/ProductsPage.jsx" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/pages/ProductsPage.jsx" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/gatewayserver/pom.xml" beforeDir="false" afterPath="$PROJECT_DIR$/gatewayserver/pom.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/gatewayserver/src/main/java/com/example/gatewayserver/GatewayserverApplication.java" beforeDir="false" afterPath="$PROJECT_DIR$/gatewayserver/src/main/java/com/example/gatewayserver/GatewayserverApplication.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/gatewayserver/src/main/java/com/example/gatewayserver/config/CorsConfig.java" beforeDir="false" afterPath="$PROJECT_DIR$/gatewayserver/src/main/java/com/example/gatewayserver/config/CorsConfig.java" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/gatewayserver/src/main/java/com/example/gatewayserver/config/SecurityConfig.java" beforeDir="false" afterPath="$PROJECT_DIR$/gatewayserver/src/main/java/com/example/gatewayserver/config/SecurityConfig.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/gatewayserver/src/main/java/com/example/gatewayserver/filters/UserInfoHeaderFilter.java" beforeDir="false" afterPath="$PROJECT_DIR$/gatewayserver/src/main/java/com/example/gatewayserver/filters/UserInfoHeaderFilter.java" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/gatewayserver/src/main/resources/application.yml" beforeDir="false" afterPath="$PROJECT_DIR$/gatewayserver/src/main/resources/application.yml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/users/src/main/java/com/example/products/UsersApplication.java" beforeDir="false" afterPath="$PROJECT_DIR$/users/src/main/java/com/example/users/UsersApplication.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/users/src/main/java/com/example/products/config/KeycloakAdminClientProperties.java" beforeDir="false" afterPath="$PROJECT_DIR$/users/src/main/java/com/example/users/config/KeycloakAdminClientProperties.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/users/src/main/java/com/example/products/config/KeycloakAdminConfig.java" beforeDir="false" afterPath="$PROJECT_DIR$/users/src/main/java/com/example/users/config/KeycloakAdminConfig.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/users/src/main/java/com/example/products/controller/UserController.java" beforeDir="false" afterPath="$PROJECT_DIR$/users/src/main/java/com/example/users/controller/UserController.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/users/src/main/java/com/example/products/dto/AddressDto.java" beforeDir="false" afterPath="$PROJECT_DIR$/users/src/main/java/com/example/users/dto/AddressDto.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/users/src/main/java/com/example/products/dto/UpdateUserDto.java" beforeDir="false" afterPath="$PROJECT_DIR$/users/src/main/java/com/example/users/dto/UpdateUserDto.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/users/src/main/java/com/example/products/dto/UserDto.java" beforeDir="false" afterPath="$PROJECT_DIR$/users/src/main/java/com/example/users/dto/UserDto.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/users/src/main/java/com/example/products/entity/Address.java" beforeDir="false" afterPath="$PROJECT_DIR$/users/src/main/java/com/example/users/entity/Address.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/users/src/main/java/com/example/products/entity/PaymentMethod.java" beforeDir="false" afterPath="$PROJECT_DIR$/users/src/main/java/com/example/users/entity/PaymentMethod.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/users/src/main/java/com/example/products/entity/User.java" beforeDir="false" afterPath="$PROJECT_DIR$/users/src/main/java/com/example/users/entity/User.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/users/src/main/java/com/example/products/exception/AddressNotFoundException.java" beforeDir="false" afterPath="$PROJECT_DIR$/users/src/main/java/com/example/users/exception/AddressNotFoundException.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/users/src/main/java/com/example/products/exception/PaymentMethodNotFoundException.java" beforeDir="false" afterPath="$PROJECT_DIR$/users/src/main/java/com/example/users/exception/PaymentMethodNotFoundException.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/users/src/main/java/com/example/products/exception/UserNotFoundException.java" beforeDir="false" afterPath="$PROJECT_DIR$/users/src/main/java/com/example/users/exception/UserNotFoundException.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/users/src/main/java/com/example/products/mapper/UserMapper.java" beforeDir="false" afterPath="$PROJECT_DIR$/users/src/main/java/com/example/users/mapper/UserMapper.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/users/src/main/java/com/example/products/mapper/impl/UserMapperImpl.java" beforeDir="false" afterPath="$PROJECT_DIR$/users/src/main/java/com/example/users/mapper/impl/UserMapperImpl.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/users/src/main/java/com/example/products/repository/UserRepository.java" beforeDir="false" afterPath="$PROJECT_DIR$/users/src/main/java/com/example/users/repository/UserRepository.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/users/src/main/java/com/example/products/service/KeycloakAdminService.java" beforeDir="false" afterPath="$PROJECT_DIR$/users/src/main/java/com/example/users/service/KeycloakAdminService.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/users/src/main/java/com/example/products/service/UserService.java" beforeDir="false" afterPath="$PROJECT_DIR$/users/src/main/java/com/example/users/service/UserService.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/users/src/main/java/com/example/products/service/impl/UserServiceImpl.java" beforeDir="false" afterPath="$PROJECT_DIR$/users/src/main/java/com/example/users/service/impl/UserServiceImpl.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/users/src/test/java/com/example/products/CardsApplicationTests.java" beforeDir="false" afterPath="$PROJECT_DIR$/users/src/test/java/com/example/users/CardsApplicationTests.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/liveauctions/pom.xml" beforeDir="false" afterPath="$PROJECT_DIR$/liveauctions/pom.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/liveauctions/src/main/java/com/example/liveauctions/client/dto/ProductDto.java" beforeDir="false" afterPath="$PROJECT_DIR$/liveauctions/src/main/java/com/example/liveauctions/client/dto/ProductDto.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/liveauctions/src/main/java/com/example/liveauctions/config/RabbitMqConfig.java" beforeDir="false" afterPath="$PROJECT_DIR$/liveauctions/src/main/java/com/example/liveauctions/config/RabbitMqConfig.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/liveauctions/src/main/java/com/example/liveauctions/config/WebSocketConfig.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/liveauctions/src/main/java/com/example/liveauctions/controller/LiveAuctionController.java" beforeDir="false" afterPath="$PROJECT_DIR$/liveauctions/src/main/java/com/example/liveauctions/controller/LiveAuctionController.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/liveauctions/src/main/java/com/example/liveauctions/dto/CategoryDto.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/liveauctions/src/main/java/com/example/liveauctions/dto/LiveAuctionDetailsDto.java" beforeDir="false" afterPath="$PROJECT_DIR$/liveauctions/src/main/java/com/example/liveauctions/dto/LiveAuctionDetailsDto.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/liveauctions/src/main/java/com/example/liveauctions/dto/LiveAuctionStateDto.java" beforeDir="false" afterPath="$PROJECT_DIR$/liveauctions/src/main/java/com/example/liveauctions/dto/LiveAuctionStateDto.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/liveauctions/src/main/java/com/example/liveauctions/listener/AuctionEventListener.java" beforeDir="false" afterPath="$PROJECT_DIR$/liveauctions/src/main/java/com/example/liveauctions/listener/AuctionEventListener.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/liveauctions/src/main/java/com/example/liveauctions/manager/AuctionLifecycleManager.java" beforeDir="false" afterPath="$PROJECT_DIR$/liveauctions/src/main/java/com/example/liveauctions/manager/AuctionLifecycleManager.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/liveauctions/src/main/java/com/example/liveauctions/mapper/AuctionMapper.java" beforeDir="false" afterPath="$PROJECT_DIR$/liveauctions/src/main/java/com/example/liveauctions/mapper/AuctionMapper.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/liveauctions/src/main/java/com/example/liveauctions/service/LiveAuctionService.java" beforeDir="false" afterPath="$PROJECT_DIR$/liveauctions/src/main/java/com/example/liveauctions/service/LiveAuctionService.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/liveauctions/src/main/java/com/example/liveauctions/service/WebSocketEventPublisher.java" beforeDir="false" afterPath="$PROJECT_DIR$/liveauctions/src/main/java/com/example/liveauctions/service/WebSocketEventPublisher.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/liveauctions/src/main/java/com/example/liveauctions/service/impl/LiveAuctionServiceImpl.java" beforeDir="false" afterPath="$PROJECT_DIR$/liveauctions/src/main/java/com/example/liveauctions/service/impl/LiveAuctionServiceImpl.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/liveauctions/src/main/java/com/example/liveauctions/service/impl/WebSocketEventPublisherImpl.java" beforeDir="false" afterPath="$PROJECT_DIR$/liveauctions/src/main/java/com/example/liveauctions/service/impl/WebSocketEventPublisherImpl.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/liveauctions/src/main/java/com/example/liveauctions/websocket/AuctionWebSocketHandler.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/liveauctions/src/main/java/com/example/liveauctions/websocket/WebSocketSessionManager.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/liveauctions/src/main/resources/application.yml" beforeDir="false" afterPath="$PROJECT_DIR$/liveauctions/src/main/resources/application.yml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/products/src/main/java/com/example/products/controller/ProductController.java" beforeDir="false" afterPath="$PROJECT_DIR$/products/src/main/java/com/example/products/controller/ProductController.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/products/src/main/java/com/example/products/service/ProductService.java" beforeDir="false" afterPath="$PROJECT_DIR$/products/src/main/java/com/example/products/service/ProductService.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/products/src/main/java/com/example/products/service/impl/ProductServiceImpl.java" beforeDir="false" afterPath="$PROJECT_DIR$/products/src/main/java/com/example/products/service/impl/ProductServiceImpl.java" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -83,8 +51,8 @@
     <option name="RECENT_TEMPLATES">
       <list>
         <option value="Enum" />
-        <option value="Exception" />
         <option value="Interface" />
+        <option value="Exception" />
         <option value="Class" />
       </list>
     </option>
@@ -118,11 +86,11 @@
     "Spring Boot.ConfigserverApplication.executor": "Run",
     "Spring Boot.EurekaserverApplication.executor": "Run",
     "Spring Boot.GatewayserverApplication (1).executor": "Run",
-    "Spring Boot.GatewayserverApplication.executor": "Run",
-    "Spring Boot.LiveAuctionsApplication.executor": "Run",
+    "Spring Boot.GatewayserverApplication.executor": "Debug",
+    "Spring Boot.LiveAuctionsApplication.executor": "Debug",
     "Spring Boot.ProductsApplication.executor": "Run",
     "Spring Boot.UsersApplication.executor": "Run",
-    "git-widget-placeholder": "live-auction",
+    "git-widget-placeholder": "live-auction-logic",
     "node.js.detected.package.eslint": "true",
     "node.js.detected.package.tslint": "true",
     "node.js.selected.package.eslint": "(autodetect)",
@@ -135,7 +103,7 @@
   <component name="ReactorSettings">
     <option name="notificationShown" value="true" />
   </component>
-  <component name="RunManager" selected="Spring Boot.UsersApplication">
+  <component name="RunManager" selected="Spring Boot.GatewayserverApplication">
     <configuration name="ConfigserverApplication" type="SpringBootApplicationConfigurationType" factoryName="Spring Boot" nameIsGenerated="true">
       <module name="configserver" />
       <option name="SPRING_BOOT_MAIN_CLASS" value="com.example.configserver.ConfigserverApplication" />
@@ -210,7 +178,9 @@
       <option name="presentableId" value="Default" />
       <updated>1745737732381</updated>
       <workItem from="1745737734517" duration="13649000" />
-      <workItem from="1745751407296" duration="15033000" />
+      <workItem from="1745751407296" duration="25115000" />
+      <workItem from="1745824512250" duration="9892000" />
+      <workItem from="1745835004713" duration="20001000" />
     </task>
     <servers />
   </component>

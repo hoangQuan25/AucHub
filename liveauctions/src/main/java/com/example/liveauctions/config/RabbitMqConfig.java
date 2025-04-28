@@ -1,6 +1,10 @@
 package com.example.liveauctions.config; // Or your config package
 
 import org.springframework.amqp.core.*;
+import org.springframework.amqp.rabbit.connection.ConnectionFactory;
+import org.springframework.amqp.rabbit.core.RabbitTemplate;
+import org.springframework.amqp.support.converter.Jackson2JsonMessageConverter;
+import org.springframework.amqp.support.converter.MessageConverter;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
@@ -65,7 +69,31 @@ public class RabbitMqConfig {
                 .noargs();
     }
 
-    // Note: The WebSocket listener queues bound to AUCTION_EVENTS_EXCHANGE
-    // are typically declared dynamically/anonymously via @RabbitListener annotations
+    // --- NEW Beans for JSON Conversion ---
+
+    /**
+     * Defines the Jackson JSON message converter to be used.
+     * @return MessageConverter bean using Jackson JSON.
+     */
+    @Bean
+    public MessageConverter jsonMessageConverter() {
+        // Uses Jackson library (usually included with spring-boot-starter-web)
+        // to convert objects to/from JSON.
+        return new Jackson2JsonMessageConverter();
+    }
+
+    /**
+     * Creates a customized RabbitTemplate that uses the JSON message converter.
+     * Spring will inject this template where RabbitTemplate is autowired.
+     * @param connectionFactory The RabbitMQ connection factory (auto-injected).
+     * @return Customized RabbitTemplate bean.
+     */
+    @Bean
+    public RabbitTemplate rabbitTemplate(final ConnectionFactory connectionFactory) {
+        final RabbitTemplate rabbitTemplate = new RabbitTemplate(connectionFactory);
+        // Set the message converter to use JSON
+        rabbitTemplate.setMessageConverter(jsonMessageConverter());
+        return rabbitTemplate;
+    }
     // as shown previously, so no specific beans are usually needed here for those.
 }

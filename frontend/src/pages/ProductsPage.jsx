@@ -26,7 +26,7 @@ function ProductsPage() {
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [productToDelete, setProductToDelete] = useState(null); // Store {id, title} for message
   const [isDeleting, setIsDeleting] = useState(false);
-  const [deleteError, setDeleteError] = useState('');
+  const [deleteError, setDeleteError] = useState("");
 
   // Details Modal State
   const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
@@ -42,7 +42,7 @@ function ProductsPage() {
   // --- NEW STATE for Start Auction Modal ---
   const [isStartAuctionModalOpen, setIsStartAuctionModalOpen] = useState(false);
   const [productToAuction, setProductToAuction] = useState(null);
-  const [startAuctionError, setStartAuctionError] = useState('');
+  const [startAuctionError, setStartAuctionError] = useState("");
   const [startAuctionLoading, setStartAuctionLoading] = useState(false);
   // ---
 
@@ -158,44 +158,37 @@ function ProductsPage() {
     ); /* Confirmation -> API Call -> fetchMyProducts */
   };
 
-  // --- MODIFIED: Handler to open Start Auction Modal ---
-    const handleStartAuction = (e, product) => {
-        e.stopPropagation(); // Prevent card click if called from card
-        console.log("Opening Start Auction Modal for Product:", product);
-        setProductToAuction(product);        // Set the product context
-        setStartAuctionError('');            // Clear previous errors
-        setIsStartAuctionModalOpen(true);    // Open the modal
-    };
-    // --- END MODIFICATION ---
-
-    // --- NEW: Handler for submitting the Start Auction Modal form ---
-    const handleStartAuctionSubmit = async (auctionData) => {
-      console.log("Submitting auction configuration:", auctionData);
-      setStartAuctionLoading(true);
-      setStartAuctionError('');
-      try {
-          // TODO: Replace with actual API call to backend
-          // Example: const response = await apiClient.post('/api/liveauctions', auctionData);
-          await new Promise(resolve => setTimeout(resolve, 1000)); // Simulate API call
-          console.log("Mock auction started successfully for product:", auctionData.productId);
-
-          setIsStartAuctionModalOpen(false); // Close modal on success
-          setProductToAuction(null);        // Clear selected product
-          // Maybe show a success notification?
-          // Optionally refetch products if status changes: fetchMyProducts(filterCategoryIds);
-
-      } catch (err) {
-          console.error("Failed to start auction:", err);
-          // Set error state to display within the modal or page
-          setStartAuctionError(err.response?.data?.message || "Failed to start auction.");
-          // Keep modal open on error? Or re-throw to let modal handle? Let's keep open.
-          // setIsStartAuctionModalOpen(false); // Decide if modal should close on error
-          // setProductToAuction(null);
-      } finally {
-          setStartAuctionLoading(false);
-      }
+  const handleStartAuction = (e, product) => {
+    e.stopPropagation(); // Prevent card click if called from card
+    console.log("Opening Start Auction Modal for Product:", product);
+    setProductToAuction(product); // Set the product context
+    // setStartAuctionError(''); // Error state is managed within the modal now
+    setIsStartAuctionModalOpen(true); // Open the modal
   };
-  // --- END NEW HANDLER ---
+
+  const handleStartAuctionSubmit = (createdAuctionDto) => {
+    // This function DOES NOT make the API call. StartAuctionModal does.
+    // This function just handles the SUCCESSFUL result passed back from the modal.
+
+    console.log(
+      "Auction successfully created (data received from modal):",
+      createdAuctionDto
+    );
+
+    // 1. Close the modal (optional, modal might close itself via onClose)
+    setIsStartAuctionModalOpen(false);
+
+    // 2. Clear the selected product state in this page
+    setProductToAuction(null);
+
+    // 3. Provide User Feedback (e.g., using a toast notification library)
+    // Use data from the DTO passed back from the modal
+    const productTitle = productToAuction?.title || "product"; // Get title from original product object stored in state
+    alert(`Auction started successfully for ${productTitle}!`); // Simple alert for now
+
+    // 4. Optional: Update UI State (e.g., refetch products)
+    // fetchMyProducts(filterCategoryIds); // Uncomment if needed
+  };
 
   // --- DELETE HANDLERS ---
   // Opens the delete confirmation modal
@@ -203,7 +196,7 @@ function ProductsPage() {
     e.stopPropagation(); // Prevent card click if called from card button
     console.log("Prompting delete for:", product);
     setProductToDelete(product); // Store the product object (or just id/title)
-    setDeleteError(''); // Clear previous delete errors
+    setDeleteError(""); // Clear previous delete errors
     setIsDeleteModalOpen(true);
   };
 
@@ -212,7 +205,7 @@ function ProductsPage() {
     if (!productToDelete) return;
 
     setIsDeleting(true);
-    setDeleteError('');
+    setDeleteError("");
     console.log(`Attempting to delete product ID: ${productToDelete.id}`);
 
     try {
@@ -221,15 +214,17 @@ function ProductsPage() {
       console.log(`Product ID: ${productToDelete.id} deleted successfully.`);
 
       setIsDeleteModalOpen(false); // Close modal
-      setProductToDelete(null);    // Clear selected product
+      setProductToDelete(null); // Clear selected product
       fetchMyProducts(filterCategoryIds); // Refresh the product list
 
       // Optional: Show a success notification to the user
       // showToast("Product deleted successfully!");
-
     } catch (err) {
       console.error("Failed to delete product:", err);
-      setDeleteError(err.response?.data?.message || "Could not delete product. Please try again.");
+      setDeleteError(
+        err.response?.data?.message ||
+          "Could not delete product. Please try again."
+      );
       // Keep modal open to show error? Or close it? Let's close it for now.
       // setIsDeleteModalOpen(false);
       // setProductToDelete(null);
@@ -238,8 +233,6 @@ function ProductsPage() {
     }
   };
   // --- END DELETE HANDLERS ---
-
-  
 
   // Display loading until Keycloak is initialized
   if (!initialized) {
@@ -278,7 +271,13 @@ function ProductsPage() {
       <div className="flex-grow p-6 bg-gray-50 overflow-y-auto">
         <div className="flex justify-between items-center mb-6">
           <h2 className="text-2xl font-bold">Your Products</h2>
-          <button onClick={() => { setEditingProduct(null); setIsAddEditModalOpen(true); }} className="bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-4 rounded shadow flex items-center">
+          <button
+            onClick={() => {
+              setEditingProduct(null);
+              setIsAddEditModalOpen(true);
+            }}
+            className="bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-4 rounded shadow flex items-center"
+          >
             + Add New Product
           </button>
         </div>
@@ -358,7 +357,7 @@ function ProductsPage() {
                       </div>
                     </div>
                     <button
-                      onClick={(e) => handleStartAuction(e, product.id)}
+                      onClick={(e) => handleStartAuction(e, product)}
                       className="w-full text-sm bg-purple-600 hover:bg-purple-700 text-white font-semibold py-2 px-4 rounded flex items-center justify-center"
                     >
                       <FaRocket className="mr-2" /> Start Auction
@@ -390,31 +389,38 @@ function ProductsPage() {
           onStartAuction={handleStartAuction}
         />
       )}
-       <ConfirmationModal
-          isOpen={isDeleteModalOpen}
-          onClose={() => { setIsDeleteModalOpen(false); setProductToDelete(null); }}
-          onConfirm={handleConfirmDeleteProduct}
-          title="Confirm Deletion"
-          message={`Are you sure you want to delete the product "${productToDelete?.title || 'this item'}"? This action cannot be undone.`}
-          confirmText="Delete"
-          confirmButtonClass="bg-red-600 hover:bg-red-700" // Optional: Style delete button
-          isLoading={isDeleting} // Pass loading state
-          error={deleteError} // Pass error state
+      <ConfirmationModal
+        isOpen={isDeleteModalOpen}
+        onClose={() => {
+          setIsDeleteModalOpen(false);
+          setProductToDelete(null);
+        }}
+        onConfirm={handleConfirmDeleteProduct}
+        title="Confirm Deletion"
+        message={`Are you sure you want to delete the product "${
+          productToDelete?.title || "this item"
+        }"? This action cannot be undone.`}
+        confirmText="Delete"
+        confirmButtonClass="bg-red-600 hover:bg-red-700" // Optional: Style delete button
+        isLoading={isDeleting} // Pass loading state
+        error={deleteError} // Pass error state
       />
-
       {/* --- NEW: Render Start Auction Modal --- */}
       {productToAuction && ( // Render only when a product is selected
-              <StartAuctionModal
-                isOpen={isStartAuctionModalOpen}
-                onClose={() => { setIsStartAuctionModalOpen(false); setProductToAuction(null); }}
-                product={productToAuction}
-                onStartAuctionSubmit={handleStartAuctionSubmit} // Pass the handler
-                // Pass loading/error states if you want modal to display them:
-                // isLoading={startAuctionLoading}
-                // error={startAuctionError}
-              />
-            )}
-            {/* --- END --- */}
+        <StartAuctionModal
+          isOpen={isStartAuctionModalOpen}
+          onClose={() => {
+            setIsStartAuctionModalOpen(false);
+            setProductToAuction(null);
+          }}
+          product={productToAuction}
+          onStartAuctionSubmit={handleStartAuctionSubmit} // Pass the handler
+          // Pass loading/error states if you want modal to display them:
+          // isLoading={startAuctionLoading}
+          // error={startAuctionError}
+        />
+      )}
+      {/* --- END --- */}
     </div>
   );
 }

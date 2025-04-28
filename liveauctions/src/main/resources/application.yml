@@ -79,7 +79,16 @@ management:
 # === Logging ===
 logging:
   level:
-    com.example.liveauctionservice: DEBUG # Adjust base package
+    # Set a sensible default root level (e.g., INFO)
+    root: INFO
+    # --- Key packages for WebFlux and WebSocket debugging ---
+    # Core WebFlux request handling, mapping, dispatching
+    org.springframework.web.reactive: DEBUG
+    org.springframework.security: DEBUG
+    # Underlying Netty server handling requests/connections
+    reactor.netty.http.server: DEBUG
+    # Your application's specific code (handlers, config, services)
+    com.example.liveauctions: DEBUG
   pattern:
     level: "%5p [${spring.application.name},%X{trace_id},%X{span_id}] %m%n"
 

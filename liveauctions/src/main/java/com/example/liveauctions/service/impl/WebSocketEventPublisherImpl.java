@@ -3,9 +3,12 @@ package com.example.liveauctions.service.impl; // Or a dedicated publisher packa
 import com.example.liveauctions.config.RabbitMqConfig;
 import com.example.liveauctions.dto.LiveAuctionStateDto; // Use this for structure consistency
 import com.example.liveauctions.entity.AuctionStatus;
-import com.example.liveauctions.events.AuctionStateUpdateEvent; // The event DTO
+import com.example.liveauctions.entity.Bid;
+import com.example.liveauctions.event.AuctionStateUpdateEvent;
 import com.example.liveauctions.entity.LiveAuction;
+import com.example.liveauctions.mapper.AuctionMapper;
 import com.example.liveauctions.service.WebSocketEventPublisher;
+import jakarta.annotation.Nullable;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.amqp.rabbit.core.RabbitTemplate;
@@ -21,11 +24,12 @@ import java.time.LocalDateTime;
 public class WebSocketEventPublisherImpl implements WebSocketEventPublisher {
 
     private final RabbitTemplate rabbitTemplate;
+    private final AuctionMapper auctionMapper;
     // Assuming getIncrement logic is accessible, maybe via a helper bean
     // private final AuctionHelper auctionHelper;
 
     @Override
-    public void publishAuctionStateUpdate(LiveAuction auction) {
+    public void publishAuctionStateUpdate(LiveAuction auction, @Nullable Bid newBidEntity) {
         if (auction == null) {
             log.warn("Attempted to publish state update for null auction.");
             return;
@@ -68,7 +72,10 @@ public class WebSocketEventPublisherImpl implements WebSocketEventPublisher {
                     .nextBidAmount(nextBidAmount) // Calculated
                     .timeLeftMs(timeLeftMs) // Calculated
                     .reserveMet(auction.isReserveMet())
-                    // Add winnerId, winningBid if status indicates ended?
+                    .newBid(newBidEntity == null ? null : auctionMapper.mapToBidDto(newBidEntity))
+                    .winnerId(auction.getStatus() == AuctionStatus.SOLD ? auction.getWinnerId() : null)
+                    .winningBid(auction.getStatus() == AuctionStatus.SOLD ? auction.getWinningBid() : null)
+                    // -------------------------
                     .build();
 
             String routingKey = RabbitMqConfig.UPDATE_ROUTING_KEY_PREFIX + auction.getId();
