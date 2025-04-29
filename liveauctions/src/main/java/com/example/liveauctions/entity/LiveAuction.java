@@ -8,6 +8,8 @@ import org.hibernate.annotations.UuidGenerator; // For UUID generation
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.util.HashSet;
+import java.util.Set;
 import java.util.UUID;
 
 @Entity
@@ -35,6 +37,12 @@ public class LiveAuction {
 
     @Column(nullable = false, updatable = false)
     private String sellerUsernameSnapshot;
+
+    @ElementCollection
+    @CollectionTable(name = "auction_categories",
+            joinColumns = @JoinColumn(name = "auction_id"))
+    @Column(name = "category_id")
+    private Set<Long> productCategoryIdsSnapshot = new HashSet<>();
     // --- End Snapshots ---
 
     @Column(nullable = false, precision = 19, scale = 2) // Example precision/scale for money
@@ -82,7 +90,6 @@ public class LiveAuction {
     @UpdateTimestamp
     @Column(nullable = false)
     private LocalDateTime updatedAt;
-}
 
-// Define AuctionStatus Enum separately
-// public enum AuctionStatus { SCHEDULED, ACTIVE, SOLD, RESERVE_NOT_MET, CANCELLED }
+    private boolean fastFinishOnReserve;
+}

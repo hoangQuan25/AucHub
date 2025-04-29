@@ -1,61 +1,46 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+// src/components/CountdownTimer.jsx – improved: reacts to end‑time changes and keeps clients in‑sync
+import React, { useState, useEffect } from "react";
 
-// --- Simple Countdown Timer Component ---
-const CountdownTimer = ({ endTimeMillis, onEnd }) => {
-  const calculateTimeLeft = useCallback(() => {
-    const now = Date.now();
-    const difference = endTimeMillis - now;
-    let timeLeft = {};
+/**
+ * CountdownTimer
+ * @param {number} endTimeMillis – absolute epoch‑ms when the countdown should reach 0
+ * @param {function} onEnd – optional callback fired exactly once when 0 is reached
+ */
+function CountdownTimer({ endTimeMillis, onEnd }) {
+  const calcMsLeft = () => Math.max(0, endTimeMillis - Date.now());
 
-    if (difference > 0) {
-      timeLeft = {
-        // total: difference, // Optional: total milliseconds
-        minutes: Math.floor((difference / 1000 / 60) % 60),
-        seconds: Math.floor((difference / 1000) % 60),
-      };
-    } else {
-      timeLeft = { minutes: 0, seconds: 0 };
-    }
-    return timeLeft;
+  const [msLeft, setMsLeft] = useState(calcMsLeft);
+  const [hasFiredEnd, setHasFiredEnd] = useState(false);
+
+  /* Reset whenever the prop changes */
+  useEffect(() => {
+    setMsLeft(calcMsLeft());
+    setHasFiredEnd(false);
   }, [endTimeMillis]);
 
-  const [timeLeft, setTimeLeft] = useState(calculateTimeLeft());
-  const [isEnded, setIsEnded] = useState(false);
-
+  /* Tick every 200 ms for smoother sync across browsers */
   useEffect(() => {
-    // Exit early if already ended
-    if (isEnded) return;
-    // Reset ended state if end time changes
-    setIsEnded(Date.now() >= endTimeMillis);
-
-    const timer = setTimeout(() => {
-      const newTimeLeft = calculateTimeLeft();
-      setTimeLeft(newTimeLeft);
-      if (newTimeLeft.minutes === 0 && newTimeLeft.seconds === 0) {
-        console.log("Countdown Timer Ended.");
-        setIsEnded(true);
-        if (onEnd) onEnd(); // Call callback if provided
+    if (msLeft === 0) {
+      if (!hasFiredEnd) {
+        onEnd?.();
+        setHasFiredEnd(true);
       }
-    }, 1000); // Update every second
+      return; // no interval needed once finished
+    }
+    const id = setInterval(() => setMsLeft(calcMsLeft()), 200);
+    return () => clearInterval(id);
+  }, [msLeft, endTimeMillis, onEnd, hasFiredEnd]);
 
-    // Cleanup timeout on unmount or when endTimeMillis changes
-    return () => clearTimeout(timer);
-  }, [timeLeft, endTimeMillis, calculateTimeLeft, isEnded, onEnd]); // Rerun effect when timeLeft or endTimeMillis changes
-
-  const displayMinutes = String(timeLeft.minutes || 0).padStart(2, "0");
-  const displaySeconds = String(timeLeft.seconds || 0).padStart(2, "0");
-  const critical = timeLeft.minutes === 0 && (timeLeft.seconds || 0) <= 20; // Example: critical under 20s
+  const totalSec = Math.floor(msLeft / 1000);
+  const minutes = String(Math.floor(totalSec / 60)).padStart(2, "0");
+  const seconds = String(totalSec % 60).padStart(2, "0");
+  const critical = totalSec <= 20;
 
   return (
-    <span
-      className={`font-bold text-xl ${
-        critical ? "text-red-600 animate-pulse" : "text-gray-800"
-      }`}
-    >
-      {displayMinutes}:{displaySeconds}
+    <span className={`font-bold text-xl ${critical ? "text-red-600 animate-pulse" : "text-gray-800"}`}>
+      {minutes}:{seconds}
     </span>
   );
-};
-// --- End Countdown Timer Component ---
+}
 
 export default CountdownTimer;

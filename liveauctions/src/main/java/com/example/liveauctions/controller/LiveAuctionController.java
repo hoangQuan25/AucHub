@@ -1,6 +1,7 @@
 package com.example.liveauctions.controller;
 
 import com.example.liveauctions.dto.*;
+import com.example.liveauctions.entity.AuctionStatus;
 import com.example.liveauctions.service.LiveAuctionService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -9,12 +10,16 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.web.PageableDefault; // Use this again
 import org.springframework.data.domain.Sort; // Keep Sort import
+import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 // No Mono/Reactor imports needed here
 
 import java.security.Principal; // Keep Principal if needed for direct access (though header is preferred)
+import java.time.LocalDateTime;
+import java.util.List;
+import java.util.Set;
 import java.util.UUID;
 
 @RestController
@@ -67,16 +72,38 @@ public class LiveAuctionController {
     }
     // --- END REVERT ---
 
-    // --- TestController methods would also change back to ResponseEntity ---
-    /*
-    @RestController
-    @RequestMapping("/api/liveauctions/test")
-    public class TestController {
-        @GetMapping("/ping")
-        public ResponseEntity<String> ping() { ... return ResponseEntity.ok(...); }
+    // LiveAuctionController.java   (add just after getActiveAuctions)
+    @GetMapping("/my-auctions")
+    public ResponseEntity<Page<LiveAuctionSummaryDto>> getSellerAuctions(
+            @RequestHeader(USER_ID_HEADER) String sellerId,          // comes from Gateway filter
+            @RequestParam(value = "status", required = false) AuctionStatus status,
+            @RequestParam(value = "categoryIds", required = false) Set<Long> categoryIds,
+            @RequestParam(value = "from", required = false)
+            @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime from,
+            @PageableDefault(size = 12, sort = "endTime", direction = Sort.Direction.DESC) Pageable pageable) {
 
-        @PostMapping("/echo")
-        public ResponseEntity<Map<String, Object>> echoPost(...) { ... return ResponseEntity.ok(...); }
+        log.info("Seller {} fetching their auctions (status={}, cats={}, from={}, page={})",
+                sellerId, status, categoryIds, from, pageable);
+        Page<LiveAuctionSummaryDto> page =
+                liveAuctionService.getSellerAuctions(sellerId, status, categoryIds, from, pageable);
+        return ResponseEntity.ok(page);
     }
-    */
+
+    @PostMapping("/{auctionId}/hammer")
+    public ResponseEntity<Void> hammerDown(
+            @RequestHeader(USER_ID_HEADER) String sellerId,
+            @PathVariable UUID auctionId) {
+        liveAuctionService.hammerDownNow(auctionId, sellerId);
+        return ResponseEntity.ok().build();
+    }
+
+    @PostMapping("/{auctionId}/cancel")
+    public ResponseEntity<Void> cancel(
+            @RequestHeader(USER_ID_HEADER) String sellerId,
+            @PathVariable UUID auctionId) {
+        liveAuctionService.cancelAuction(auctionId, sellerId);
+        return ResponseEntity.ok().build();
+    }
+
+
 }

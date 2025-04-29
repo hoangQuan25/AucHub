@@ -2,9 +2,12 @@ package com.example.liveauctions.service.impl;
 
 import com.example.liveauctions.client.ProductServiceClient; // Feign Client for Products
 import com.example.liveauctions.client.UserServiceClient; // Feign Client for Users
+import com.example.liveauctions.client.dto.CategoryDto;
 import com.example.liveauctions.client.dto.ProductDto; // DTO from Products service
 import com.example.liveauctions.client.dto.UserBasicInfoDto; // DTO from Users service
+import com.example.liveauctions.commands.AuctionLifecycleCommands;
 import com.example.liveauctions.commands.AuctionLifecycleCommands.StartAuctionCommand; // Our command record
+import com.example.liveauctions.config.AuctionTimingProperties;
 import com.example.liveauctions.config.RabbitMqConfig; // Constants for RabbitMQ
 import com.example.liveauctions.dto.*;
 import com.example.liveauctions.entity.AuctionStatus;
@@ -17,6 +20,7 @@ import com.example.liveauctions.repository.BidRepository;
 import com.example.liveauctions.repository.LiveAuctionRepository;
 import com.example.liveauctions.service.LiveAuctionService;
 import com.example.liveauctions.service.WebSocketEventPublisher; // For WebSocket events
+import jakarta.annotation.Nullable;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.redisson.api.RLock;
@@ -32,11 +36,9 @@ import org.springframework.transaction.annotation.Transactional; // Import Trans
 import java.math.BigDecimal;
 import java.time.Duration;
 import java.time.LocalDateTime;
-import java.util.Collections;
-import java.util.List;
-import java.util.Map;
-import java.util.UUID;
+import java.util.*;
 import java.util.concurrent.TimeUnit;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -53,6 +55,7 @@ public class LiveAuctionServiceImpl implements LiveAuctionService {
     private final RedissonClient redissonClient; // Add RedissonClient dependency
     private final WebSocketEventPublisher webSocketEventPublisher; // For publishing events
     private final AuctionLifecycleManager lifecycleManager;
+    private final AuctionTimingProperties timing;
 
     // Assume getIncrement is available, maybe in a helper class or static method
     // private final AuctionHelper auctionHelper;
@@ -86,6 +89,15 @@ public class LiveAuctionServiceImpl implements LiveAuctionService {
         // 4. Calculate Initial Increment
         BigDecimal initialIncrement = getIncrement(createDto.getStartPrice());
 
+        // LiveAuctionServiceImpl#createAuction
+        Set<Long> categoryIdsSnapshot = product.getCategories() == null
+                ? Set.of()
+                : product.getCategories().stream()
+                .map(CategoryDto::getId)
+                .collect(Collectors.toSet());
+
+
+
         // 5. Build LiveAuction Entity
         LiveAuction auction = LiveAuction.builder()
                 .productId(product.getId())
@@ -103,6 +115,7 @@ public class LiveAuctionServiceImpl implements LiveAuctionService {
                 .endTime(endTime)
                 .status(initialStatus)
                 .reserveMet(false)
+                .productCategoryIdsSnapshot(categoryIdsSnapshot)
                 .build();
 
         // 6. Save the Auction Entity
@@ -325,132 +338,106 @@ public class LiveAuctionServiceImpl implements LiveAuctionService {
     }
 
     @Override
-    @Transactional // Ensure DB operations are atomic
+    @Transactional
     public void placeBid(UUID auctionId, String bidderId, PlaceBidDto bidDto) {
-        // Define lock key specific to this auction
+
         String lockKey = "auction_lock:" + auctionId;
         RLock lock = redissonClient.getLock(lockKey);
         boolean lockAcquired = false;
 
         try {
-            // Try to acquire the lock with a wait time and lease time
-            // Wait max 5 seconds, hold lock max 10 seconds (adjust as needed)
             lockAcquired = lock.tryLock(5, 10, TimeUnit.SECONDS);
-
             if (!lockAcquired) {
-                log.warn("Failed to acquire lock for auction {} within timeout", auctionId);
-                throw new IllegalStateException("Could not process bid at this time, please try again."); // Or a custom exception
+                throw new IllegalStateException("Could not process bid, please retry.");
             }
 
-            log.info("Lock acquired for auction {}. Processing bid from bidder {}", auctionId, bidderId);
-
-            // --- Operations inside the lock ---
-
-            // 1. Fetch Auction
             LiveAuction auction = liveAuctionRepository.findById(auctionId)
                     .orElseThrow(() -> new AuctionNotFoundException("Auction not found: " + auctionId));
 
-            // 2. Validate Auction State & Time
+            /* ---------- 1. Validations -------------------------------------------------- */
             if (auction.getStatus() != AuctionStatus.ACTIVE) {
-                throw new InvalidAuctionStateException("Auction is not active. Status: " + auction.getStatus());
+                throw new InvalidAuctionStateException("Auction is not active.");
             }
             if (LocalDateTime.now().isAfter(auction.getEndTime())) {
-                // Optional: Could trigger end logic here if missed by scheduler, but safer to let scheduler handle it
                 throw new InvalidAuctionStateException("Auction has already ended.");
             }
-
-            // 3. Validate Bidder
             if (auction.getSellerId().equals(bidderId)) {
-                throw new InvalidBidException("Seller cannot bid on their own auction.");
+                throw new InvalidBidException("Seller cannot bid on own auction.");
             }
             if (bidderId.equals(auction.getHighestBidderId())) {
                 throw new InvalidBidException("You are already the highest bidder.");
             }
 
-            // 4. Validate Bid Amount
             BigDecimal currentBid = auction.getCurrentBid() == null ? BigDecimal.ZERO : auction.getCurrentBid();
-            // If no bids yet, the first bid must meet or exceed startPrice
-            BigDecimal requiredAmount;
-            if (auction.getHighestBidderId() == null) {
-                requiredAmount = auction.getStartPrice();
-                log.debug("First bid for auction {}. Required amount >= {}", auctionId, requiredAmount);
-            } else {
-                requiredAmount = currentBid.add(auction.getCurrentBidIncrement());
-                log.debug("Subsequent bid for auction {}. Current: {}, Increment: {}. Required amount >= {}",
-                        auctionId, currentBid, auction.getCurrentBidIncrement(), requiredAmount);
-            }
-
+            BigDecimal requiredAmount = (auction.getHighestBidderId() == null)
+                    ? auction.getStartPrice()
+                    : currentBid.add(auction.getCurrentBidIncrement());
 
             if (bidDto.getAmount().compareTo(requiredAmount) < 0) {
-                throw new InvalidBidException("Bid amount is too low. Minimum required: " + requiredAmount);
+                throw new InvalidBidException("Bid too low. Minimum required: " + requiredAmount);
             }
 
-            // --- All Validations Passed ---
-
-            // 5. Fetch Bidder Username (Optional but good for snapshot)
-            String bidderUsername = fetchBidderUsername(bidderId); // Similar Feign helper as fetchSellerUsername
-
-            // 6. Create and Save Bid Entity
-            Bid newBid = Bid.builder()
+            /* ---------- 2. Persist new bid --------------------------------------------- */
+            String bidderUsername = fetchBidderUsername(bidderId);
+            Bid newBid = bidRepository.save(Bid.builder()
                     .liveAuctionId(auctionId)
                     .bidderId(bidderId)
-                    .bidderUsernameSnapshot(bidderUsername) // Store snapshot
+                    .bidderUsernameSnapshot(bidderUsername)
                     .amount(bidDto.getAmount())
-                    // bidTime is set automatically by @CreationTimestamp
-                    .build();
-            bidRepository.save(newBid);
-            log.info("New bid saved for auction {}. Bidder: {}, Amount: {}", auctionId, bidderId, bidDto.getAmount());
+                    .build());
 
-            // 7. Update LiveAuction Entity
+            /* ---------- 3. Update auction financials ----------------------------------- */
             auction.setCurrentBid(bidDto.getAmount());
             auction.setHighestBidderId(bidderId);
             auction.setHighestBidderUsernameSnapshot(bidderUsername);
+            auction.setCurrentBidIncrement(getIncrement(auction.getCurrentBid()));
 
-            // Check reserve price
-            if (!auction.isReserveMet() && auction.getReservePrice() != null &&
-                    auction.getCurrentBid().compareTo(auction.getReservePrice()) >= 0) {
-                auction.setReserveMet(true);
-                log.info("Reserve price met for auction {}", auctionId);
-                // Future: Could potentially extend auction end time slightly here if desired ("sniping prevention")
+            /* ---------- 4. Reserve-met & timing rules ---------------------------------- */
+            boolean reserveJustMet = !auction.isReserveMet()
+                    && auction.getReservePrice() != null
+                    && auction.getCurrentBid().compareTo(auction.getReservePrice()) >= 0;
+
+            AuctionTimingProperties.SoftClose sc = timing.getSoftClose();
+            AuctionTimingProperties.FastFinish ff = timing.getFastFinish();
+
+            long millisLeft = Duration.between(LocalDateTime.now(), auction.getEndTime()).toMillis();
+
+            // 4-a  Soft-close anti-sniping
+            if (sc.isEnabled() && millisLeft <= sc.getThresholdSeconds() * 1_000L) {
+                auction.setEndTime(
+                        auction.getEndTime().plusSeconds(sc.getExtensionSeconds()));
+                lifecycleManager.scheduleAuctionEnd(auction);
+                log.info("Anti-sniping: extended auction {} by {} s", auctionId, sc.getExtensionSeconds());
             }
 
-            // Recalculate next increment based on the *new* current bid
-            auction.setCurrentBidIncrement(getIncrement(auction.getCurrentBid()));
-            log.debug("Recalculated next bid increment for auction {} to {}", auctionId, auction.getCurrentBidIncrement());
+            // 4-b  Reserve met ➜ optional fast-finish
+            if (reserveJustMet) {
+                auction.setReserveMet(true);
 
-            // 8. Save Updated Auction
+                if (auction.isFastFinishOnReserve() && ff.isEnabled()) {
+                    long fastMs = ff.getFastFinishMinutes() * 60_000L;
+                    if (millisLeft > fastMs) {   // shorten only if it would be earlier
+                        auction.setEndTime(LocalDateTime.now().plusMinutes(ff.getFastFinishMinutes()));
+                        lifecycleManager.scheduleAuctionEnd(auction);
+                        log.info("Fast-finish: reserve met, new end for auction {} is {}", auctionId, auction.getEndTime());
+                    }
+                }
+            }
+
+            /* ---------- 5. Persist auction & publish event ----------------------------- */
             LiveAuction updatedAuction = liveAuctionRepository.save(auction);
-
-            // 9. Publish State Update Event via Publisher (after DB commit ideally)
-            // Spring's @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT) on a separate listener bean
-            // is the robust way. For simplicity here, we call the publisher directly, assuming
-            // the transaction management and message broker handle commit order reasonably.
             webSocketEventPublisher.publishAuctionStateUpdate(updatedAuction, newBid);
-            log.info("Published auction state update event for auction {}", auctionId);
-
-            // --- End of operations inside the lock ---
 
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
-            log.error("Lock acquisition interrupted for auction {}", auctionId, e);
             throw new IllegalStateException("Bid processing interrupted.");
-        } catch (AuctionNotFoundException | InvalidAuctionStateException | InvalidBidException e) {
-            // Log specific validation errors
-            log.warn("Bid validation failed for auction {}: {}", auctionId, e.getMessage());
-            throw e; // Re-throw specific exceptions for controller advice to handle
-        } catch (Exception e) {
-            // Catch broader exceptions during the process
-            log.error("An unexpected error occurred while placing bid for auction {}", auctionId, e);
-            throw new RuntimeException("Failed to place bid due to an internal error."); // Generic error
-        }
-        finally {
-            // VERY IMPORTANT: Release the lock in a finally block
+        } finally {
             if (lockAcquired && lock.isHeldByCurrentThread()) {
                 lock.unlock();
-                log.info("Lock released for auction {}", auctionId);
             }
         }
     }
+
 
     // --- Need blocking fetchBidderUsername helper ---
     private String fetchBidderUsername(String bidderId) {
@@ -475,4 +462,71 @@ public class LiveAuctionServiceImpl implements LiveAuctionService {
         Page<LiveAuction> auctionPage = liveAuctionRepository.findByStatus(AuctionStatus.ACTIVE, pageable);
         return auctionPage.map(auctionMapper::mapToLiveAuctionSummaryDto);
     }
+
+    // LiveAuctionServiceImpl.java   (add below getActiveAuctions)
+    @Override
+    @Transactional(readOnly = true)
+    public Page<LiveAuctionSummaryDto> getSellerAuctions(String sellerId,
+                                                         AuctionStatus status,
+                                                         Set<Long> categoryIds,
+                                                         LocalDateTime from,
+                                                         Pageable pageable) {
+
+        Page<LiveAuction> page = liveAuctionRepository.findSellerAuctionsBySnapshot(
+                sellerId,
+                status,
+                from,
+                categoryIds == null ? Set.of() : categoryIds,
+                categoryIds == null || categoryIds.isEmpty(),
+                pageable);
+
+        return page.map(auctionMapper::mapToLiveAuctionSummaryDto);
+    }
+
+    @Override
+    @Transactional
+    public void hammerDownNow(UUID auctionId, String sellerId) {
+
+        LiveAuction auction = liveAuctionRepository.findById(auctionId)
+                .orElseThrow(() -> new AuctionNotFoundException("Auction not found "+auctionId));
+
+        if (!auction.getSellerId().equals(sellerId))
+            throw new InvalidAuctionStateException("Only the seller may hammer down");
+
+        if (auction.getStatus() != AuctionStatus.ACTIVE)
+            throw new InvalidAuctionStateException("Auction is not active");
+
+        if (auction.getHighestBidderId() == null)
+            throw new InvalidAuctionStateException("Cannot hammer – no bids yet");
+
+        // publish to MQ — actual close happens in the manager
+        rabbitTemplate.convertAndSend(
+                RabbitMqConfig.AUCTION_COMMAND_EXCHANGE,
+                RabbitMqConfig.HAMMER_ROUTING_KEY,
+                new AuctionLifecycleCommands.HammerDownCommand(auctionId, sellerId));
+    }
+
+    @Override
+    @Transactional
+    public void cancelAuction(UUID auctionId, String sellerId) {
+
+        LiveAuction a = liveAuctionRepository.findById(auctionId)
+                .orElseThrow(() -> new AuctionNotFoundException("Auction not found"));
+
+        if (!a.getSellerId().equals(sellerId))
+            throw new InvalidAuctionStateException("Only the seller may cancel");
+
+        if (!(a.getStatus() == AuctionStatus.SCHEDULED
+                     || a.getStatus() == AuctionStatus.ACTIVE)) {
+            throw new InvalidAuctionStateException("Only scheduled or active auctions can be cancelled");
+        }
+
+        rabbitTemplate.convertAndSend(
+                RabbitMqConfig.AUCTION_COMMAND_EXCHANGE,
+                RabbitMqConfig.CANCEL_ROUTING_KEY,
+                new AuctionLifecycleCommands.CancelAuctionCommand(auctionId, sellerId));
+    }
+
+
+
 }

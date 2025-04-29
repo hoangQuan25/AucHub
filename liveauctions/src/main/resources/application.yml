@@ -92,6 +92,18 @@ logging:
   pattern:
     level: "%5p [${spring.application.name},%X{trace_id},%X{span_id}] %m%n"
 
+
+auction:
+  timing:
+    soft-close:
+      enabled: true
+      threshold-seconds: 60
+      extension-seconds: 20
+    fast-finish:
+      enabled: false
+      fast-finish-minutes: 2
+
+
 # === Custom App Info ===
 info:
   app:

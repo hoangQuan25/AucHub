@@ -70,6 +70,7 @@ public class WebSocketEventPublisherImpl implements WebSocketEventPublisher {
                     .highestBidderId(auction.getHighestBidderId())
                     .highestBidderUsername(auction.getHighestBidderUsernameSnapshot()) // Use snapshot
                     .nextBidAmount(nextBidAmount) // Calculated
+                    .endTime(auction.getEndTime())
                     .timeLeftMs(timeLeftMs) // Calculated
                     .reserveMet(auction.isReserveMet())
                     .newBid(newBidEntity == null ? null : auctionMapper.mapToBidDto(newBidEntity))
@@ -77,6 +78,8 @@ public class WebSocketEventPublisherImpl implements WebSocketEventPublisher {
                     .winningBid(auction.getStatus() == AuctionStatus.SOLD ? auction.getWinningBid() : null)
                     // -------------------------
                     .build();
+
+            log.info("EVENT: {}", event);
 
             String routingKey = RabbitMqConfig.UPDATE_ROUTING_KEY_PREFIX + auction.getId();
 

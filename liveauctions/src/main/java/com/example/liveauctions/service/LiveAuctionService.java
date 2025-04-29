@@ -1,9 +1,12 @@
 package com.example.liveauctions.service;
 
 import com.example.liveauctions.dto.*;
+import com.example.liveauctions.entity.AuctionStatus;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 
+import java.time.LocalDateTime;
+import java.util.Set;
 import java.util.UUID;
 
 public interface LiveAuctionService {
@@ -16,6 +19,14 @@ public interface LiveAuctionService {
 
     Page<LiveAuctionSummaryDto> getActiveAuctions(Pageable pageable);
 
-    // We'll need internal methods for starting/ending auctions, calculating increments, etc.
-    // And potentially methods called by scheduled tasks or message listeners.
+    Page<LiveAuctionSummaryDto> getSellerAuctions(String sellerId,
+                                                  AuctionStatus status,
+                                                  Set<Long> categoryIds,
+                                                  LocalDateTime from,
+                                                  Pageable pageable);
+
+    void hammerDownNow(UUID auctionId, String sellerId);
+
+    void cancelAuction(UUID auctionId, String sellerId);
+
 }
