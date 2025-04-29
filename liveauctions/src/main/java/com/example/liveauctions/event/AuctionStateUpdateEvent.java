@@ -8,6 +8,7 @@ import lombok.AllArgsConstructor;
 import lombok.NoArgsConstructor;
 
 import java.math.BigDecimal;
+import java.time.LocalDateTime;
 import java.util.UUID;
 
 /**
@@ -31,6 +32,7 @@ public class AuctionStateUpdateEvent {
     private BigDecimal nextBidAmount; // Calculated
     private long timeLeftMs; // Calculated
     private boolean reserveMet;
+    private LocalDateTime endTime;
 
     private BidDto newBid;                     // <— sent only when placeBid() succeeds
     private String winnerId;                   // <— filled when status = SOLD

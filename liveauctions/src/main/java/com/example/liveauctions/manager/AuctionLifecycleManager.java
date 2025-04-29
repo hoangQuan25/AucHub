@@ -16,6 +16,7 @@ import org.springframework.transaction.annotation.Transactional; // Import Trans
 
 import java.time.Duration;
 import java.time.LocalDateTime;
+import java.util.Optional;
 import java.util.UUID;
 
 @Component
@@ -65,8 +66,23 @@ public class AuctionLifecycleManager {
         log.info("Processing EndAuctionCommand for auctionId: {}", auctionId);
 
         // Consider Pessimistic Lock
-        LiveAuction auction = auctionRepository.findById(auctionId)
-                .orElseThrow(() -> new AuctionNotFoundException("Auction not found for end command: " + auctionId));
+        Optional<LiveAuction> opt = auctionRepository.findById(command.auctionId());
+
+        if (opt.isEmpty()) {
+            log.warn("END cmd for {}, but auction row is gone – ignoring", command.auctionId());
+            return;                             // <— ACK the msg, no retry
+        }
+
+        LiveAuction auction = opt.get();
+
+        /* IGNORE stale commands -------------------------------------------- */
+        if (!command.fireAt().isEqual(auction.getEndTime())) {
+            log.info("Stale END cmd for {} – fireAt {}, currentEnd {} – ignored",
+                    command.auctionId(), command.fireAt(), auction.getEndTime());
+            return;
+        }
+
+        /* ------------------------------------------------------------------- */
 
         // Idempotency check: Only proceed if currently ACTIVE
         if (auction.getStatus() == AuctionStatus.ACTIVE) {
@@ -88,6 +104,9 @@ public class AuctionLifecycleManager {
                     auction.setStatus(AuctionStatus.RESERVE_NOT_MET);
                     log.info("Auction {} ended. Status: RESERVE_NOT_MET.", auctionId);
                 }
+            } else {
+                auction.setStatus(
+                        AuctionStatus.RESERVE_NOT_MET); // same outcome: unsold
             }
 
             LiveAuction endedAuction = auctionRepository.save(auction);
@@ -105,13 +124,39 @@ public class AuctionLifecycleManager {
         }
     }
 
+    @RabbitListener(queues = RabbitMqConfig.AUCTION_CANCEL_QUEUE)
+    @Transactional
+    public void handleCancelCommand(CancelAuctionCommand cmd) {
+
+        LiveAuction a = auctionRepository.findById(cmd.auctionId())
+                .orElseThrow(() -> new AuctionNotFoundException("Auction not found"));
+
+        if (!a.getSellerId().equals(cmd.sellerId())) return; // belt-and-suspenders
+
+        if (!(a.getStatus() == AuctionStatus.SCHEDULED
+                || (a.getStatus() == AuctionStatus.ACTIVE))) {
+            log.warn("Cancel ignored – auction {} wrong state {}", a.getId(), a.getStatus());
+            return;
+        }
+
+        a.setStatus(AuctionStatus.CANCELLED);
+        a.setActualEndTime(LocalDateTime.now());
+
+        LiveAuction saved = auctionRepository.save(a);
+        webSocketEventPublisher.publishAuctionStateUpdate(saved, null);
+
+        log.info("Auction {} cancelled by seller {}", a.getId(), cmd.sellerId());
+    }
+
+
     // Helper to schedule the end command (called from handleStartAuctionCommand)
     public void scheduleAuctionEnd(LiveAuction auction) {
         LocalDateTime now = LocalDateTime.now();
-        long delayMillis = Duration.between(now, auction.getEndTime()).toMillis();
+        long delayMillis = Duration.between(LocalDateTime.now(),
+                auction.getEndTime()).toMillis();
 
         if (delayMillis > 0) {
-            EndAuctionCommand command = new EndAuctionCommand(auction.getId());
+            EndAuctionCommand command = new EndAuctionCommand(auction.getId(), auction.getEndTime());
             rabbitTemplate.convertAndSend(
                     RabbitMqConfig.AUCTION_SCHEDULE_EXCHANGE,
                     RabbitMqConfig.END_ROUTING_KEY,
@@ -137,7 +182,7 @@ public class AuctionLifecycleManager {
             // Run in a separate transaction maybe? Or handle potential recursion carefully.
             // For simplicity now, directly call the handler (beware of transactional context)
             try {
-                handleEndAuctionCommand(new EndAuctionCommand(auction.getId()));
+                handleEndAuctionCommand(new EndAuctionCommand(auction.getId(), auction.getEndTime()));
             } catch (Exception e) {
                 log.error("Error during immediate end processing for auction {}", auction.getId(), e);
                 // Consider retry logic or marking auction as ERRORED

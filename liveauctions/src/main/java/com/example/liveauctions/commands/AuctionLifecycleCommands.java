@@ -1,5 +1,6 @@
 package com.example.liveauctions.commands; // Or your commands/dtos package
 
+import java.time.LocalDateTime;
 import java.util.UUID;
 
 public interface AuctionLifecycleCommands {
@@ -11,8 +12,12 @@ public interface AuctionLifecycleCommands {
 
     // Command sent to trigger ending an active auction
     record EndAuctionCommand(
-            UUID auctionId
+            UUID auctionId, LocalDateTime fireAt
     ) {}
+
+    record HammerDownCommand(UUID auctionId, String sellerId) { }
+
+    record CancelAuctionCommand(UUID auctionId, String sellerId) {}
 
 }
 

@@ -42,8 +42,8 @@ function ProductsPage() {
   // --- NEW STATE for Start Auction Modal ---
   const [isStartAuctionModalOpen, setIsStartAuctionModalOpen] = useState(false);
   const [productToAuction, setProductToAuction] = useState(null);
-  const [startAuctionError, setStartAuctionError] = useState("");
-  const [startAuctionLoading, setStartAuctionLoading] = useState(false);
+  const [isAuctionConfirmModalOpen, setIsAuctionConfirmModalOpen] = useState(false);
+  const [productForAuctionConfirmation, setProductForAuctionConfirmation] = useState(null);
   // ---
 
   // --- Data Fetching Callbacks ---
@@ -158,12 +158,35 @@ function ProductsPage() {
     ); /* Confirmation -> API Call -> fetchMyProducts */
   };
 
-  const handleStartAuction = (e, product) => {
-    e.stopPropagation(); // Prevent card click if called from card
-    console.log("Opening Start Auction Modal for Product:", product);
-    setProductToAuction(product); // Set the product context
-    // setStartAuctionError(''); // Error state is managed within the modal now
-    setIsStartAuctionModalOpen(true); // Open the modal
+  const promptStartAuction = (e, product) => {
+    e.stopPropagation(); // Prevent card click
+    console.log("Prompting confirmation to start auction for:", product);
+    setProductForAuctionConfirmation(product); // Store product for confirmation
+    setIsAuctionConfirmModalOpen(true);       // Open the confirmation modal
+  };
+
+  // --- NEW: Handler for when the user CONFIRMS starting the auction ---
+  const handleConfirmStartAuction = () => {
+    if (!productForAuctionConfirmation) return; // Should not happen, but safety check
+
+    console.log("User confirmed. Opening Start Auction Modal for Product:", productForAuctionConfirmation);
+
+    // Set the product state needed for the actual StartAuctionModal
+    setProductToAuction(productForAuctionConfirmation);
+    // setStartAuctionError(''); // Reset error if managed here (likely managed within StartAuctionModal now)
+
+    // Close the confirmation modal
+    setIsAuctionConfirmModalOpen(false);
+    setProductForAuctionConfirmation(null); // Clear confirmation state
+
+    // Open the *actual* modal to configure the auction details
+    setIsStartAuctionModalOpen(true);
+  };
+
+  // --- NEW: Handler to simply close the auction confirmation modal ---
+  const handleCloseAuctionConfirmModal = () => {
+    setIsAuctionConfirmModalOpen(false);
+    setProductForAuctionConfirmation(null); // Clear confirmation state
   };
 
   const handleStartAuctionSubmit = (createdAuctionDto) => {
@@ -180,14 +203,6 @@ function ProductsPage() {
 
     // 2. Clear the selected product state in this page
     setProductToAuction(null);
-
-    // 3. Provide User Feedback (e.g., using a toast notification library)
-    // Use data from the DTO passed back from the modal
-    const productTitle = productToAuction?.title || "product"; // Get title from original product object stored in state
-    alert(`Auction started successfully for ${productTitle}!`); // Simple alert for now
-
-    // 4. Optional: Update UI State (e.g., refetch products)
-    // fetchMyProducts(filterCategoryIds); // Uncomment if needed
   };
 
   // --- DELETE HANDLERS ---
@@ -357,7 +372,7 @@ function ProductsPage() {
                       </div>
                     </div>
                     <button
-                      onClick={(e) => handleStartAuction(e, product)}
+                      onClick={(e) => promptStartAuction(e, product)}
                       className="w-full text-sm bg-purple-600 hover:bg-purple-700 text-white font-semibold py-2 px-4 rounded flex items-center justify-center"
                     >
                       <FaRocket className="mr-2" /> Start Auction
@@ -404,6 +419,21 @@ function ProductsPage() {
         confirmButtonClass="bg-red-600 hover:bg-red-700" // Optional: Style delete button
         isLoading={isDeleting} // Pass loading state
         error={deleteError} // Pass error state
+      />
+      {/* --- NEW: Confirmation Modal for Starting Auction --- */}
+      <ConfirmationModal
+        isOpen={isAuctionConfirmModalOpen}
+        onClose={handleCloseAuctionConfirmModal} // Use the new close handler
+        onConfirm={handleConfirmStartAuction}     // Use the new confirm handler
+        title="Confirm Start Auction"
+        message={`Are you sure you want to proceed with starting an auction for "${
+          productForAuctionConfirmation?.title || "this item"
+        }"?\n\nYou will configure the auction details in the next step.`}
+        confirmText="Proceed"
+        cancelText="Cancel"
+        confirmButtonClass="bg-purple-600 hover:bg-purple-700" // Style like the original button
+        // isLoading={false} // Confirmation step itself isn't loading anything async
+        // error={null}      // No specific error state for this simple confirmation
       />
       {/* --- NEW: Render Start Auction Modal --- */}
       {productToAuction && ( // Render only when a product is selected

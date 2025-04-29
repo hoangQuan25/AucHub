@@ -1,71 +1,81 @@
-// src/components/ConfirmationModal.jsx (Enhanced)
+// src/components/ConfirmationModal.jsx (Enhanced & Beautified)
 import React from 'react';
 
 function ConfirmationModal({
   isOpen,
-  onClose,          // Function to call when closing (Cancel button or overlay click)
-  onConfirm,        // Function to call when confirm button is clicked
-  title,            // String for the modal title
-  message,          // String for the main message/question
-  isLoading = false,// OPTIONAL: Boolean to show loading state (disables buttons)
-  error = null,     // OPTIONAL: String containing an error message to display
-  confirmText = "Yes / Confirm", // OPTIONAL: Text for the confirm button
-  cancelText = "No / Cancel",   // OPTIONAL: Text for the cancel button
-  confirmButtonClass = "bg-green-500 hover:bg-green-600" // OPTIONAL: Tailwind classes for confirm button styling
+  onClose,
+  onConfirm,
+  title,
+  message,
+  isLoading = false,
+  error = null,
+  confirmText = "Yes / Confirm",
+  cancelText = "No / Cancel",
+  confirmButtonClass = "bg-green-500 hover:bg-green-600"
 }) {
   if (!isOpen) return null;
 
-  // Prevent closing via overlay click when an action is loading
   const handleOverlayClick = (e) => {
-      if (e.target === e.currentTarget && !isLoading) {
-          onClose();
-      }
-  }
-  // Prevent clicks inside the modal from closing it
+    if (e.target === e.currentTarget && !isLoading) {
+      onClose();
+    }
+  };
+
   const handleContentClick = (e) => {
-      e.stopPropagation();
-  }
+    e.stopPropagation();
+  };
 
   return (
-    // Modal Overlay
     <div
-      className="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center z-50 p-4 transition-opacity duration-150"
+      className="fixed inset-0 flex items-center justify-center z-50 bg-black/30 backdrop-blur-sm p-4"
       onClick={handleOverlayClick}
     >
-      {/* Modal Content Box */}
       <div
-        className="bg-white p-6 rounded-lg shadow-xl max-w-sm w-full transform transition-all duration-300 scale-100" // Added basic transition classes
+        className="relative bg-white rounded-2xl shadow-2xl p-8 max-w-md w-full transition-transform transform-gpu scale-100 animate-fadeIn"
         onClick={handleContentClick}
       >
+        {/* Close Button Top Right */}
+        <button
+          onClick={onClose}
+          disabled={isLoading}
+          className="absolute top-3 right-3 text-gray-400 hover:text-gray-600 transition disabled:opacity-50"
+        >
+          ✕
+        </button>
+
         {/* Title */}
-        <h3 className="text-xl font-bold mb-4">{title}</h3>
+        <h3 className="text-2xl font-bold text-gray-800 mb-4">{title}</h3>
 
         {/* Message */}
-        <p className="mb-6 text-sm text-gray-700 whitespace-pre-wrap">{message}</p>
+        <p className="text-gray-600 text-base whitespace-pre-wrap mb-6">
+          {message}
+        </p>
 
-        {/* Error Display Area */}
+        {/* Error Box */}
         {error && (
-          <p className="mb-4 text-sm text-red-600 bg-red-50 p-3 rounded border border-red-200">
-            <span className="font-semibold">Error:</span> {error}
-          </p>
+          <div className="bg-red-100 border border-red-300 text-red-700 p-4 rounded mb-6 text-sm">
+            <strong className="block font-semibold mb-1">Error:</strong> {error}
+          </div>
         )}
 
         {/* Action Buttons */}
-        <div className="flex justify-end space-x-3">
+        <div className="flex justify-end gap-3">
           <button
             onClick={onClose}
-            disabled={isLoading} // Disable if loading
-            className="px-4 py-2 bg-gray-200 hover:bg-gray-300 rounded text-gray-800 font-medium text-sm disabled:opacity-50"
+            disabled={isLoading}
+            className="px-4 py-2 rounded-lg bg-gray-100 hover:bg-gray-200 text-gray-800 font-semibold text-sm transition disabled:opacity-50"
           >
             {cancelText}
           </button>
           <button
             onClick={onConfirm}
-            disabled={isLoading} // Disable if loading
-            // Apply default or passed-in button classes + disabled styles
-            className={`px-4 py-2 rounded text-white font-medium text-sm disabled:opacity-50 ${isLoading ? 'bg-gray-400 cursor-wait' : confirmButtonClass}`}
+            disabled={isLoading}
+            className={`px-4 py-2 rounded-lg text-white font-semibold text-sm transition disabled:opacity-50 ${
+              isLoading
+                ? 'bg-gray-400 cursor-wait'
+                : confirmButtonClass
+            }`}
           >
-            {/* Show different text when loading */}
             {isLoading ? 'Processing...' : confirmText}
           </button>
         </div>

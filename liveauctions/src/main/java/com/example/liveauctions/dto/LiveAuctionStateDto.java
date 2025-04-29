@@ -4,6 +4,7 @@ import com.example.liveauctions.entity.AuctionStatus; // Import the enum
 import lombok.Builder;
 import lombok.Value; // Immutable DTO, good for state snapshots
 import java.math.BigDecimal;
+import java.time.LocalDateTime;
 import java.util.UUID;
 
 @Value // Creates final fields, getters, constructor, equals/hashCode, toString
@@ -17,6 +18,7 @@ public class LiveAuctionStateDto {
     String highestBidderUsername; // Can be null
     BigDecimal nextBidAmount; // Calculated: currentBid + currentBidIncrement
     long timeLeftMs; // Milliseconds remaining
+    LocalDateTime endTime;
     boolean reserveMet;
 
     BidDto newBid;           // present only on “bid placed” events

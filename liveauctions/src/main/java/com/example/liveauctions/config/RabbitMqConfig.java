@@ -15,20 +15,26 @@ import java.util.Map;
 public class RabbitMqConfig {
 
     public static final String AUCTION_SCHEDULE_EXCHANGE = "auction_schedule_exchange";
+    public static final String AUCTION_EVENTS_EXCHANGE = "auction_events_exchange";
+    public static final String AUCTION_COMMAND_EXCHANGE = "auction_command_exchange";
+
     public static final String AUCTION_START_QUEUE = "auction_start_queue";
     public static final String AUCTION_END_QUEUE = "auction_end_queue";
+    public static final String AUCTION_HAMMER_QUEUE     = "auction_hammer_queue";
+    public static final String AUCTION_CANCEL_QUEUE  = "auction_cancel_queue";
+
     public static final String START_ROUTING_KEY = "auction.command.start";
     public static final String END_ROUTING_KEY = "auction.command.end";
+    public static final String HAMMER_ROUTING_KEY = "auction.command.hammer";
+    public static final String CANCEL_ROUTING_KEY = "auction.command.cancel";
 
-    // The main exchange for real-time auction state updates (used later by WebSocket broadcaster)
-    public static final String AUCTION_EVENTS_EXCHANGE = "auction_events_exchange";
+
     public static final String UPDATE_ROUTING_KEY_PREFIX = "auction.update."; // e.g., auction.update.uuid
 
     @Bean
     TopicExchange auctionEventsExchange() {
         return new TopicExchange(AUCTION_EVENTS_EXCHANGE);
     }
-
 
     // --- Configuration for Delayed Scheduling ---
 
@@ -42,6 +48,11 @@ public class RabbitMqConfig {
     }
 
     @Bean
+    DirectExchange auctionCommandExchange() {
+        return new DirectExchange(AUCTION_COMMAND_EXCHANGE);
+    }
+
+    @Bean
     Queue auctionStartQueue() {
         // Durable queue to receive start commands after delay
         return QueueBuilder.durable(AUCTION_START_QUEUE).build();
@@ -51,6 +62,16 @@ public class RabbitMqConfig {
     Queue auctionEndQueue() {
         // Durable queue to receive end commands after delay
         return QueueBuilder.durable(AUCTION_END_QUEUE).build();
+    }
+
+    @Bean
+    Queue auctionHammerQueue() {
+        return QueueBuilder.durable(AUCTION_HAMMER_QUEUE).build();
+    }
+
+    @Bean
+    Queue auctionCancelQueue() {
+        return QueueBuilder.durable(AUCTION_CANCEL_QUEUE).build();
     }
 
     @Bean
@@ -69,7 +90,20 @@ public class RabbitMqConfig {
                 .noargs();
     }
 
-    // --- NEW Beans for JSON Conversion ---
+    @Bean
+    Binding hammerBinding(Queue auctionHammerQueue, DirectExchange auctionCommandExchange) {
+        return BindingBuilder.bind(auctionHammerQueue)
+                .to(auctionCommandExchange)
+                .with(HAMMER_ROUTING_KEY);
+    }
+
+    @Bean
+    Binding cancelBinding(Queue auctionCancelQueue,
+                                DirectExchange auctionCommandExchange) {
+        return BindingBuilder.bind(auctionCancelQueue)
+                .to(auctionCommandExchange)
+                .with(CANCEL_ROUTING_KEY);
+    }
 
     /**
      * Defines the Jackson JSON message converter to be used.

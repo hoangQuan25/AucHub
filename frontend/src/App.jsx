@@ -10,6 +10,7 @@ import apiClient, { setupAuthInterceptor } from './api/apiClient';
 import LiveAuctionsPage from './pages/LiveAuctionsPage';
 import LiveAuctionDetailPage from './pages/LiveAuctionDetailPage'; // New page for auction details
 import TestPage from './pages/TestPage';
+import MyAuctionsPage from './pages/MyAuctionsPage';
 
 // PrivateRoute now just checks auth, Layout handles UI structure
 const PrivateRoute = ({ children }) => {
@@ -55,6 +56,7 @@ function App() {
           <Route path="/test" element={<TestPage />} /> {/* Test page for API calls */}
           {/* Seller-specific Route */}
           <Route path="/my-products" element={<SellerRoute><ProductsPage /></SellerRoute>} />
+          <Route path="/my-auctions" element={<SellerRoute><MyAuctionsPage /></SellerRoute>} />
           {/* Add other protected routes here */}
         </Route>
 
