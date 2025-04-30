@@ -53,5 +53,5 @@ public interface LiveAuctionRepository extends JpaRepository<LiveAuction, UUID> 
                                                    @Param("catIdsEmpty") boolean catIdsEmpty,
                                                    Pageable pageable);
 
-
+    boolean existsByIdAndSellerId(UUID id, String sellerId);
 }

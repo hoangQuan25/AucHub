@@ -7,6 +7,7 @@ import CountdownTimer from "../components/CountdownTimer"; // Assuming extracted
 import ConfirmationModal from "../components/ConfirmationModal";
 import CollapsibleSection from "../components/CollapsibleSection";
 import AuctionRules from "../components/AuctionRules";
+import AuctionChatPanel from "../components/AuctionChatPanel";
 import { FaChevronLeft, FaChevronRight } from "react-icons/fa"; // Icons for arrows
 import SockJS from "sockjs-client/dist/sockjs"; // Use specific path for wider compatibility
 import { Client } from "@stomp/stompjs";
@@ -436,27 +437,33 @@ function LiveAuctionDetailPage() {
   const images = auctionDetails.productImageUrls || []; // Ensure images is an array
   const isHighest = auctionDetails.highestBidderId === keycloak.subject;
 
+  const chatDisabled = ["SOLD", "CANCELLED", "RESERVE_NOT_MET"].includes(auctionDetails.status);
+  const finalChatNotice =
+    auctionDetails.status === "SOLD"
+      ? "Auction has ended."
+      : auctionDetails.status === "CANCELLED"
+      ? "Auction has been cancelled."
+      : auctionDetails.status === "RESERVE_NOT_MET"
+      ? "Auction ended without meeting reserve price."
+      : null;
+
   // --- ** THIS IS THE UPDATED RENDER LOGIC ** ---
   return (
-    <div className="flex flex-col md:flex-row gap-6 p-4 max-w-7xl mx-auto">
-      {/* Left Side: Product Info */}
-      <div className="w-full md:w-1/2 lg:w-2/5">
-        {/* Use title snapshot from auctionDetails */}
-        <h2 className="text-2xl font-bold mb-3">
+    <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 p-4 max-w-7xl mx-auto">
+      {/* LEFT */}
+      <div className="lg:col-span-5 space-y-4">
+        <h2 className="text-2xl font-bold">
           {auctionDetails.productTitleSnapshot || "Product Title Missing"}
         </h2>
 
-        {/* Image Carousel using auctionDetails.allProductImageUrls */}
-        <div className="relative h-80 rounded mb-4 bg-gray-100 border">
+        {/* Image */}
+        <div className="relative h-80 rounded bg-gray-100 border overflow-hidden">
           {images.length > 0 ? (
             <>
               <img
-                key={currentImageIndex}
                 src={images[currentImageIndex]}
-                alt={`${
-                  auctionDetails.productTitleSnapshot || "Auction Item"
-                } - Image ${currentImageIndex + 1}`}
-                className="w-full h-full object-contain rounded"
+                alt={`Image ${currentImageIndex + 1}`}
+                className="w-full h-full object-contain"
                 onError={(e) => {
                   e.target.onerror = null;
                   e.target.src = "/placeholder.png";
@@ -466,15 +473,13 @@ function LiveAuctionDetailPage() {
                 <>
                   <button
                     onClick={handlePrevImage}
-                    className="absolute top-1/2 left-2 transform -translate-y-1/2 bg-black bg-opacity-40 text-white p-2 rounded-full hover:bg-opacity-60 focus:outline-none transition-opacity"
-                    aria-label="Previous Image"
+                    className="absolute top-1/2 left-2 transform -translate-y-1/2 bg-black bg-opacity-40 text-white p-2 rounded-full hover:bg-opacity-60"
                   >
                     <FaChevronLeft size="1em" />
                   </button>
                   <button
                     onClick={handleNextImage}
-                    className="absolute top-1/2 right-2 transform -translate-y-1/2 bg-black bg-opacity-40 text-white p-2 rounded-full hover:bg-opacity-60 focus:outline-none transition-opacity"
-                    aria-label="Next Image"
+                    className="absolute top-1/2 right-2 transform -translate-y-1/2 bg-black bg-opacity-40 text-white p-2 rounded-full hover:bg-opacity-60"
                   >
                     <FaChevronRight size="1em" />
                   </button>
@@ -491,88 +496,40 @@ function LiveAuctionDetailPage() {
           )}
         </div>
 
-        {/* Collapsible sections */}
-        <div className="bg-white rounded-xl shadow-md border border-gray-200 divide-y divide-gray-100 overflow-hidden">
+        {/* Description */}
+        <div className="bg-white rounded-xl shadow border divide-y">
           <CollapsibleSection title="Overview" defaultOpen>
-            <div className="space-y-2 text-sm text-gray-700 leading-relaxed">
+            <div className="text-sm text-gray-700 space-y-2">
               <p className="whitespace-pre-wrap">
                 {auctionDetails.productDescription || "No description."}
               </p>
-
-              <p>
-                <strong className="font-semibold text-gray-900">
-                  Condition:
-                </strong>{" "}
-                {auctionDetails.productCondition
-                  ? auctionDetails.productCondition.replace("_", " ")
-                  : "N/A"}
-              </p>
-              <p>
-                <strong className="font-semibold text-gray-900">
-                  Categories:
-                </strong>{" "}
-                {auctionDetails.productCategories?.length
-                  ? auctionDetails.productCategories
-                      .map((c) => c.name)
-                      .join(", ")
-                  : "N/A"}
-              </p>
-              <p className="text-xs text-gray-500 mt-2">
-                Seller: {auctionDetails.sellerUsernameSnapshot || "N/A"}
-              </p>
+              <p><strong>Condition:</strong> {auctionDetails.productCondition?.replace("_", " ") || "N/A"}</p>
+              <p><strong>Categories:</strong> {auctionDetails.productCategories?.map(c => c.name).join(", ") || "N/A"}</p>
+              <p className="text-xs text-gray-500">Seller: {auctionDetails.sellerUsernameSnapshot}</p>
             </div>
           </CollapsibleSection>
-
           <AuctionRules />
         </div>
       </div>
 
-      {/* Right Side: Bidding Info & Actions */}
-      <div className="w-full md:w-1/2 lg:w-3/5">
-        {/* WebSocket Status Indicator */}
-        <div className="text-xs text-right mb-1 text-gray-500">
-          WebSocket: {wsStatus}
-        </div>
+      {/* RIGHT */}
+      <div className="lg:col-span-7 space-y-4 flex flex-col">
+        <div className="text-xs text-right text-gray-500">WebSocket: {wsStatus}</div>
 
-        <div className="bg-white p-4 rounded shadow-sm border mb-4">
-          {/* Status Bar */}
-          <div className="flex justify-between items-center border-b pb-2 mb-3">
-            <span
-              className={`text-sm font-medium ${
-                auctionDetails.reserveMet ? "text-green-600" : "text-orange-600"
-              }`}
-            >
-              {auctionDetails.reserveMet
-                ? "✔ Reserve Met"
-                : auctionDetails.reservePrice
-                ? "Reserve Not Met"
-                : "No Reserve"}
+        <div className="bg-white p-4 rounded shadow border space-y-4">
+          <div className="flex justify-between items-start border-b pb-2">
+            <span className={`text-sm font-medium ${auctionDetails.reserveMet ? "text-green-600" : "text-orange-600"}`}>
+              {auctionDetails.reserveMet ? "✔ Reserve Met" : auctionDetails.reservePrice ? "Reserve Not Met" : "No Reserve"}
             </span>
             <div className="text-right">
               <div className="text-xs text-gray-500">
-                {auctionDetails.status !== "ACTIVE"
-                  ? "Auction Ended"
-                  : "Time Remaining"}
+                {auctionDetails.status !== "ACTIVE" ? "Auction Ended" : "Time Remaining"}
               </div>
               {auctionDetails.status === "ACTIVE" ? (
-                <CountdownTimer
-                  endTimeMillis={new Date(auctionDetails.endTime).getTime()}
-                  onEnd={() =>
-                    console.log(
-                      "Timer visually ended - waiting for server state"
-                    )
-                  }
-                />
+                <CountdownTimer endTimeMillis={new Date(auctionDetails.endTime).getTime()} onEnd={() => console.log("Timer Ended")}/>
               ) : (
                 <span className="font-bold text-xl text-gray-500">
-                  {/* Display final status if ended */}
-                  {auctionDetails.status === "SOLD"
-                    ? "SOLD"
-                    : auctionDetails.status === "RESERVE_NOT_MET"
-                    ? "NOT SOLD"
-                    : auctionDetails.status === "CANCELLED"
-                    ? "CANCELLED"
-                    : "--:--"}
+                  {auctionDetails.status === "SOLD" ? "SOLD" : auctionDetails.status === "RESERVE_NOT_MET" ? "NOT SOLD" : auctionDetails.status === "CANCELLED" ? "CANCELLED" : "--:--"}
                 </span>
               )}
               {auctionDetails.reserveMet && (
@@ -583,169 +540,92 @@ function LiveAuctionDetailPage() {
             </div>
           </div>
 
-          {/* Bidding Area */}
           <div className="text-center my-4">
             <p className="text-sm text-gray-600 mb-1">Current Bid</p>
             <p className="text-4xl font-bold text-indigo-700">
-              {/* Display winning bid if sold, otherwise current/start */}
-              {(auctionDetails.status === "SOLD"
-                ? auctionDetails.winningBid
-                : auctionDetails.currentBid ?? auctionDetails.startPrice ?? 0
-              ).toLocaleString("vi-VN")}{" "}
-              VNĐ
+              {(auctionDetails.status === "SOLD" ? auctionDetails.winningBid : auctionDetails.currentBid ?? auctionDetails.startPrice ?? 0).toLocaleString("vi-VN")} VNĐ
             </p>
-            <p className="text-center text-xs text-gray-500 mb-4">
-              Leading:{" "}
-              {auctionDetails.highestBidderUsernameSnapshot ? (
-                isHighest ? (
-                  <span className="text-green-600 font-semibold">You</span>
-                ) : (
-                  auctionDetails.highestBidderUsernameSnapshot
-                )
-              ) : (
-                "No bids yet"
-              )}
+            <p className="text-xs text-gray-500">
+              Leading: {auctionDetails.highestBidderUsernameSnapshot ? (isHighest ? <span className="text-green-600 font-semibold">You</span> : auctionDetails.highestBidderUsernameSnapshot) : "No bids yet"}
             </p>
           </div>
 
-          {/* Bidding Button */}
           {auctionDetails.sellerId !== keycloak.subject && (
             <button
               onClick={handlePlaceBid}
-              disabled={!canBid || isBidding} // Disable based on calculated state
-              className="w-full py-3 px-4 bg-green-600 hover:bg-green-700 text-white font-bold rounded text-lg disabled:opacity-60 disabled:cursor-not-allowed transition duration-150"
+              disabled={!canBid || isBidding}
+              className="w-full py-3 px-4 bg-green-600 hover:bg-green-700 text-white font-bold rounded text-lg disabled:opacity-60"
             >
-              {isBidding
-                ? "Placing Bid..."
-                : !auctionDetails?.nextBidAmount
-                ? "Bidding Unavailable"
-                : `Bid ${auctionDetails.nextBidAmount.toLocaleString(
-                    "vi-VN"
-                  )} VNĐ`}
+              {isBidding ? "Placing Bid..." : `Bid ${auctionDetails.nextBidAmount?.toLocaleString("vi-VN") || "N/A"} VNĐ`}
             </button>
           )}
-          {auctionDetails.sellerId === keycloak.subject &&
-            (auctionDetails.status === "SCHEDULED" ||
-              auctionDetails.status === "ACTIVE") && ( // Only show for seller when ACTIVE
-              <div className="flex justify-center items-center space-x-4 mt-4 pt-4 border-t">
-                {/* Cancel Button */}
-                <button
-                  onClick={promptCancelAuction}
-                  disabled={isCancelling || isHammering} // Disable if any action is pending
-                  className="flex-1 px-4 py-2 bg-red-600 hover:bg-red-700 text-white font-semibold rounded text-sm shadow disabled:opacity-60 disabled:cursor-not-allowed transition duration-150"
-                >
-                  {isCancelling ? "Cancelling..." : "Cancel Auction"}
-                </button>
 
-                {/* Hammer Down Button */}
-                <button
-                  onClick={promptHammerDown}
-                  disabled={
-                    isCancelling ||
-                    isHammering || // Disable if any action is pending
-                    !auctionDetails.highestBidderId || // Disable if no bids yet
-                    (auctionDetails.reservePrice != null &&
-                      !auctionDetails.reserveMet) // Disable if reserve exists and not met
-                  }
-                  title={
-                    // Add tooltip explaining why it might be disabled
-                    !auctionDetails.highestBidderId
-                      ? "Cannot end auction before the first bid"
-                      : auctionDetails.reservePrice != null &&
-                        !auctionDetails.reserveMet
-                      ? "Reserve price not met yet"
-                      : "End the auction now and sell to the highest bidder"
-                  }
-                  className="flex-1 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded text-sm shadow disabled:opacity-60 disabled:cursor-not-allowed transition duration-150"
-                >
-                  {isHammering ? "Ending..." : "Hammer Down"}
-                </button>
-              </div>
-            )}
-          {/* --- END MODIFIED Seller Action Area --- */}
-
-          {bidError && (
-            <p className="text-center text-xs text-red-500 mt-2">{bidError}</p>
+          {auctionDetails.sellerId === keycloak.subject && (auctionDetails.status === "SCHEDULED" || auctionDetails.status === "ACTIVE") && (
+            <div className="flex justify-between items-center gap-4 mt-4 pt-4 border-t">
+              <button
+                onClick={promptCancelAuction}
+                disabled={isCancelling || isHammering}
+                className="flex-1 px-4 py-2 bg-red-600 hover:bg-red-700 text-white font-semibold rounded text-sm disabled:opacity-60"
+              >
+                {isCancelling ? "Cancelling..." : "Cancel Auction"}
+              </button>
+              <button
+                onClick={promptHammerDown}
+                disabled={isCancelling || isHammering || !auctionDetails.highestBidderId || (auctionDetails.reservePrice && !auctionDetails.reserveMet)}
+                className="flex-1 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded text-sm disabled:opacity-60"
+              >
+                {isHammering ? "Ending..." : "Hammer Down"}
+              </button>
+            </div>
           )}
+
+          {bidError && <p className="text-center text-xs text-red-500 mt-2">{bidError}</p>}
+
           <p className="text-center text-xs text-gray-500 mt-2">
-            (Next required bid:{" "}
-            {auctionDetails?.nextBidAmount?.toLocaleString("vi-VN") || "N/A"}{" "}
-            VNĐ)
+            (Next required bid: {auctionDetails?.nextBidAmount?.toLocaleString("vi-VN") || "N/A"} VNĐ)
           </p>
         </div>
 
         {auctionDetails.status === "SOLD" && (
-          <div className="flex items-center gap-3 mt-4 p-4 bg-green-50 border border-green-300 rounded-lg shadow-sm">
-            <div className="flex-shrink-0">
-              {/* Trophy Icon (emoji or replace with real icon if you want) */}
-              🏆
-            </div>
-            <div className="flex-1">
-              <p className="text-green-800 font-semibold">
-                Congratulations
-                {auctionDetails.winnerId === keycloak.subject
-                  ? ", you won!"
-                  : "!"}
+          <div className="flex items-center gap-3 p-4 bg-green-50 border border-green-300 rounded-lg shadow-sm">
+            <div className="text-xl">🏆</div>
+            <div>
+              <p className="font-semibold text-green-800">
+                {auctionDetails.winnerId === keycloak.subject ? "Congratulations, you won!" : "Auction Complete"}
               </p>
               <p className="text-green-700 text-sm">
-                {auctionDetails.winnerId === keycloak.subject ? (
-                  <>
-                    You won with{" "}
-                    <strong>
-                      {auctionDetails.winningBid.toLocaleString("vi-VN")}
-                    </strong>{" "}
-                    VNĐ!
-                  </>
-                ) : (
-                  <>
-                    Winner:{" "}
-                    <strong>
-                      {auctionDetails.highestBidderUsernameSnapshot}
-                    </strong>{" "}
-                    with{" "}
-                    <strong>
-                      {auctionDetails.winningBid.toLocaleString("vi-VN")}
-                    </strong>{" "}
-                    VNĐ
-                  </>
-                )}
+                Winner: <strong>{auctionDetails.highestBidderUsernameSnapshot}</strong> with <strong>{auctionDetails.winningBid.toLocaleString("vi-VN")} VNĐ</strong>
               </p>
             </div>
           </div>
         )}
 
-        {/* Bid History */}
-        <div className="bg-white p-4 rounded shadow-sm border max-h-60 overflow-y-auto">
-          <h4 className="font-semibold mb-2 text-sm border-b pb-1">
-            Bid History
-          </h4>
+        <div className="bg-white p-4 rounded shadow border overflow-y-auto max-h-60">
+          <h4 className="font-semibold mb-2 text-sm border-b pb-1">Bid History</h4>
           {bidHistory.length === 0 ? (
             <p className="text-xs text-gray-500">No bids placed yet.</p>
           ) : (
             <ul className="space-y-1 text-xs">
-              {/* Use bidHistory state */}
-              {bidHistory.map((bid, index) => (
-                <li
-                  key={bid.id || index}
-                  className="flex justify-between border-b border-dashed border-gray-200 py-0.5"
-                >
-                  <span>
-                    {(bid.bidderUsername ?? bid.bidderUsernameSnapshot) ===
-                    keycloak.tokenParsed?.preferred_username ? (
-                      <span className="font-semibold text-blue-600">You</span>
-                    ) : (
-                      bid.bidderUsername ?? bid.bidderUsernameSnapshot
-                    )}
+              {bidHistory.map((bid, i) => (
+                <li key={bid.id || i} className="flex justify-between border-b border-dashed border-gray-200 py-0.5">
+                  <span className={bid.bidderUsername === keycloak.tokenParsed?.preferred_username ? "text-blue-600 font-semibold" : ""}>
+                    {bid.bidderUsername === keycloak.tokenParsed?.preferred_username ? "You" : bid.bidderUsername}
                   </span>
-                  <span className="font-medium">
-                    {bid.amount.toLocaleString("vi-VN")} VNĐ
-                  </span>
-                  <span className="text-gray-500">
-                    {new Date(bid.bidTime).toLocaleTimeString()}
-                  </span>
+                  <span className="font-medium">{bid.amount.toLocaleString("vi-VN")} VNĐ</span>
+                  <span className="text-gray-500">{new Date(bid.bidTime).toLocaleTimeString()}</span>
                 </li>
               ))}
             </ul>
+          )}
+        </div>
+
+        <div className="bg-white rounded shadow border flex flex-col max-h-[300px] min-h-[250px]">
+          {chatDisabled ? (
+            <div className="flex items-center justify-center h-full text-sm text-gray-600">
+              {finalChatNotice || "Chat is disabled."}
+            </div>
+          ) : (
+            <AuctionChatPanel auctionId={auctionId} />
           )}
         </div>
       </div>
