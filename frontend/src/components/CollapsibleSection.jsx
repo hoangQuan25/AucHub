@@ -21,8 +21,8 @@ const CollapsibleSection = ({ title, defaultOpen = false, children }) => {
       </button>
 
       <div
-        className={`px-4 text-sm text-gray-700 transition-all duration-300 ${
-          open ? "max-h-[1000px] py-3" : "max-h-0 overflow-hidden"
+        className={`px-5 text-sm text-gray-700 transition-all duration-300 ${
+    open ? "max-h-[1000px] py-3" : "max-h-0 overflow-hidden"
         }`}
       >
         {children}

@@ -401,7 +401,7 @@ function ProductsPage() {
           product={selectedProductForDetail}
           onEdit={handleEditProduct}
           onDelete={handleDeleteProduct}
-          onStartAuction={handleStartAuction}
+          onStartAuction={promptStartAuction}
         />
       )}
       <ConfirmationModal

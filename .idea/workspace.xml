@@ -5,28 +5,22 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="e72edef0-0b14-4f3d-8bd4-9379eb9dd286" name="Changes" comment="">
-      <change afterPath="$PROJECT_DIR$/liveauctions/src/main/java/com/example/liveauctions/config/AuctionTimingProperties.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/liveauctions/src/main/java/com/example/liveauctions/config/JacksonConfig.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/liveauctions/src/main/java/com/example/liveauctions/config/RedisConfig.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/liveauctions/src/main/java/com/example/liveauctions/config/UserIdHandshakeInterceptor.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/liveauctions/src/main/java/com/example/liveauctions/controller/AuctionChatController.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/liveauctions/src/main/java/com/example/liveauctions/dto/ChatMessageDto.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/liveauctions/src/main/java/com/example/liveauctions/service/AuctionChatService.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/liveauctions/src/main/java/com/example/liveauctions/service/impl/AuctionChatServiceImpl.java" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/frontend/src/App.jsx" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/App.jsx" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/frontend/src/components/ConfirmationModal.jsx" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/components/ConfirmationModal.jsx" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/frontend/src/components/CountdownTimer.jsx" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/components/CountdownTimer.jsx" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/frontend/src/components/Sidebar.jsx" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/components/Sidebar.jsx" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/frontend/src/components/StartAuctionModal.jsx" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/components/StartAuctionModal.jsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/frontend/src/components/CollapsibleSection.jsx" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/components/CollapsibleSection.jsx" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/frontend/src/pages/LiveAuctionDetailPage.jsx" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/pages/LiveAuctionDetailPage.jsx" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/frontend/src/pages/ProductsPage.jsx" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/pages/ProductsPage.jsx" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/liveauctions/src/main/java/com/example/liveauctions/commands/AuctionLifecycleCommands.java" beforeDir="false" afterPath="$PROJECT_DIR$/liveauctions/src/main/java/com/example/liveauctions/commands/AuctionLifecycleCommands.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/liveauctions/src/main/java/com/example/liveauctions/config/RabbitMqConfig.java" beforeDir="false" afterPath="$PROJECT_DIR$/liveauctions/src/main/java/com/example/liveauctions/config/RabbitMqConfig.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/liveauctions/src/main/java/com/example/liveauctions/controller/LiveAuctionController.java" beforeDir="false" afterPath="$PROJECT_DIR$/liveauctions/src/main/java/com/example/liveauctions/controller/LiveAuctionController.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/liveauctions/src/main/java/com/example/liveauctions/dto/LiveAuctionStateDto.java" beforeDir="false" afterPath="$PROJECT_DIR$/liveauctions/src/main/java/com/example/liveauctions/dto/LiveAuctionStateDto.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/liveauctions/src/main/java/com/example/liveauctions/entity/LiveAuction.java" beforeDir="false" afterPath="$PROJECT_DIR$/liveauctions/src/main/java/com/example/liveauctions/entity/LiveAuction.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/liveauctions/src/main/java/com/example/liveauctions/event/AuctionStateUpdateEvent.java" beforeDir="false" afterPath="$PROJECT_DIR$/liveauctions/src/main/java/com/example/liveauctions/event/AuctionStateUpdateEvent.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/liveauctions/src/main/java/com/example/liveauctions/listener/AuctionEventListener.java" beforeDir="false" afterPath="$PROJECT_DIR$/liveauctions/src/main/java/com/example/liveauctions/listener/AuctionEventListener.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/liveauctions/src/main/java/com/example/liveauctions/manager/AuctionLifecycleManager.java" beforeDir="false" afterPath="$PROJECT_DIR$/liveauctions/src/main/java/com/example/liveauctions/manager/AuctionLifecycleManager.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/liveauctions/pom.xml" beforeDir="false" afterPath="$PROJECT_DIR$/liveauctions/pom.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/liveauctions/src/main/java/com/example/liveauctions/client/dto/UserBasicInfoDto.java" beforeDir="false" afterPath="$PROJECT_DIR$/liveauctions/src/main/java/com/example/liveauctions/client/dto/UserBasicInfoDto.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/liveauctions/src/main/java/com/example/liveauctions/config/WebSocketStompConfig.java" beforeDir="false" afterPath="$PROJECT_DIR$/liveauctions/src/main/java/com/example/liveauctions/config/WebSocketStompConfig.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/liveauctions/src/main/java/com/example/liveauctions/controller/TestController.java" beforeDir="false" />
       <change beforePath="$PROJECT_DIR$/liveauctions/src/main/java/com/example/liveauctions/repository/LiveAuctionRepository.java" beforeDir="false" afterPath="$PROJECT_DIR$/liveauctions/src/main/java/com/example/liveauctions/repository/LiveAuctionRepository.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/liveauctions/src/main/java/com/example/liveauctions/service/LiveAuctionService.java" beforeDir="false" afterPath="$PROJECT_DIR$/liveauctions/src/main/java/com/example/liveauctions/service/LiveAuctionService.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/liveauctions/src/main/java/com/example/liveauctions/service/impl/LiveAuctionServiceImpl.java" beforeDir="false" afterPath="$PROJECT_DIR$/liveauctions/src/main/java/com/example/liveauctions/service/impl/LiveAuctionServiceImpl.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/liveauctions/src/main/java/com/example/liveauctions/service/impl/WebSocketEventPublisherImpl.java" beforeDir="false" afterPath="$PROJECT_DIR$/liveauctions/src/main/java/com/example/liveauctions/service/impl/WebSocketEventPublisherImpl.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/liveauctions/src/main/resources/application.yml" beforeDir="false" afterPath="$PROJECT_DIR$/liveauctions/src/main/resources/application.yml" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -37,8 +31,8 @@
     <option name="RECENT_TEMPLATES">
       <list>
         <option value="Enum" />
-        <option value="Interface" />
         <option value="Exception" />
+        <option value="Interface" />
         <option value="Class" />
       </list>
     </option>
@@ -72,11 +66,11 @@
     &quot;Spring Boot.ConfigserverApplication.executor&quot;: &quot;Run&quot;,
     &quot;Spring Boot.EurekaserverApplication.executor&quot;: &quot;Run&quot;,
     &quot;Spring Boot.GatewayserverApplication (1).executor&quot;: &quot;Run&quot;,
-    &quot;Spring Boot.GatewayserverApplication.executor&quot;: &quot;Debug&quot;,
+    &quot;Spring Boot.GatewayserverApplication.executor&quot;: &quot;Run&quot;,
     &quot;Spring Boot.LiveAuctionsApplication.executor&quot;: &quot;Debug&quot;,
     &quot;Spring Boot.ProductsApplication.executor&quot;: &quot;Run&quot;,
     &quot;Spring Boot.UsersApplication.executor&quot;: &quot;Run&quot;,
-    &quot;git-widget-placeholder&quot;: &quot;smallfix&quot;,
+    &quot;git-widget-placeholder&quot;: &quot;feat/chat&quot;,
     &quot;node.js.detected.package.eslint&quot;: &quot;true&quot;,
     &quot;node.js.detected.package.tslint&quot;: &quot;true&quot;,
     &quot;node.js.selected.package.eslint&quot;: &quot;(autodetect)&quot;,
@@ -167,7 +161,8 @@
       <workItem from="1745751407296" duration="25115000" />
       <workItem from="1745824512250" duration="9892000" />
       <workItem from="1745835004713" duration="20001000" />
-      <workItem from="1745906050883" duration="21085000" />
+      <workItem from="1745906050883" duration="25995000" />
+      <workItem from="1745999457970" duration="7613000" />
     </task>
     <servers />
   </component>
