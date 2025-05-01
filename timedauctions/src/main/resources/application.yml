@@ -1,0 +1,118 @@
+server:
+  port: 8004
+
+spring:
+  application:
+    name: timedauctions # Different name
+  profiles:
+    active: "dev"
+  # === Database Configuration ===
+  datasource:
+    # Use a different schema name for timed auctions
+    url: jdbc:mysql://localhost:3306/timed_auction_schema
+    username: timed_auctions_svc_user # Consider different user/pass
+    password: quan12345656915691
+    driverClassName: com.mysql.cj.jdbc.Driver
+  jpa:
+    database-platform: org.hibernate.dialect.MySQLDialect
+    hibernate:
+      ddl-auto: create
+    show-sql: true # Log SQL for dev
+    properties:
+      hibernate.globally_quoted_identifiers: true # Good practice for MySQL
+
+  # === RabbitMQ (Likely same instance) ===
+  rabbitmq:
+    host: localhost
+    port: 5672
+    username: guest
+    password: guest
+
+  # === Redis (Likely same instance) ===
+  data:
+    redis:
+      host: localhost
+      port: 6379
+      # password: ${REDIS_PASSWORD:} # If needed
+  # === Redisson Config ===
+  # Note: Redisson starter usually picks up spring.data.redis properties by default for single server
+  # Explicit config might look like this if needed:
+  # redisson:
+  #  single-server-config:
+  #    address: "redis://${spring.data.redis.host:localhost}:${spring.data.redis.port:6379}"
+  #    # password: ${spring.data.redis.password:}
+
+  # === Configuration Server ===
+  config:
+    import: "optional:configserver:http://localhost:8071/"
+
+# === Eureka Client Configuration ===
+eureka:
+  instance:
+    preferIpAddress: true
+    # Optional: Append app name to instance ID for clarity in Eureka dashboard
+    instance-id: ${spring.application.name}:${spring.application.instance_id:${random.value}}
+  client:
+    fetchRegistry: true
+    registerWithEureka: true
+    serviceUrl:
+      defaultZone: http://localhost:8070/eureka/
+
+# === Management & Actuator ===
+management:
+  endpoints:
+    web:
+      exposure:
+        include: "*"
+  health:
+    readiness-state:
+      enabled: true
+    liveness-state:
+      enabled: true
+  endpoint:
+    health:
+      probes:
+        enabled: true
+  info:
+    env:
+      enabled: true
+  metrics:
+    tags:
+      application: ${spring.application.name}
+
+# === Logging ===
+logging:
+  level:
+    root: INFO
+    com.example.timedauctions: DEBUG # Set your package to DEBUG
+    org.hibernate.SQL: DEBUG # Log SQL statements
+    org.hibernate.type.descriptor.sql: TRACE # Log bind parameters (careful in prod)
+  pattern:
+    # Include app name, trace/span IDs
+    level: "%5p [${spring.application.name},%X{traceId:-},%X{spanId:-}] %-40.40logger{39} : %m%n"
+
+
+# === Custom App Properties ===
+# Placeholder for timing properties - define specific values later
+auction:
+  timing:
+    soft-close:
+      enabled: true
+      threshold-minutes: 10 # Longer threshold for timed auctions
+      extension-minutes: 5  # Longer extension
+    # fast-finish likely not applicable to timed auctions
+    # fast-finish:
+    #   enabled: false
+
+info:
+  app:
+    name: "Timed Auction Service"
+    description: "Handles timed auctions with proxy bidding and comments"
+    version: "1.0.0"
+
+# Add Redisson Starter dependency to pom.xml or build.gradle if not done via Initializr
+# Example Maven:
+# <dependency>
+#     <groupId>org.redisson</groupId>
+#     <artifactId>redisson-spring-boot-starter</artifactId>
+#     <version>3.27.2</version> # </dependency>

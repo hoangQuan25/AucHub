@@ -26,10 +26,10 @@ function Sidebar() {
 
           <li>
             <NavLink
-              to="/live-auctions"
+              to="/all-auctions"
               className={({ isActive }) => `${linkStyle} ${isActive ? activeLinkStyle : ''}`}
             >
-              Live Auctions
+              All Active Auctions
             </NavLink>
           </li>
 

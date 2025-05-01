@@ -10,6 +10,7 @@
         <option value="$PROJECT_DIR$/eurekaserver/pom.xml" />
         <option value="$PROJECT_DIR$/liveauctions/pom.xml" />
         <option value="$PROJECT_DIR$/gatewayserver/pom.xml" />
+        <option value="$PROJECT_DIR$/timedauctions/pom.xml" />
       </list>
     </option>
   </component>

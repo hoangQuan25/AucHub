@@ -5,25 +5,24 @@ const CollapsibleSection = ({ title, defaultOpen = false, children }) => {
   const [open, setOpen] = useState(defaultOpen);
 
   return (
-    <div className="border rounded-lg mb-4 bg-white shadow-sm overflow-hidden">
+    <div className="rounded-xl border bg-white shadow-sm overflow-hidden mb-4">
       <button
-        className="w-full flex justify-between items-center px-4 py-3 text-left font-semibold text-gray-800 hover:bg-gray-50 transition"
-        onClick={() => setOpen((o) => !o)}
+        onClick={() => setOpen((prev) => !prev)}
+        className="w-full flex items-center justify-between px-4 py-3 text-sm font-semibold text-gray-800 hover:bg-gray-50 transition"
       >
         <span>{title}</span>
-        <span
+        <FaChevronDown
           className={`transform transition-transform duration-300 ${
             open ? "rotate-180" : ""
           }`}
-        >
-          <FaChevronDown size="0.9em" />
-        </span>
+          size={14}
+        />
       </button>
 
       <div
-        className={`px-5 text-sm text-gray-700 transition-all duration-300 ${
-    open ? "max-h-[1000px] py-3" : "max-h-0 overflow-hidden"
-        }`}
+        className={`transition-all duration-300 ease-in-out ${
+          open ? "max-h-[1000px] py-3 px-5" : "max-h-0 overflow-hidden px-5"
+        } text-sm text-gray-700`}
       >
         {children}
       </div>

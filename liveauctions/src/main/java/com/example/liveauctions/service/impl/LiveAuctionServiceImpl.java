@@ -211,27 +211,11 @@ public class LiveAuctionServiceImpl implements LiveAuctionService {
         publishAuctionStateUpdate(auction); // Helper method needed
     }
 
-
-//    // Placeholder: Schedules the end via RabbitMQ delayed message
-//    private void scheduleAuctionEnd(LiveAuction auction) {
-//        // ... Logic to calculate delay and publish EndAuctionCommand ...
-//        // (Will be implemented fully in AuctionLifecycleManager later, but called from here too)
-//        log.info("Placeholder: scheduleAuctionEnd called for auction {}", auction.getId());
-//        // Similar rabbitTemplate.convertAndSend logic as for start command
-//        long delayMillis = Duration.between(LocalDateTime.now(), auction.getEndTime()).toMillis();
-//        if (delayMillis > 0) {
-//            // ... publish EndAuctionCommand with delay ...
-//        } else {
-//            // ... handle immediate end ...
-//        }
-//    }
-
     // Placeholder: Publishes state update event via RabbitMQ
     private void publishAuctionStateUpdate(LiveAuction auction) {
         // ... Logic to build event DTO and publish to AUCTION_EVENTS_EXCHANGE ...
         log.info("Placeholder: publishAuctionStateUpdate called for auction {}", auction.getId());
     }
-
 
     // Placeholder for the getIncrement logic
     private BigDecimal getIncrement(BigDecimal currentBid) {
