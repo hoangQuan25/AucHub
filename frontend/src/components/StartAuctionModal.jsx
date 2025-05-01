@@ -3,9 +3,28 @@ import React, { useState, useEffect } from "react";
 import ConfirmationModal from "./ConfirmationModal";
 import apiClient from "../api/apiClient"; // Ensure path is correct
 
+// Helper function to get minimum date string for input fields
+const getMinDateTimeLocal = (offsetMillis = 0) => {
+  const now = new Date();
+  const futureDate = new Date(now.getTime() + offsetMillis);
+  // Convert to YYYY-MM-DDTHH:mm format required by datetime-local
+  const year = futureDate.getFullYear();
+  const month = (futureDate.getMonth() + 1).toString().padStart(2, "0");
+  const day = futureDate.getDate().toString().padStart(2, "0");
+  const hours = futureDate.getHours().toString().padStart(2, "0");
+  const minutes = futureDate.getMinutes().toString().padStart(2, "0");
+  return `${year}-${month}-${day}T${hours}:${minutes}`;
+};
+
 function StartAuctionModal({ isOpen, onClose, product, onStartAuctionSubmit }) {
+  const [auctionType, setAuctionType] = useState("LIVE");
+
   // State for auction configuration
-  const [duration, setDuration] = useState(30);
+  const [durationMinutes, setDurationMinutes] = useState(30); // Default for LIVE
+
+  // --- NEW: State for Timed Auction End Time ---
+  const [timedAuctionEndTime, setTimedAuctionEndTime] = useState(""); // Store YYYY-MM-DDTHH:mm string
+
   const [startPrice, setStartPrice] = useState("");
   const [reservePrice, setReservePrice] = useState("");
   const [startTimeOption, setStartTimeOption] = useState("NOW");
@@ -13,36 +32,42 @@ function StartAuctionModal({ isOpen, onClose, product, onStartAuctionSubmit }) {
 
   // State for submission status and errors
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [isConfirmingSubmit, setIsConfirmingSubmit] = useState(false); // Is the final confirmation modal open?
+  const [isConfirmingSubmit, setIsConfirmingSubmit] = useState(false);
   const [auctionDataToConfirm, setAuctionDataToConfirm] = useState(null);
-  const [validationError, setValidationError] = useState(""); // For form validation errors
-  const [submitError, setSubmitError] = useState(""); // For API submission errors
+  const [validationError, setValidationError] = useState("");
+  const [submitError, setSubmitError] = useState("");
 
-  const [fastFinish, setFastFinish] = useState(false);
+  // Calculate minimum allowed end time for timed auctions (+24 hours)
+  const minTimedEndTime = getMinDateTimeLocal(24 * 60 * 60 * 1000); // 24 hours in ms
+  // Calculate minimum allowed start time for scheduled auctions (+ buffer)
+  const minScheduledStartTime = getMinDateTimeLocal(60 * 1000); // 1 min in ms buffer
 
   // Reset form when modal opens or product changes
   useEffect(() => {
     if (isOpen) {
-      setDuration(30);
+      // Reset to defaults
+      setAuctionType("LIVE");
+      setDurationMinutes(30);
+      // Set default timed end time (e.g., 7 days from now) when modal opens
+      setTimedAuctionEndTime(getMinDateTimeLocal(7 * 24 * 60 * 60 * 1000)); // Default 7 days
       setStartPrice("");
       setReservePrice("");
       setStartTimeOption("NOW");
       setScheduledStartTime("");
       setValidationError("");
       setSubmitError("");
-      setIsSubmitting(false); // Ensure submitting state is reset
+      setIsSubmitting(false);
+      setIsConfirmingSubmit(false);
+      setAuctionDataToConfirm(null);
     }
-  }, [isOpen, product]); // Reset if product changes while modal is open too
+  }, [isOpen, product]);
 
   // --- Handle Form Submission ---
-  // --- MODIFIED Handle Form Submission ---
-  const handleSubmit = (e) => { // No longer async directly
+  const handleSubmit = (e) => {
     e.preventDefault();
     setValidationError("");
-    // Don't clear submitError here - it might be relevant if shown in confirm modal
-    // setSubmitError("");
 
-    // --- Frontend Validation (Keep this block as is) ---
+    // Basic price validation
     const startPriceNum = parseFloat(startPrice);
     if (isNaN(startPriceNum) || startPriceNum < 0) {
       setValidationError("Start price must be a valid non-negative number.");
@@ -50,122 +75,214 @@ function StartAuctionModal({ isOpen, onClose, product, onStartAuctionSubmit }) {
     }
     const reservePriceNum = reservePrice ? parseFloat(reservePrice) : null;
     if (reservePrice && (isNaN(reservePriceNum) || reservePriceNum < 0)) {
-      setValidationError("Reserve price must be a valid non-negative number if provided.");
+      setValidationError(
+        "Reserve price must be a valid non-negative number if provided."
+      );
       return;
     }
     if (reservePriceNum !== null && reservePriceNum < startPriceNum) {
       setValidationError("Reserve price cannot be lower than the start price.");
       return;
     }
-    if (startTimeOption === "SCHEDULE" && !scheduledStartTime) {
-      setValidationError("Please select a scheduled start time.");
-      return;
+
+    // Start time validation
+    let effectiveStartTime = null; // Will hold the JS Date object or null
+    if (startTimeOption === "SCHEDULE") {
+      if (!scheduledStartTime) {
+        setValidationError("Please select a scheduled start time.");
+        return;
+      }
+      effectiveStartTime = new Date(scheduledStartTime);
+      const now = new Date();
+      // Check against min allowed start time (now + buffer)
+      if (
+        effectiveStartTime.getTime() < new Date(minScheduledStartTime).getTime()
+      ) {
+        setValidationError(
+          "Scheduled start time must be at least a few minutes in the future."
+        );
+        return;
+      }
+    } else {
+      effectiveStartTime = new Date(); // If starting now, use current time for comparison
     }
-    if (
-      startTimeOption === "SCHEDULE" &&
-      new Date(scheduledStartTime) < new Date()
-    ) {
-      setValidationError("Scheduled start time cannot be in the past.");
-      return;
+
+    // --- Type-specific Validation & Data Prep ---
+    let finalEndTime = null; // Will hold the ISO string for backend or derived value
+    let formattedDurationOrEndTime = "";
+
+    if (auctionType === "LIVE") {
+      const durationMins = parseInt(durationMinutes, 10);
+      if (isNaN(durationMins) || durationMins <= 0) {
+        setValidationError(
+          "Please select a valid duration for the live auction."
+        );
+        return;
+      }
+      // For LIVE, backend expects durationMinutes, not endTime
+      // We don't need to calculate finalEndTime here for the payload
+      formattedDurationOrEndTime = `Duration: ${durationMinutes} Minute${
+        durationMinutes == 1 ? "" : "s"
+      }`;
+    } else {
+      // TIMED auction
+      if (!timedAuctionEndTime) {
+        setValidationError(
+          "Please select an end date and time for the timed auction."
+        );
+        return;
+      }
+      const selectedEndDate = new Date(timedAuctionEndTime);
+      const minEndDate = new Date(minTimedEndTime); // Min end date (now + 24h)
+
+      // Use the *effective* start time (now or scheduled) for the 24h check relative to start
+      const minEndDateFromStart = new Date(
+        effectiveStartTime.getTime() + 24 * 60 * 60 * 1000
+      );
+
+      if (selectedEndDate.getTime() < minEndDateFromStart.getTime()) {
+        setValidationError(
+          "Timed auction end time must be at least 24 hours after the start time."
+        );
+        return;
+      }
+
+      finalEndTime = selectedEndDate.toISOString(); // Send ISO string to backend
+      formattedDurationOrEndTime = `Ends: ${selectedEndDate.toLocaleString(
+        "en-GB"
+      )}`;
     }
-    // --- End Validation ---
+    // --- End Type-specific Validation ---
 
     // --- Prepare Data for Confirmation & Backend ---
     const dataForConfirmation = {
+      // Core data
       productId: product.id,
-      durationMinutes: parseInt(duration, 10),
       startPrice: startPriceNum,
       reservePrice: reservePriceNum,
-      startTime: startTimeOption === "NOW" ? null : scheduledStartTime,
-      // Add formatted versions for display in the confirmation message
+      startTime:
+        startTimeOption === "NOW"
+          ? null
+          : new Date(scheduledStartTime).toISOString(), // Send ISO string or null
+      // Type & EndTime/Duration
+      auctionType: auctionType,
+      // Send EITHER endTime OR durationMinutes, backend needs adaptation
+      endTime: auctionType === "TIMED" ? finalEndTime : null, // Only for TIMED
+      durationMinutes:
+        auctionType === "LIVE" ? parseInt(durationMinutes, 10) : null, // Only for LIVE
+
+      // Formatted values for display
       formatted: {
-          duration: `${duration} Minutes` + (duration == 1 ? " (Test)" : duration == 60 ? " (1 Hour)" : ""),
-          startPrice: startPriceNum.toLocaleString('vi-VN', { style: 'currency', currency: 'VND' }), // Format for display
-          reservePrice: reservePriceNum !== null ? reservePriceNum.toLocaleString('vi-VN', { style: 'currency', currency: 'VND' }) : "None", // Format or "None"
-          startTime: startTimeOption === "NOW" ? "Start Immediately" : `Scheduled: ${new Date(scheduledStartTime).toLocaleString('en-GB')}` // Format date/time nicely
-      }
+        auctionType: auctionType === "LIVE" ? "Live Auction" : "Timed Auction",
+        durationOrEndTime: formattedDurationOrEndTime, // Use the combined formatted string
+        startPrice: startPriceNum.toLocaleString("vi-VN", {
+          style: "currency",
+          currency: "VND",
+        }),
+        reservePrice:
+          reservePriceNum !== null
+            ? reservePriceNum.toLocaleString("vi-VN", {
+                style: "currency",
+                currency: "VND",
+              })
+            : "None",
+        startTime:
+          startTimeOption === "NOW"
+            ? "Start Immediately"
+            : `Scheduled: ${new Date(scheduledStartTime).toLocaleString(
+                "en-GB"
+              )}`,
+      },
     };
 
-    // --- Store data and open confirmation modal ---
     setAuctionDataToConfirm(dataForConfirmation);
-    setIsConfirmingSubmit(true); // Open the confirmation modal
-
-    // NOTE: We DO NOT call the API here anymore.
+    setIsConfirmingSubmit(true);
   };
 
-  // --- NEW Function to execute the API call after confirmation ---
+  // --- Execute API call after confirmation ---
   const executeStartAuction = async () => {
-    if (!auctionDataToConfirm) return; // Safety check
+    if (!auctionDataToConfirm) return;
 
-    setIsSubmitting(true); // Set loading state ON
-    setSubmitError(""); // Clear previous submission errors before trying again
+    setIsSubmitting(true);
+    setSubmitError("");
 
-    // Prepare payload from the confirmed data (exclude the 'formatted' part)
-    const payload = {
+    let apiUrl = "";
+    let payload = {};
+
+    // --- Prepare API URL and Payload based on Type ---
+    if (auctionDataToConfirm.auctionType === "LIVE") {
+      apiUrl = "/liveauctions/new-auction"; // Live auction endpoint
+      payload = {
         productId: auctionDataToConfirm.productId,
-        durationMinutes: auctionDataToConfirm.durationMinutes,
+        durationMinutes: auctionDataToConfirm.durationMinutes, // Send duration
         startPrice: auctionDataToConfirm.startPrice,
         reservePrice: auctionDataToConfirm.reservePrice,
-        startTime: auctionDataToConfirm.startTime,
-    };
+        startTime: auctionDataToConfirm.startTime, // Send optional start time
+      };
+    } else {
+      // TIMED auction
+      apiUrl = "/timedauctions/timed-auctions"; // Timed auction endpoint
+      // **BACKEND DTO CHANGE NEEDED**: Send endTime, not duration
+      payload = {
+        productId: auctionDataToConfirm.productId,
+        endTime: auctionDataToConfirm.endTime, // Send selected end time
+        startPrice: auctionDataToConfirm.startPrice,
+        reservePrice: auctionDataToConfirm.reservePrice,
+        startTime: auctionDataToConfirm.startTime, // Send optional start time
+      };
+    }
 
-    console.log("Submitting Auction Config (Confirmed):", payload);
+    console.log(
+      `Submitting ${auctionDataToConfirm.auctionType} Auction Config (Confirmed):`,
+      payload
+    );
+    console.log(`API URL: ${apiUrl}`);
 
     try {
-      const response = await apiClient.post("/liveauctions/new-auction", payload);
+      const response = await apiClient.post(apiUrl, payload);
       console.log("Auction created successfully:", response.data);
 
       if (onStartAuctionSubmit) {
-        onStartAuctionSubmit(response.data); // Pass created DTO back
+        onStartAuctionSubmit(response.data);
       }
-      onClose(); // Close the main StartAuctionModal on success
-
+      onClose();
     } catch (err) {
       console.error("Failed to start auction:", err);
-      const message = err.response?.data?.message || err.message || "Failed to start auction. Please try again.";
-      setSubmitError(message); // Show API error
-      // Keep the confirmation modal open (or let it close?) - keeping it open allows retry
-      // If we kept it open, the error will show inside the ConfirmationModal via its `error` prop.
+      const message =
+        err.response?.data?.message ||
+        err.message ||
+        "Failed to start auction. Please try again.";
+      setSubmitError(message);
     } finally {
-      setIsSubmitting(false); // Set loading state OFF
-      // Don't clear auctionDataToConfirm here, it might be needed if submit fails and user retries confirm
+      setIsSubmitting(false);
     }
   };
 
-  // --- NEW Handlers for the final confirmation modal ---
-  const handleConfirmFinalSubmit = () => {
-    // User clicked "Confirm & Start" in the confirmation modal
-    // The API call will be made now.
-    executeStartAuction();
-    // Keep the confirmation modal open while `isSubmitting` is true.
-    // `ConfirmationModal`'s `isLoading` prop will handle disabling buttons.
-  };
-
-  const handleCloseFinalConfirmModal = () => {
-    // User clicked "Edit Details" or closed the confirmation modal
-    setIsConfirmingSubmit(false);
-    // We keep auctionDataToConfirm so if they re-submit the main form without changes, it's still there.
-    // Alternatively, clear it if you want them to always re-trigger validation:
-    // setAuctionDataToConfirm(null);
-  };
+  // Confirmation modal handlers (no change needed)
+  const handleConfirmFinalSubmit = () => executeStartAuction();
+  const handleCloseFinalConfirmModal = () => setIsConfirmingSubmit(false);
 
   if (!isOpen || !product) return null;
 
-  const confirmationMessage = auctionDataToConfirm ? `Please review the auction details:\n
+  // --- Generate Confirmation Message ---
+  const confirmationMessage = auctionDataToConfirm
+    ? `Please review the auction details:\n
 Product:         ${product.title}
-Duration:        ${auctionDataToConfirm.formatted.duration}
+Type:            ${auctionDataToConfirm.formatted.auctionType}
+${auctionDataToConfirm.formatted.durationOrEndTime}
 Start Price:     ${auctionDataToConfirm.formatted.startPrice}
 Reserve Price:   ${auctionDataToConfirm.formatted.reservePrice}
-Start Time:      ${auctionDataToConfirm.formatted.startTime}` : "";
+Start Time:      ${auctionDataToConfirm.formatted.startTime}`
+    : "";
 
+  // --- Render Component ---
   return (
-    // --- Modal Structure (Tailwind CSS) ---
     <div className="fixed inset-0 bg-black bg-opacity-60 flex justify-center items-center z-50 p-4">
       <div className="bg-white p-6 rounded-lg shadow-xl max-w-lg w-full max-h-[90vh] overflow-y-auto relative">
         {/* Close Button */}
         <button
           onClick={onClose}
-          disabled={isSubmitting} // Disable close button during submission? Optional.
+          disabled={isSubmitting}
           className="absolute top-3 right-4 text-gray-600 hover:text-gray-900 text-2xl font-bold disabled:opacity-50"
         >
           &times;
@@ -177,61 +294,99 @@ Start Time:      ${auctionDataToConfirm.formatted.startTime}` : "";
 
         {/* Form */}
         <form onSubmit={handleSubmit} className="space-y-4">
-          {/* Display Validation Errors */}
           {validationError && (
             <p className="text-red-500 text-sm mb-3 bg-red-50 p-2 rounded border border-red-200">
               {validationError}
             </p>
           )}
-          {/* Display API Submission Errors */}
-          {submitError && (
-            <p className="text-red-500 text-sm mb-3 bg-red-50 p-2 rounded border border-red-200">
-              {submitError}
-            </p>
-          )}
 
-          {/* Auction Type (Still locked to LIVE) */}
+          {/* Auction Type Selection (No change) */}
           <div>
             <label className="block mb-1 font-medium text-sm text-gray-700">
               Auction Type:
             </label>
-            <input
-              type="text"
-              value="Live Auction"
-              disabled
-              className="w-full p-2 border rounded bg-gray-100 border-gray-300"
-            />
-            {/* Hidden field if needed, but backend likely doesn't need it */}
-            {/* <input type="hidden" value="LIVE" /> */}
+            <div className="flex items-center space-x-4">
+              <label className="flex items-center">
+                <input
+                  type="radio"
+                  name="auctionType"
+                  value="LIVE"
+                  checked={auctionType === "LIVE"}
+                  onChange={(e) => setAuctionType(e.target.value)}
+                  disabled={isSubmitting}
+                  className="form-radio disabled:opacity-70"
+                />
+                <span className={`ml-2 ${isSubmitting ? "text-gray-500" : ""}`}>
+                  Live Auction
+                </span>
+              </label>
+              <label className="flex items-center">
+                <input
+                  type="radio"
+                  name="auctionType"
+                  value="TIMED"
+                  checked={auctionType === "TIMED"}
+                  onChange={(e) => setAuctionType(e.target.value)}
+                  disabled={isSubmitting}
+                  className="form-radio disabled:opacity-70"
+                />
+                <span className={`ml-2 ${isSubmitting ? "text-gray-500" : ""}`}>
+                  Timed Auction
+                </span>
+              </label>
+            </div>
           </div>
 
-          {/* Duration Select */}
-          <div>
-            <label
-              htmlFor="duration"
-              className="block mb-1 font-medium text-sm text-gray-700"
-            >
-              Duration:
-            </label>
-            <select
-              id="duration"
-              value={duration}
-              onChange={(e) => setDuration(e.target.value)}
-              required
-              disabled={isSubmitting}
-              className="w-full p-2 border rounded border-gray-300 focus:outline-none focus:ring-2 focus:ring-indigo-500 disabled:bg-gray-100"
-            >
-              {/* Options... */}
-              <option value={15}>15 Minutes</option>
-              <option value={30}>30 Minutes</option>
-              <option value={45}>45 Minutes</option>
-              <option value={60}>1 Hour</option>
-              <option value={1}>1 Minute (Test)</option>{" "}
-              {/* Add short duration for testing */}
-            </select>
-          </div>
+          {/* --- Conditional Duration / End Time Input --- */}
+          {auctionType === "LIVE" && (
+            <div>
+              <label
+                htmlFor="durationMinutes"
+                className="block mb-1 font-medium text-sm text-gray-700"
+              >
+                Duration:
+              </label>
+              <select
+                id="durationMinutes"
+                value={durationMinutes}
+                onChange={(e) => setDurationMinutes(e.target.value)}
+                required
+                disabled={isSubmitting}
+                className="w-full p-2 border rounded border-gray-300 focus:outline-none focus:ring-2 focus:ring-indigo-500 disabled:bg-gray-100"
+              >
+                <option value={15}>15 Minutes</option>
+                <option value={30}>30 Minutes</option>
+                <option value={45}>45 Minutes</option>
+                <option value={60}>1 Hour</option>
+                <option value={1}>1 Minute (Test)</option>
+              </select>
+            </div>
+          )}
+          {auctionType === "TIMED" && (
+            <div>
+              <label
+                htmlFor="timedAuctionEndTime"
+                className="block mb-1 font-medium text-sm text-gray-700"
+              >
+                Auction End Time:
+              </label>
+              <input
+                id="timedAuctionEndTime"
+                type="datetime-local"
+                value={timedAuctionEndTime}
+                onChange={(e) => setTimedAuctionEndTime(e.target.value)}
+                required
+                disabled={isSubmitting}
+                className="w-full p-2 border rounded border-gray-300 focus:outline-none focus:ring-2 focus:ring-indigo-500 disabled:bg-gray-100"
+                min={minTimedEndTime} // Set minimum end time (+24h from now)
+              />
+              <p className="text-xs text-gray-500 mt-1">
+                Must be at least 24 hours after the start time.
+              </p>
+            </div>
+          )}
 
-          {/* Pricing Inputs */}
+          {/* Pricing Inputs (No change) */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
               <label
@@ -244,7 +399,7 @@ Start Time:      ${auctionDataToConfirm.formatted.startTime}` : "";
                 id="startPrice"
                 type="number"
                 min="0"
-                step="any" // Allow decimals if needed, else use step="1"
+                step="any"
                 value={startPrice}
                 onChange={(e) => setStartPrice(e.target.value)}
                 required
@@ -274,12 +429,13 @@ Start Time:      ${auctionDataToConfirm.formatted.startTime}` : "";
             </div>
           </div>
 
-          {/* Start Time Options */}
+          {/* Start Time Options (Added min attribute) */}
           <div>
             <label className="block mb-1 font-medium text-sm text-gray-700">
               Start Time:
             </label>
             <div className="flex items-center space-x-4">
+              {/* Radio buttons... */}
               <label className="flex items-center">
                 <input
                   type="radio"
@@ -325,61 +481,48 @@ Start Time:      ${auctionDataToConfirm.formatted.startTime}` : "";
                   required={startTimeOption === "SCHEDULE"}
                   disabled={isSubmitting}
                   className="w-full p-2 border rounded border-gray-300 focus:outline-none focus:ring-2 focus:ring-indigo-500 disabled:bg-gray-100"
-                  min={new Date(Date.now() + 60000).toISOString().slice(0, 16)} // Prevent scheduling less than 1 min in future
+                  min={minScheduledStartTime} // Prevent scheduling in the past/too soon
                 />
               </div>
             )}
-            <label className="flex items-center gap-2 mt-4">
-              <input
-                type="checkbox"
-                checked={fastFinish}
-                onChange={() => setFastFinish(!fastFinish)}
-                className="form-checkbox h-4 w-4 text-indigo-600"
-              />
-              <span className="text-sm">
-                Accelerate closing to&nbsp;
-                <strong>2 min</strong> once reserve is met
-              </span>
-            </label>
           </div>
 
-          {/* Action Buttons (Submit button now triggers confirmation) */}
+          {/* Action Buttons (No change) */}
           <div className="flex justify-end space-x-3 pt-4 border-t border-gray-200 mt-6">
             <button
               type="button"
               onClick={onClose}
-              disabled={isSubmitting} // Disable if final API call is in progress
+              disabled={isSubmitting}
               className="inline-flex justify-center rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 shadow-sm hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 transition ease-in-out duration-150 disabled:opacity-50 disabled:cursor-not-allowed"
             >
               Cancel
             </button>
             <button
-              type="submit" // Still type="submit" to trigger form's onSubmit
-              disabled={isSubmitting} // Disable if final API call is in progress
+              type="submit"
+              disabled={isSubmitting}
               className="inline-flex justify-center rounded-md border border-transparent bg-green-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2 transition ease-in-out duration-150 disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              {/* Text can indicate review step now */}
               {isSubmitting ? "Starting..." : "Review & Start Auction"}
             </button>
           </div>
         </form>
       </div>
-      {/* --- NEW: Render the Final Confirmation Modal --- */}
+
+      {/* Final Confirmation Modal (No change) */}
       {auctionDataToConfirm && (
         <ConfirmationModal
           isOpen={isConfirmingSubmit}
-          onClose={handleCloseFinalConfirmModal} // Go back to editing
-          onConfirm={handleConfirmFinalSubmit}     // Trigger the actual API call
+          onClose={handleCloseFinalConfirmModal}
+          onConfirm={handleConfirmFinalSubmit}
           title="Confirm Auction Details"
-          message={confirmationMessage} // Use the dynamically generated message
-          confirmText="Confirm & Start Auction" // Clear final action text
-          cancelText="Edit Details"          // Clear "go back" action text
-          confirmButtonClass="bg-green-600 hover:bg-green-700" // Green for go
-          isLoading={isSubmitting} // Show loading state during the API call
-          error={submitError}      // Display API submission errors directly here
+          message={confirmationMessage} // Updated message format handles type/endTime
+          confirmText="Confirm & Start Auction"
+          cancelText="Edit Details"
+          confirmButtonClass="bg-green-600 hover:bg-green-700"
+          isLoading={isSubmitting}
+          error={submitError}
         />
       )}
-      {/* --- END NEW --- */}
     </div>
   );
 }

@@ -16,6 +16,7 @@ import org.springframework.transaction.annotation.Transactional; // Import Trans
 
 import java.time.Duration;
 import java.time.LocalDateTime;
+import java.time.temporal.ChronoUnit;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -75,14 +76,32 @@ public class AuctionLifecycleManager {
 
         LiveAuction auction = opt.get();
 
-        /* IGNORE stale commands -------------------------------------------- */
-        if (!command.fireAt().isEqual(auction.getEndTime())) {
-            log.info("Stale END cmd for {} – fireAt {}, currentEnd {} – ignored",
-                    command.auctionId(), command.fireAt(), auction.getEndTime());
-            return;
+        /* --- MODIFIED Stale Check --- */
+        LocalDateTime fireAtFromCommand = command.fireAt(); // Assuming fireAt() method exists and returns LocalDateTime
+        LocalDateTime endTimeFromDb = auction.getEndTime();
+
+        // Basic null check for safety
+        if (fireAtFromCommand == null || endTimeFromDb == null) {
+            log.warn("Cannot perform stale check for auction {}: fireAt={} endTime={}", auctionId, fireAtFromCommand, endTimeFromDb);
+            return; // Or handle as appropriate, maybe ignore?
         }
 
-        /* ------------------------------------------------------------------- */
+        // --- Compare truncated to MICROSECONDS ---
+        LocalDateTime truncatedFireAt = fireAtFromCommand.truncatedTo(ChronoUnit.MICROS);
+        LocalDateTime truncatedEndTime = endTimeFromDb.truncatedTo(ChronoUnit.MICROS);
+
+        if (!truncatedFireAt.isEqual(truncatedEndTime)) {
+            log.info("Stale END cmd for {} – CmdFireAt (µs): {}, AuctionEndTime (µs): {} – ignored. [Original CmdFireAt: {}, Original AuctionEndTime: {}]",
+                    command.auctionId(),
+                    truncatedFireAt, // Log truncated
+                    truncatedEndTime, // Log truncated
+                    fireAtFromCommand, // Log original
+                    endTimeFromDb); // Log original
+            return; // Exit if they don't match at microsecond level
+        }
+        log.info("Stale check passed for auction {}. CmdFireAt (µs): {}, AuctionEndTime (µs): {}",
+                command.auctionId(), truncatedFireAt, truncatedEndTime);
+        /* --- End MODIFIED Stale Check --- */
 
         // Idempotency check: Only proceed if currently ACTIVE
         if (auction.getStatus() == AuctionStatus.ACTIVE) {
@@ -105,8 +124,9 @@ public class AuctionLifecycleManager {
                     log.info("Auction {} ended. Status: RESERVE_NOT_MET.", auctionId);
                 }
             } else {
-                auction.setStatus(
-                        AuctionStatus.RESERVE_NOT_MET); // same outcome: unsold
+                log.info("Auction {} entering NO_BID end logic path.", auctionId); // <<< ADD THIS LOG
+                auction.setStatus(AuctionStatus.RESERVE_NOT_MET);
+                log.info("Auction {} status set to RESERVE_NOT_MET (in memory).", auctionId);
             }
 
             LiveAuction endedAuction = auctionRepository.save(auction);

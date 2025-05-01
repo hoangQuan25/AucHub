@@ -4,23 +4,42 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="e72edef0-0b14-4f3d-8bd4-9379eb9dd286" name="Changes" comment="">
-      <change afterPath="$PROJECT_DIR$/liveauctions/src/main/java/com/example/liveauctions/config/JacksonConfig.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/liveauctions/src/main/java/com/example/liveauctions/config/RedisConfig.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/liveauctions/src/main/java/com/example/liveauctions/config/UserIdHandshakeInterceptor.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/liveauctions/src/main/java/com/example/liveauctions/controller/AuctionChatController.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/liveauctions/src/main/java/com/example/liveauctions/dto/ChatMessageDto.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/liveauctions/src/main/java/com/example/liveauctions/service/AuctionChatService.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/liveauctions/src/main/java/com/example/liveauctions/service/impl/AuctionChatServiceImpl.java" afterDir="false" />
+    <list default="true" id="0e638229-04b9-4bfe-bce8-937ee8354b9b" name="Changes" comment="">
+      <change afterPath="$PROJECT_DIR$/timedauctions/src/main/java/com/example/timedauctions/controller/TimedAuctionController.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/timedauctions/src/main/java/com/example/timedauctions/dto/BidDto.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/timedauctions/src/main/java/com/example/timedauctions/dto/CommentDto.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/timedauctions/src/main/java/com/example/timedauctions/dto/CreateCommentDto.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/timedauctions/src/main/java/com/example/timedauctions/dto/CreateTimedAuctionDto.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/timedauctions/src/main/java/com/example/timedauctions/dto/PlaceMaxBidDto.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/timedauctions/src/main/java/com/example/timedauctions/dto/TimedAuctionDetailsDto.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/timedauctions/src/main/java/com/example/timedauctions/dto/TimedAuctionSummaryDto.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/timedauctions/src/main/java/com/example/timedauctions/entity/AuctionComment.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/timedauctions/src/main/java/com/example/timedauctions/entity/AuctionProxyBid.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/timedauctions/src/main/java/com/example/timedauctions/entity/TimedAuction.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/timedauctions/src/main/java/com/example/timedauctions/exception/CommentNotFoundException.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/timedauctions/src/main/java/com/example/timedauctions/listener/AuctionLifecycleListener.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/timedauctions/src/main/java/com/example/timedauctions/mapper/TimedAuctionMapper.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/timedauctions/src/main/java/com/example/timedauctions/repository/AuctionCommentRepository.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/timedauctions/src/main/java/com/example/timedauctions/repository/AuctionProxyBidRepository.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/timedauctions/src/main/java/com/example/timedauctions/repository/BidRepository.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/timedauctions/src/main/java/com/example/timedauctions/repository/TimedAuctionRepository.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/timedauctions/src/main/java/com/example/timedauctions/service/TimedAuctionService.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/timedauctions/src/main/java/com/example/timedauctions/service/impl/TimedAuctionServiceImpl.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/compiler.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/compiler.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/encodings.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/encodings.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/misc.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/misc.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/frontend/src/App.jsx" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/App.jsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/frontend/src/components/AuctionChatPanel.jsx" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/components/AuctionChatPanel.jsx" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/frontend/src/components/CollapsibleSection.jsx" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/components/CollapsibleSection.jsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/frontend/src/components/CountdownTimer.jsx" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/components/CountdownTimer.jsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/frontend/src/components/Sidebar.jsx" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/components/Sidebar.jsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/frontend/src/components/StartAuctionModal.jsx" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/components/StartAuctionModal.jsx" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/frontend/src/pages/LiveAuctionDetailPage.jsx" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/pages/LiveAuctionDetailPage.jsx" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/frontend/src/pages/ProductsPage.jsx" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/pages/ProductsPage.jsx" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/liveauctions/pom.xml" beforeDir="false" afterPath="$PROJECT_DIR$/liveauctions/pom.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/liveauctions/src/main/java/com/example/liveauctions/client/dto/UserBasicInfoDto.java" beforeDir="false" afterPath="$PROJECT_DIR$/liveauctions/src/main/java/com/example/liveauctions/client/dto/UserBasicInfoDto.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/liveauctions/src/main/java/com/example/liveauctions/config/WebSocketStompConfig.java" beforeDir="false" afterPath="$PROJECT_DIR$/liveauctions/src/main/java/com/example/liveauctions/config/WebSocketStompConfig.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/liveauctions/src/main/java/com/example/liveauctions/controller/TestController.java" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/liveauctions/src/main/java/com/example/liveauctions/repository/LiveAuctionRepository.java" beforeDir="false" afterPath="$PROJECT_DIR$/liveauctions/src/main/java/com/example/liveauctions/repository/LiveAuctionRepository.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/frontend/src/pages/LiveAuctionsPage.jsx" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/gatewayserver/src/main/java/com/example/gatewayserver/GatewayserverApplication.java" beforeDir="false" afterPath="$PROJECT_DIR$/gatewayserver/src/main/java/com/example/gatewayserver/GatewayserverApplication.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/liveauctions/src/main/java/com/example/liveauctions/manager/AuctionLifecycleManager.java" beforeDir="false" afterPath="$PROJECT_DIR$/liveauctions/src/main/java/com/example/liveauctions/manager/AuctionLifecycleManager.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/liveauctions/src/main/java/com/example/liveauctions/service/impl/LiveAuctionServiceImpl.java" beforeDir="false" afterPath="$PROJECT_DIR$/liveauctions/src/main/java/com/example/liveauctions/service/impl/LiveAuctionServiceImpl.java" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -30,8 +49,6 @@
   <component name="FileTemplateManagerImpl">
     <option name="RECENT_TEMPLATES">
       <list>
-        <option value="Enum" />
-        <option value="Exception" />
         <option value="Interface" />
         <option value="Class" />
       </list>
@@ -40,14 +57,15 @@
   <component name="Git.Settings">
     <option name="RECENT_GIT_ROOT_PATH" value="$PROJECT_DIR$" />
   </component>
-  <component name="ProblemsViewState">
-    <option name="selectedTabId" value="CurrentFile" />
-  </component>
+  <component name="KubernetesApiPersistence">{}</component>
+  <component name="KubernetesApiProvider">{
+  &quot;isMigrated&quot;: true
+}</component>
   <component name="ProjectColorInfo">{
   &quot;customColor&quot;: &quot;&quot;,
   &quot;associatedIndex&quot;: 1
 }</component>
-  <component name="ProjectId" id="2wIn031O7XexY0hHDhCDP9AtbP4" />
+  <component name="ProjectId" id="2wUOE6gGZcyLWp0kbZoYaRRpjKM" />
   <component name="ProjectLevelVcsManager">
     <ConfirmationsSetting value="2" id="Add" />
   </component>
@@ -65,23 +83,35 @@
     &quot;RunOnceActivity.git.unshallow&quot;: &quot;true&quot;,
     &quot;Spring Boot.ConfigserverApplication.executor&quot;: &quot;Run&quot;,
     &quot;Spring Boot.EurekaserverApplication.executor&quot;: &quot;Run&quot;,
-    &quot;Spring Boot.GatewayserverApplication (1).executor&quot;: &quot;Run&quot;,
     &quot;Spring Boot.GatewayserverApplication.executor&quot;: &quot;Run&quot;,
-    &quot;Spring Boot.LiveAuctionsApplication.executor&quot;: &quot;Debug&quot;,
+    &quot;Spring Boot.LiveAuctionsApplication.executor&quot;: &quot;Run&quot;,
     &quot;Spring Boot.ProductsApplication.executor&quot;: &quot;Run&quot;,
+    &quot;Spring Boot.TimedAuctionApplication.executor&quot;: &quot;Debug&quot;,
     &quot;Spring Boot.UsersApplication.executor&quot;: &quot;Run&quot;,
-    &quot;git-widget-placeholder&quot;: &quot;feat/chat&quot;,
+    &quot;git-widget-placeholder&quot;: &quot;timed-auction&quot;,
     &quot;node.js.detected.package.eslint&quot;: &quot;true&quot;,
     &quot;node.js.detected.package.tslint&quot;: &quot;true&quot;,
     &quot;node.js.selected.package.eslint&quot;: &quot;(autodetect)&quot;,
     &quot;node.js.selected.package.tslint&quot;: &quot;(autodetect)&quot;,
     &quot;nodejs_package_manager_path&quot;: &quot;npm&quot;,
+    &quot;project.structure.last.edited&quot;: &quot;Modules&quot;,
+    &quot;project.structure.proportion&quot;: &quot;0.0&quot;,
+    &quot;project.structure.side.proportion&quot;: &quot;0.0&quot;,
     &quot;run.configurations.included.in.services&quot;: &quot;true&quot;,
     &quot;vue.rearranger.settings.migration&quot;: &quot;true&quot;
   }
 }</component>
   <component name="ReactorSettings">
     <option name="notificationShown" value="true" />
+  </component>
+  <component name="RunDashboard">
+    <option name="configurationTypes">
+      <set>
+        <option value="MicronautRunConfigurationType" />
+        <option value="QuarkusRunConfigurationType" />
+        <option value="SpringBootApplicationConfigurationType" />
+      </set>
+    </option>
   </component>
   <component name="RunManager" selected="Spring Boot.GatewayserverApplication">
     <configuration name="ConfigserverApplication" type="SpringBootApplicationConfigurationType" factoryName="Spring Boot" nameIsGenerated="true">
@@ -98,9 +128,8 @@
         <option name="Make" enabled="true" />
       </method>
     </configuration>
-    <configuration name="GatewayserverApplication" type="SpringBootApplicationConfigurationType" factoryName="Spring Boot">
-      <option name="ALTERNATIVE_JRE_PATH" value="17" />
-      <option name="ALTERNATIVE_JRE_PATH_ENABLED" value="true" />
+    <configuration name="GatewayserverApplication" type="SpringBootApplicationConfigurationType" factoryName="Spring Boot" nameIsGenerated="true">
+      <option name="FRAME_DEACTIVATION_UPDATE_POLICY" value="UpdateClassesAndResources" />
       <module name="gatewayserver" />
       <option name="SPRING_BOOT_MAIN_CLASS" value="com.example.gatewayserver.GatewayserverApplication" />
       <method v="2">
@@ -123,9 +152,17 @@
         <option name="Make" enabled="true" />
       </method>
     </configuration>
-    <configuration name="UsersApplication" type="SpringBootApplicationConfigurationType" factoryName="Spring Boot">
+    <configuration name="TimedAuctionApplication" type="SpringBootApplicationConfigurationType" factoryName="Spring Boot">
       <option name="ALTERNATIVE_JRE_PATH" value="17" />
       <option name="ALTERNATIVE_JRE_PATH_ENABLED" value="true" />
+      <module name="timedauctions" />
+      <option name="SPRING_BOOT_MAIN_CLASS" value="com.example.timedauctions.TimedAuctionsApplication" />
+      <method v="2">
+        <option name="Make" enabled="true" />
+      </method>
+    </configuration>
+    <configuration name="UsersApplication" type="SpringBootApplicationConfigurationType" factoryName="Spring Boot" nameIsGenerated="true">
+      <option name="FRAME_DEACTIVATION_UPDATE_POLICY" value="UpdateClassesAndResources" />
       <module name="users" />
       <option name="SPRING_BOOT_MAIN_CLASS" value="com.example.users.UsersApplication" />
       <method v="2">
@@ -133,12 +170,13 @@
       </method>
     </configuration>
     <list>
-      <item itemvalue="Spring Boot.UsersApplication" />
-      <item itemvalue="Spring Boot.GatewayserverApplication" />
       <item itemvalue="Spring Boot.ConfigserverApplication" />
+      <item itemvalue="Spring Boot.TimedAuctionApplication" />
       <item itemvalue="Spring Boot.EurekaserverApplication" />
+      <item itemvalue="Spring Boot.GatewayserverApplication" />
       <item itemvalue="Spring Boot.LiveAuctionsApplication" />
       <item itemvalue="Spring Boot.ProductsApplication" />
+      <item itemvalue="Spring Boot.UsersApplication" />
     </list>
   </component>
   <component name="SharedIndexes">
@@ -152,17 +190,13 @@
   <component name="SpellCheckerSettings" RuntimeDictionaries="0" Folders="0" CustomDictionaries="0" DefaultDictionary="application-level" UseSingleDictionary="true" transferred="true" />
   <component name="TaskManager">
     <task active="true" id="Default" summary="Default task">
-      <changelist id="e72edef0-0b14-4f3d-8bd4-9379eb9dd286" name="Changes" comment="" />
-      <created>1745737732381</created>
+      <changelist id="0e638229-04b9-4bfe-bce8-937ee8354b9b" name="Changes" comment="" />
+      <created>1746092573867</created>
       <option name="number" value="Default" />
       <option name="presentableId" value="Default" />
-      <updated>1745737732381</updated>
-      <workItem from="1745737734517" duration="13649000" />
-      <workItem from="1745751407296" duration="25115000" />
-      <workItem from="1745824512250" duration="9892000" />
-      <workItem from="1745835004713" duration="20001000" />
-      <workItem from="1745906050883" duration="25995000" />
-      <workItem from="1745999457970" duration="7613000" />
+      <updated>1746092573867</updated>
+      <workItem from="1746092576381" duration="12906000" />
+      <workItem from="1746116555117" duration="7319000" />
     </task>
     <servers />
   </component>

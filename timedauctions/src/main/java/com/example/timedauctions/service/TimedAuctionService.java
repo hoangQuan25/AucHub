@@ -1,0 +1,83 @@
+package com.example.timedauctions.service;
+
+import com.example.timedauctions.dto.*;
+import com.example.timedauctions.entity.AuctionStatus; // If filtering by status needed
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import java.time.LocalDateTime;
+import java.util.List;
+import java.util.Set;
+import java.util.UUID;
+
+public interface TimedAuctionService {
+
+    /**
+     * Creates a new timed auction.
+     * @param sellerId The ID of the user creating the auction.
+     * @param createDto DTO containing creation details.
+     * @return DTO representing the created auction's details.
+     */
+    TimedAuctionDetailsDto createAuction(String sellerId, CreateTimedAuctionDto createDto);
+
+    /**
+     * Retrieves the detailed view of a specific timed auction.
+     * @param auctionId The ID of the auction to retrieve.
+     * @return DTO containing detailed auction information.
+     * @throws com.example.timedauctions.exception.AuctionNotFoundException if auction not found.
+     */
+    TimedAuctionDetailsDto getAuctionDetails(UUID auctionId);
+
+    /**
+     * Places or updates a maximum proxy bid for a user on an auction.
+     * @param auctionId The ID of the auction.
+     * @param bidderId The ID of the user placing the bid.
+     * @param bidDto DTO containing the maximum bid amount.
+     * @throws com.example.timedauctions.exception.AuctionNotFoundException if auction not found.
+     * @throws com.example.timedauctions.exception.InvalidAuctionStateException if auction is not active or ended.
+     * @throws com.example.timedauctions.exception.InvalidBidException for various bid validation errors.
+     */
+    void placeMaxBid(UUID auctionId, String bidderId, PlaceMaxBidDto bidDto);
+
+
+    /**
+     * Retrieves auctions for a specific seller with filtering.
+     */
+    Page<TimedAuctionSummaryDto> getSellerAuctions(String sellerId,
+                                                   AuctionStatus status,
+                                                   Set<Long> categoryIds,
+                                                   LocalDateTime from,
+                                                   Pageable pageable);
+
+    // --- Add to TimedAuctionService interface ---
+
+    /**
+     * Creates a new comment or reply on a timed auction.
+     * @param auctionId The ID of the auction being commented on.
+     * @param userId The ID of the user posting the comment.
+     * @param commentDto DTO containing comment text and optional parentId.
+     * @return The created CommentDto.
+     */
+    CommentDto createComment(UUID auctionId, String userId, CreateCommentDto commentDto);
+
+    /**
+     * Retrieves comments for a specific auction.
+     * Currently fetches all comments and builds a nested structure one level deep.
+     * Consider pagination for top-level comments if performance becomes an issue.
+     * @param auctionId The ID of the auction.
+     * @return A list of top-level CommentDto objects, each potentially containing direct replies.
+     */
+    List<CommentDto> getComments(UUID auctionId);
+
+    Page<TimedAuctionSummaryDto> getActiveAuctions(Pageable pageable);
+
+// --- Alternative with Pagination for Top-Level ---
+/**
+ * Retrieves a paginated list of top-level comments for a specific auction.
+ * Replies might need to be fetched separately or included based on strategy.
+ * @param auctionId The ID of the auction.
+ * @param pageable Pagination for top-level comments.
+ * @return Page of top-level CommentDto objects.
+ */
+// Page<CommentDto> getCommentsPaginated(UUID auctionId, Pageable pageable);
+
+}

@@ -41,13 +41,19 @@ public class GatewayserverApplication {
 								.addResponseHeader("X-Response-Time", responseTime.toString())
 						)
 						.uri("lb://LIVEAUCTIONS"))
-
 				// --- ADD THIS ROUTE FOR WEBSOCKETS ---
 				.route("liveauctions_ws_route", p -> p // ID for the WebSocket route
 						.path("/ws/**") // Match the specific WebSocket path
 						// NO rewritePath filter here - backend expects the full path
 						.uri("lb://LIVEAUCTIONS")) // Route to the same backend service
 				// --- END OF ADDED ROUTE ---
+				.route("timedauctions_api_route", p -> p // Specific ID for the API route
+						.path("/api/timedauctions/**")
+						.filters(f -> f
+								.rewritePath("/api/timedauctions/(?<segment>.*)", "/${segment}")
+								.addResponseHeader("X-Response-Time", responseTime.toString())
+						)
+						.uri("lb://TIMEDAUCTIONS"))
 
 				.build();
 	}

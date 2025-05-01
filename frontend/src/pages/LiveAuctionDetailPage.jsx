@@ -22,6 +22,7 @@ function LiveAuctionDetailPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState("");
   const [isBidding, setIsBidding] = useState(false);
+  const [customBidAmount, setCustomBidAmount] = useState("");
   const [bidError, setBidError] = useState("");
   const [wsStatus, setWsStatus] = useState("Connecting...");
   const ws = useRef(null);
@@ -334,6 +335,33 @@ function LiveAuctionDetailPage() {
     }
   };
 
+  const handleCustomBid = async () => {
+    const bidNum = parseInt(customBidAmount);
+    const minBid = auctionDetails.nextBidAmount;
+
+    if (isNaN(bidNum) || bidNum < minBid) {
+      setBidError(
+        `Bid must be at least ${minBid.toLocaleString("vi-VN")} VNĐ.`
+      );
+      setTimeout(() => setBidError(""), 3000);
+      return;
+    }
+
+    setIsBidding(true);
+    setBidError("");
+    const payload = { amount: bidNum };
+    try {
+      await apiClient.post(`/liveauctions/${auctionId}/bids`, payload);
+      setCustomBidAmount("");
+    } catch (err) {
+      const message =
+        err.response?.data?.message || err.message || "Failed to place bid.";
+      setBidError(message);
+    } finally {
+      setIsBidding(false);
+    }
+  };
+
   // -- Cancel Action --
   const promptCancelAuction = () => {
     setCancelError(""); // Clear previous errors
@@ -437,7 +465,9 @@ function LiveAuctionDetailPage() {
   const images = auctionDetails.productImageUrls || []; // Ensure images is an array
   const isHighest = auctionDetails.highestBidderId === keycloak.subject;
 
-  const chatDisabled = ["SOLD", "CANCELLED", "RESERVE_NOT_MET"].includes(auctionDetails.status);
+  const chatDisabled = ["SOLD", "CANCELLED", "RESERVE_NOT_MET"].includes(
+    auctionDetails.status
+  );
   const finalChatNotice =
     auctionDetails.status === "SOLD"
       ? "Auction has ended."
@@ -451,7 +481,7 @@ function LiveAuctionDetailPage() {
   return (
     <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 p-4 max-w-7xl mx-auto">
       {/* LEFT */}
-      <div className="lg:col-span-5 space-y-4">
+      <div className="lg:col-span-4 space-y-4">
         <h2 className="text-2xl font-bold">
           {auctionDetails.productTitleSnapshot || "Product Title Missing"}
         </h2>
@@ -496,40 +526,72 @@ function LiveAuctionDetailPage() {
           )}
         </div>
 
-        {/* Description */}
-        <div className="bg-white rounded-xl shadow border divide-y">
+        {/* Description Section */}
+        <div className="bg-white rounded-xl shadow-sm border overflow-hidden">
           <CollapsibleSection title="Overview" defaultOpen>
-            <div className="text-sm text-gray-700 space-y-2">
+            <div className="text-sm text-gray-700 space-y-2 px-4 pb-4">
               <p className="whitespace-pre-wrap">
                 {auctionDetails.productDescription || "No description."}
               </p>
-              <p><strong>Condition:</strong> {auctionDetails.productCondition?.replace("_", " ") || "N/A"}</p>
-              <p><strong>Categories:</strong> {auctionDetails.productCategories?.map(c => c.name).join(", ") || "N/A"}</p>
-              <p className="text-xs text-gray-500">Seller: {auctionDetails.sellerUsernameSnapshot}</p>
+              <p>
+                <strong>Condition:</strong>{" "}
+                {auctionDetails.productCondition?.replace("_", " ") || "N/A"}
+              </p>
+              <p>
+                <strong>Categories:</strong>{" "}
+                {auctionDetails.productCategories
+                  ?.map((c) => c.name)
+                  .join(", ") || "N/A"}
+              </p>
+              <p className="text-xs text-gray-500">
+                Seller: {auctionDetails.sellerUsernameSnapshot}
+              </p>
             </div>
           </CollapsibleSection>
+
           <AuctionRules />
         </div>
       </div>
 
-      {/* RIGHT */}
-      <div className="lg:col-span-7 space-y-4 flex flex-col">
-        <div className="text-xs text-right text-gray-500">WebSocket: {wsStatus}</div>
+      {/* MIDDLE */}
+      <div className="lg:col-span-4 flex flex-col gap-4 max-h-screen overflow-hidden">
+        <div className="text-xs text-right text-gray-500">
+          WebSocket: {wsStatus}
+        </div>
 
-        <div className="bg-white p-4 rounded shadow border space-y-4">
+        <div className="bg-white p-4 rounded shadow border flex-shrink-0">
           <div className="flex justify-between items-start border-b pb-2">
-            <span className={`text-sm font-medium ${auctionDetails.reserveMet ? "text-green-600" : "text-orange-600"}`}>
-              {auctionDetails.reserveMet ? "✔ Reserve Met" : auctionDetails.reservePrice ? "Reserve Not Met" : "No Reserve"}
+            <span
+              className={`text-sm font-medium ${
+                auctionDetails.reserveMet ? "text-green-600" : "text-orange-600"
+              }`}
+            >
+              {auctionDetails.reserveMet
+                ? "✔ Reserve Met"
+                : auctionDetails.reservePrice
+                ? "Reserve Not Met"
+                : "No Reserve"}
             </span>
             <div className="text-right">
               <div className="text-xs text-gray-500">
-                {auctionDetails.status !== "ACTIVE" ? "Auction Ended" : "Time Remaining"}
+                {auctionDetails.status !== "ACTIVE"
+                  ? "Auction Ended"
+                  : "Time Remaining"}
               </div>
               {auctionDetails.status === "ACTIVE" ? (
-                <CountdownTimer endTimeMillis={new Date(auctionDetails.endTime).getTime()} onEnd={() => console.log("Timer Ended")}/>
+                <CountdownTimer
+                  endTimeMillis={new Date(auctionDetails.endTime).getTime()}
+                  onEnd={() => console.log("Timer Ended")}
+                />
               ) : (
                 <span className="font-bold text-xl text-gray-500">
-                  {auctionDetails.status === "SOLD" ? "SOLD" : auctionDetails.status === "RESERVE_NOT_MET" ? "NOT SOLD" : auctionDetails.status === "CANCELLED" ? "CANCELLED" : "--:--"}
+                  {auctionDetails.status === "SOLD"
+                    ? "SOLD"
+                    : auctionDetails.status === "RESERVE_NOT_MET"
+                    ? "NOT SOLD"
+                    : auctionDetails.status === "CANCELLED"
+                    ? "CANCELLED"
+                    : "--:--"}
                 </span>
               )}
               {auctionDetails.reserveMet && (
@@ -543,92 +605,187 @@ function LiveAuctionDetailPage() {
           <div className="text-center my-4">
             <p className="text-sm text-gray-600 mb-1">Current Bid</p>
             <p className="text-4xl font-bold text-indigo-700">
-              {(auctionDetails.status === "SOLD" ? auctionDetails.winningBid : auctionDetails.currentBid ?? auctionDetails.startPrice ?? 0).toLocaleString("vi-VN")} VNĐ
+              {(auctionDetails.status === "SOLD"
+                ? auctionDetails.winningBid
+                : auctionDetails.currentBid ?? auctionDetails.startPrice ?? 0
+              ).toLocaleString("vi-VN")}{" "}
+              VNĐ
             </p>
             <p className="text-xs text-gray-500">
-              Leading: {auctionDetails.highestBidderUsernameSnapshot ? (isHighest ? <span className="text-green-600 font-semibold">You</span> : auctionDetails.highestBidderUsernameSnapshot) : "No bids yet"}
+              Leading:{" "}
+              {auctionDetails.highestBidderUsernameSnapshot ? (
+                isHighest ? (
+                  <span className="text-green-600 font-semibold">You</span>
+                ) : (
+                  auctionDetails.highestBidderUsernameSnapshot
+                )
+              ) : (
+                "No bids yet"
+              )}
             </p>
           </div>
 
           {auctionDetails.sellerId !== keycloak.subject && (
-            <button
-              onClick={handlePlaceBid}
-              disabled={!canBid || isBidding}
-              className="w-full py-3 px-4 bg-green-600 hover:bg-green-700 text-white font-bold rounded text-lg disabled:opacity-60"
-            >
-              {isBidding ? "Placing Bid..." : `Bid ${auctionDetails.nextBidAmount?.toLocaleString("vi-VN") || "N/A"} VNĐ`}
-            </button>
+            <>
+              <button
+                onClick={handlePlaceBid}
+                disabled={!canBid || isBidding}
+                className="w-full py-3 px-4 bg-green-600 hover:bg-green-700 text-white font-bold rounded text-lg disabled:opacity-60"
+              >
+                {isBidding
+                  ? "Placing Bid..."
+                  : `Bid ${
+                      auctionDetails.nextBidAmount?.toLocaleString("vi-VN") ||
+                      "N/A"
+                    } VNĐ`}
+              </button>
+
+              {/* Custom Bid Input */}
+              <div className="mt-3 flex items-center gap-2">
+                <input
+                  type="number"
+                  value={customBidAmount}
+                  onChange={(e) => setCustomBidAmount(e.target.value)}
+                  min={auctionDetails.nextBidAmount || 0}
+                  placeholder={`Or input your bid, min ${
+                    auctionDetails.nextBidAmount?.toLocaleString("vi-VN") ||
+                    "..."
+                  } VNĐ`}
+                  className="flex-1 px-3 py-2 border rounded text-sm focus:outline-none focus:ring-2 focus:ring-green-500"
+                />
+                <button
+                  onClick={handleCustomBid}
+                  disabled={isBidding || !customBidAmount}
+                  className="px-4 py-2 bg-green-500 hover:bg-green-600 text-white rounded text-sm disabled:opacity-60"
+                >
+                  Bid
+                </button>
+              </div>
+            </>
           )}
 
-          {auctionDetails.sellerId === keycloak.subject && (auctionDetails.status === "SCHEDULED" || auctionDetails.status === "ACTIVE") && (
-            <div className="flex justify-between items-center gap-4 mt-4 pt-4 border-t">
-              <button
-                onClick={promptCancelAuction}
-                disabled={isCancelling || isHammering}
-                className="flex-1 px-4 py-2 bg-red-600 hover:bg-red-700 text-white font-semibold rounded text-sm disabled:opacity-60"
-              >
-                {isCancelling ? "Cancelling..." : "Cancel Auction"}
-              </button>
-              <button
-                onClick={promptHammerDown}
-                disabled={isCancelling || isHammering || !auctionDetails.highestBidderId || (auctionDetails.reservePrice && !auctionDetails.reserveMet)}
-                className="flex-1 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded text-sm disabled:opacity-60"
-              >
-                {isHammering ? "Ending..." : "Hammer Down"}
-              </button>
-            </div>
-          )}
+          {auctionDetails.sellerId === keycloak.subject &&
+            (auctionDetails.status === "SCHEDULED" ||
+              auctionDetails.status === "ACTIVE") && (
+              <div className="flex justify-between items-center gap-4 mt-4 pt-4 border-t">
+                <button
+                  onClick={promptCancelAuction}
+                  disabled={isCancelling || isHammering}
+                  className="flex-1 px-4 py-2 bg-red-600 hover:bg-red-700 text-white font-semibold rounded text-sm disabled:opacity-60"
+                >
+                  {isCancelling ? "Cancelling..." : "Cancel Auction"}
+                </button>
+                <button
+                  onClick={promptHammerDown}
+                  disabled={
+                    isCancelling ||
+                    isHammering ||
+                    !auctionDetails.highestBidderId ||
+                    (auctionDetails.reservePrice && !auctionDetails.reserveMet)
+                  }
+                  className="flex-1 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded text-sm disabled:opacity-60"
+                >
+                  {isHammering ? "Ending..." : "Hammer Down"}
+                </button>
+              </div>
+            )}
 
-          {bidError && <p className="text-center text-xs text-red-500 mt-2">{bidError}</p>}
+          {bidError && (
+            <p className="text-center text-xs text-red-500 mt-2">{bidError}</p>
+          )}
 
           <p className="text-center text-xs text-gray-500 mt-2">
-            (Next required bid: {auctionDetails?.nextBidAmount?.toLocaleString("vi-VN") || "N/A"} VNĐ)
+            (Next required bid:{" "}
+            {auctionDetails?.nextBidAmount?.toLocaleString("vi-VN") || "N/A"}{" "}
+            VNĐ)
           </p>
-        </div>
 
-        {auctionDetails.status === "SOLD" && (
-          <div className="flex items-center gap-3 p-4 bg-green-50 border border-green-300 rounded-lg shadow-sm">
-            <div className="text-xl">🏆</div>
-            <div>
-              <p className="font-semibold text-green-800">
-                {auctionDetails.winnerId === keycloak.subject ? "Congratulations, you won!" : "Auction Complete"}
-              </p>
-              <p className="text-green-700 text-sm">
-                Winner: <strong>{auctionDetails.highestBidderUsernameSnapshot}</strong> with <strong>{auctionDetails.winningBid.toLocaleString("vi-VN")} VNĐ</strong>
-              </p>
+          {auctionDetails.status === "SOLD" && (
+            <div className="flex items-center gap-3 p-4 bg-green-50 border border-green-300 rounded-lg shadow-sm">
+              <div className="text-xl">🏆</div>
+              <div>
+                <p className="font-semibold text-green-800">
+                  {auctionDetails.winnerId === keycloak.subject
+                    ? "Congratulations, you won!"
+                    : "Auction Complete"}
+                </p>
+                <p className="text-green-700 text-sm">
+                  Winner:{" "}
+                  <strong>
+                    {auctionDetails.highestBidderUsernameSnapshot}
+                  </strong>{" "}
+                  with{" "}
+                  <strong>
+                    {auctionDetails.winningBid.toLocaleString("vi-VN")} VNĐ
+                  </strong>
+                </p>
+              </div>
+            </div>
+          )}
+
+          {/* Bid History - scrollable */}
+          <div className="bg-white p-4 rounded shadow border overflow-hidden flex flex-col max-h-[300px]">
+            <h4 className="font-semibold mb-2 text-sm border-b pb-1">
+              Bid History
+            </h4>
+
+            <div className="overflow-y-auto flex-1">
+              {bidHistory.length === 0 ? (
+                <p className="text-xs text-gray-500">No bids placed yet.</p>
+              ) : (
+                <ul className="divide-y divide-dashed divide-gray-200 text-sm">
+                  {bidHistory.map((bid, i) => {
+                    const isYou =
+                      bid.bidderUsernameSnapshot ===
+                      keycloak.tokenParsed?.preferred_username;
+                    return (
+                      <li
+                        key={bid.id || i}
+                        className="flex items-center justify-between py-2 px-1 hover:bg-gray-50 transition"
+                      >
+                        <span
+                          className={`w-1/3 truncate ${
+                            isYou ? "text-blue-600 font-bold" : "text-gray-700"
+                          }`}
+                        >
+                          {isYou ? "You" : bid.bidderUsernameSnapshot}
+                        </span>
+                        <span className="w-1/3 text-center font-medium text-gray-800">
+                          {bid.amount.toLocaleString("vi-VN")} VNĐ
+                        </span>
+                        <span className="w-1/3 text-right text-gray-500 text-xs">
+                          {new Date(bid.bidTime).toLocaleTimeString()}
+                        </span>
+                      </li>
+                    );
+                  })}
+                </ul>
+              )}
             </div>
           </div>
-        )}
-
-        <div className="bg-white p-4 rounded shadow border overflow-y-auto max-h-60">
-          <h4 className="font-semibold mb-2 text-sm border-b pb-1">Bid History</h4>
-          {bidHistory.length === 0 ? (
-            <p className="text-xs text-gray-500">No bids placed yet.</p>
-          ) : (
-            <ul className="space-y-1 text-xs">
-              {bidHistory.map((bid, i) => (
-                <li key={bid.id || i} className="flex justify-between border-b border-dashed border-gray-200 py-0.5">
-                  <span className={bid.bidderUsername === keycloak.tokenParsed?.preferred_username ? "text-blue-600 font-semibold" : ""}>
-                    {bid.bidderUsername === keycloak.tokenParsed?.preferred_username ? "You" : bid.bidderUsername}
-                  </span>
-                  <span className="font-medium">{bid.amount.toLocaleString("vi-VN")} VNĐ</span>
-                  <span className="text-gray-500">{new Date(bid.bidTime).toLocaleTimeString()}</span>
-                </li>
-              ))}
-            </ul>
-          )}
-        </div>
-
-        <div className="bg-white rounded shadow border flex flex-col max-h-[300px] min-h-[250px]">
-          {chatDisabled ? (
-            <div className="flex items-center justify-center h-full text-sm text-gray-600">
-              {finalChatNotice || "Chat is disabled."}
-            </div>
-          ) : (
-            <AuctionChatPanel auctionId={auctionId} />
-          )}
         </div>
       </div>
+
+      <div className="lg:col-span-4 flex flex-col max-h-screen h-[calc(100vh-2rem)] overflow-hidden">
+        <div className="bg-white rounded shadow border flex flex-col h-full overflow-hidden">
+          {/* Chat Title */}
+          <div className="px-4 py-2 border-b text-sm font-semibold text-gray-700 bg-gray-50">
+            💬 Chat Window
+          </div>
+
+          {/* Chat Panel with full height */}
+          <div className="flex-grow overflow-hidden">
+            {chatDisabled ? (
+              <div className="flex items-center justify-center h-full text-sm text-gray-600">
+                {finalChatNotice || "Chat is disabled."}
+              </div>
+            ) : (
+              <AuctionChatPanel auctionId={auctionId} />
+            )}
+          </div>
+        </div>
+      </div>
+
       {/* Cancel Confirmation */}
       <ConfirmationModal
         isOpen={isCancelConfirmOpen}

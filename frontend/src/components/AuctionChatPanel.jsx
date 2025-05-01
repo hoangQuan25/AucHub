@@ -76,7 +76,7 @@ const AuctionChatPanel = ({ auctionId }) => {
   };
 
   return (
-    <div className="flex flex-col h-full border rounded shadow bg-white">
+    <div className="flex flex-col h-full overflow-hidden">
       {/* Chat messages */}
       <div className="flex-1 overflow-y-auto p-4 space-y-2 text-sm bg-gray-50">
         {msgs.map((m, i) => {
