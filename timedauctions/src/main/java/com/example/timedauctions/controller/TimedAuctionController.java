@@ -10,11 +10,14 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.web.PageableDefault;
+import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Set;
 import java.util.UUID;
 
 @RestController
@@ -51,12 +54,65 @@ public class TimedAuctionController {
         return ResponseEntity.ok(auctionPage);
     }
 
+    @GetMapping("/my-auctions") // Maps to GET /api/timed-auctions/my-auctions
+    public ResponseEntity<Page<TimedAuctionSummaryDto>> getSellerAuctions(
+            @RequestHeader(USER_ID_HEADER) String sellerId,
+            // Status filter (optional)
+            @RequestParam(value = "status", required = false) AuctionStatus status,
+            // Special 'ended' flag (optional)
+            @RequestParam(value = "ended", required = false) Boolean ended,
+            // Category filter (optional)
+            @RequestParam(value = "categoryIds", required = false) Set<Long> categoryIds,
+            // Time filter (optional)
+            @RequestParam(value = "from", required = false)
+            @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime from,
+            // Pagination and default sort (e.g., end time descending for past auctions)
+            @PageableDefault(size = 12, sort = "endTime", direction = Sort.Direction.DESC) Pageable pageable
+    ) {
+
+        log.info("Seller {} fetching their TIMED auctions (status={}, ended={}, cats={}, from={}, page={})",
+                sellerId, status, ended, categoryIds, from, pageable);
+
+        // Input validation: Cannot provide both status and ended=true
+        if (Boolean.TRUE.equals(ended) && status != null) {
+            // Consider throwing a BadRequestException or ignoring 'status'
+            log.warn("Both 'status' and 'ended=true' provided for seller auctions, ignoring 'status'.");
+            status = null;
+        }
+
+
+        Page<TimedAuctionSummaryDto> page = timedAuctionService.getSellerAuctions(
+                sellerId, status, ended, categoryIds, from, pageable
+        );
+        return ResponseEntity.ok(page);
+    }
+
     @GetMapping("/{auctionId}")
     public ResponseEntity<TimedAuctionDetailsDto> getAuctionDetails(
             @PathVariable UUID auctionId) {
         log.info("Received request for details of timed auction: {}", auctionId);
         TimedAuctionDetailsDto details = timedAuctionService.getAuctionDetails(auctionId);
         return ResponseEntity.ok(details);
+    }
+
+    @PostMapping("/{auctionId}/cancel") // Maps to POST /api/timed-auctions/{auctionId}/cancel
+    public ResponseEntity<Void> cancelAuction(
+            @PathVariable UUID auctionId,
+            @RequestHeader(USER_ID_HEADER) String sellerId) {
+        log.info("User {} requesting cancellation for auction {}", sellerId, auctionId);
+        timedAuctionService.cancelAuction(auctionId, sellerId);
+        // Return 200 OK, actual change happens asynchronously
+        return ResponseEntity.ok().build();
+    }
+
+    @PostMapping("/{auctionId}/hammer") // Maps to POST /api/timed-auctions/{auctionId}/hammer
+    public ResponseEntity<Void> endAuctionEarly( // Renamed to match service
+                                                 @PathVariable UUID auctionId,
+                                                 @RequestHeader(USER_ID_HEADER) String sellerId) {
+        log.info("User {} requesting early end (hammer) for auction {}", sellerId, auctionId);
+        timedAuctionService.endAuctionEarly(auctionId, sellerId);
+        // Return 200 OK, actual change happens asynchronously
+        return ResponseEntity.ok().build();
     }
 
     @PostMapping("/{auctionId}/bids") // Maps to POST /api/timed-auctions/{auctionId}/bids

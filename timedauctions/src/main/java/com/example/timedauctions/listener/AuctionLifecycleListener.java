@@ -8,6 +8,8 @@ import com.example.timedauctions.exception.AuctionNotFoundException;
 import com.example.timedauctions.repository.TimedAuctionRepository;
 // Import service if complex end logic is needed, otherwise repo is enough
 // import com.example.timedauctions.service.TimedAuctionService;
+import com.example.timedauctions.service.AuctionSchedulingService;
+import com.example.timedauctions.service.TimedAuctionService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.amqp.rabbit.annotation.RabbitListener;
@@ -23,10 +25,7 @@ import java.util.Objects;
 public class AuctionLifecycleListener {
 
     private final TimedAuctionRepository timedAuctionRepository;
-    // Inject RabbitTemplate only if the listener needs to send *new* messages (e.g., reschedule end)
-    // private final RabbitTemplate rabbitTemplate;
-    // Inject Service if more complex logic beyond status update is needed
-    // private final TimedAuctionService timedAuctionService;
+    private final AuctionSchedulingService auctionSchedulingService;
 
 
     @RabbitListener(queues = RabbitMqConfig.TD_AUCTION_START_QUEUE)
@@ -44,7 +43,7 @@ public class AuctionLifecycleListener {
                 log.info("Auction {} status set to ACTIVE.", auction.getId());
 
                 // Schedule the end now that it's active (moved from createAuction for SCHEDULED auctions)
-                scheduleAuctionEnd(auction); // Requires access to schedule logic (e.g., via service or helper)
+                auctionSchedulingService.scheduleAuctionEnd(auction);; // Requires access to schedule logic (e.g., via service or helper)
 
                 // Optional: Publish internal event
                 // publishInternalEvent(auction, "STARTED");
@@ -113,28 +112,77 @@ public class AuctionLifecycleListener {
         }
     }
 
-    // --- TODO: Add listener for Cancel Command if needed ---
-    // @RabbitListener(queues = RabbitMqConfig.TD_AUCTION_CANCEL_QUEUE)
-    // @Transactional
-    // public void handleAuctionCancel(AuctionLifecycleCommands.CancelAuctionCommand command) { ... }
+    @RabbitListener(queues = RabbitMqConfig.TD_AUCTION_CANCEL_QUEUE)
+    @Transactional
+    public void handleCancelCommand(AuctionLifecycleCommands.CancelAuctionCommand command) {
+        log.info("Processing CancelAuctionCommand for auction: {}", command.auctionId());
+        TimedAuction auction = timedAuctionRepository.findById(command.auctionId())
+                .orElse(null); // Find, don't throw if already gone
 
+        if (auction == null) {
+            log.warn("Cancel cmd for {}, but auction row is gone – ignoring", command.auctionId());
+            return;
+        }
 
-    // --- Helper to Reschedule End (needs RabbitTemplate) ---
-    // If rescheduling happens inside listener, inject RabbitTemplate
-    // private final RabbitTemplate rabbitTemplate; // Inject if needed
+        // Final validation checks (defense-in-depth)
+        if (!auction.getSellerId().equals(command.sellerId())) {
+            log.warn("Cancel cmd for auction {} ignored, seller ID mismatch.", command.auctionId());
+            return; // Invalid requestor
+        }
 
-    private void scheduleAuctionEnd(TimedAuction auction) {
-        // NOTE: This duplicates logic from the service. Consider a shared SchedulingService
-        // or making scheduleAuctionEnd public in TimedAuctionService and injecting the service here.
-        // For now, simplified logic: Assume rescheduling isn't done *from* listener easily without service call.
-        // If scheduleAuctionEnd is only ever called from the ServiceImpl, this method isn't needed here.
-        log.warn("Placeholder: scheduleAuctionEnd called from Listener - requires RabbitTemplate/Service injection if actually needed here.");
+        if (auction.getStatus() == AuctionStatus.SCHEDULED || auction.getStatus() == AuctionStatus.ACTIVE) {
+            auction.setStatus(AuctionStatus.CANCELLED);
+            auction.setActualEndTime(LocalDateTime.now()); // Record when cancelled
+            timedAuctionRepository.save(auction);
+            log.info("Auction {} status set to CANCELLED.", auction.getId());
+            // Optional: Publish internal "AuctionCancelled" event
+            // publishInternalEvent(auction, "CANCELLED");
+        } else {
+            log.warn("Cancel cmd for auction {} ignored, status was already {}.", command.auctionId(), auction.getStatus());
+        }
     }
 
-    // --- Helper to Publish Internal Event (needs RabbitTemplate) ---
-    private void publishInternalEvent(TimedAuction auction, String eventType) {
-        log.warn("Placeholder: publishInternalEvent called from Listener - requires RabbitTemplate injection if actually needed here.");
-        // rabbitTemplate.convertAndSend(RabbitMqConfig.TD_AUCTION_EVENTS_EXCHANGE, "td.auction.event." + eventType.toLowerCase(), eventPayload);
+    @RabbitListener(queues = RabbitMqConfig.TD_AUCTION_HAMMER_QUEUE)
+    @Transactional
+    public void handleHammerDownCommand(AuctionLifecycleCommands.HammerDownCommand command) { // Reuse HammerDownCommand
+        log.info("Processing HammerDownCommand (end early) for auction: {}", command.auctionId());
+        TimedAuction auction = timedAuctionRepository.findById(command.auctionId())
+                .orElse(null);
+
+        if (auction == null) {
+            log.warn("Hammer cmd for {}, but auction row is gone – ignoring", command.auctionId());
+            return;
+        }
+
+        // Final validation checks
+        if (!auction.getSellerId().equals(command.sellerId())) {
+            log.warn("Hammer cmd for auction {} ignored, seller ID mismatch.", command.auctionId());
+            return;
+        }
+        if (auction.getStatus() != AuctionStatus.ACTIVE) {
+            log.warn("Hammer cmd for auction {} ignored, status was {}.", command.auctionId(), auction.getStatus());
+            return;
+        }
+        if (auction.getHighestBidderId() == null) {
+            log.warn("Hammer cmd for auction {} ignored, no highest bidder.", command.auctionId());
+            return; // Cannot hammer without bids
+        }
+
+        // --- Determine Final State ---
+        // Ending early via "Hammer" implies SOLD, even if reserve wasn't technically met.
+        // The seller is overriding the reserve requirement by choosing to end now.
+        auction.setStatus(AuctionStatus.SOLD);
+        auction.setWinnerId(auction.getHighestBidderId());
+        auction.setWinningBid(auction.getCurrentBid()); // Sold at the current visible price
+        auction.setActualEndTime(LocalDateTime.now()); // Record when hammered
+        timedAuctionRepository.save(auction);
+        log.info("Auction {} ended early (hammered). Status: SOLD. Winner: {}, Price: {}",
+                auction.getId(), auction.getWinnerId(), auction.getWinningBid());
+
+        log.debug("Scheduled end message for auction {} will be ignored by listener due to status change.", auction.getId());
+
     }
+
+
 
 }
