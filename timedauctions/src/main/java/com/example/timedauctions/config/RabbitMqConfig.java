@@ -23,6 +23,7 @@ public class RabbitMqConfig {
     public static final String TD_AUCTION_START_QUEUE = "td_auction_start_queue";
     public static final String TD_AUCTION_END_QUEUE = "td_auction_end_queue";
     public static final String TD_AUCTION_CANCEL_QUEUE  = "td_auction_cancel_queue";
+    public static final String TD_AUCTION_HAMMER_QUEUE = "td_auction_hammer_queue";
     // No hammer queue needed? Or add if required:
     // public static final String TD_AUCTION_HAMMER_QUEUE = "td_auction_hammer_queue";
 
@@ -31,6 +32,7 @@ public class RabbitMqConfig {
     public static final String TD_START_ROUTING_KEY = "td.auction.command.start";
     public static final String TD_END_ROUTING_KEY = "td.auction.command.end";
     public static final String TD_CANCEL_ROUTING_KEY = "td.auction.command.cancel";
+    public static final String TD_HAMMER_ROUTING_KEY = "td.auction.command.hammer";
     // public static final String TD_HAMMER_ROUTING_KEY = "td.auction.command.hammer";
 
     // public static final String TD_UPDATE_ROUTING_KEY_PREFIX = "td.auction.update."; // If needed
@@ -72,6 +74,11 @@ public class RabbitMqConfig {
         return QueueBuilder.durable(TD_AUCTION_CANCEL_QUEUE).build();
     }
 
+    @Bean
+    Queue tdAuctionHammerQueue() { // For ending early
+        return QueueBuilder.durable(TD_AUCTION_HAMMER_QUEUE).build();
+    }
+
     // --- Bindings ---
     @Bean
     Binding tdStartBinding(Queue tdAuctionStartQueue, CustomExchange tdAuctionScheduleExchange) {
@@ -94,6 +101,31 @@ public class RabbitMqConfig {
         return BindingBuilder.bind(tdAuctionCancelQueue)
                 .to(tdAuctionCommandExchange)
                 .with(TD_CANCEL_ROUTING_KEY);
+    }
+
+    @Bean
+    Binding tdHammerBinding(Queue tdAuctionHammerQueue, DirectExchange tdAuctionCommandExchange) { // For ending early
+        return BindingBuilder.bind(tdAuctionHammerQueue)
+                .to(tdAuctionCommandExchange)
+                .with(TD_HAMMER_ROUTING_KEY);
+    }
+
+    // Bind end queue to SCHEDULE exchange (for delayed messages)
+    @Bean
+    Binding tdEndBindingDelayed(Queue tdAuctionEndQueue, CustomExchange tdAuctionScheduleExchange) {
+        return BindingBuilder.bind(tdAuctionEndQueue)
+                .to(tdAuctionScheduleExchange)
+                .with(TD_END_ROUTING_KEY)
+                .noargs();
+    }
+
+    // --- NEW BINDING ---
+    // Bind end queue to COMMAND exchange (for immediate messages if scheduled time is past)
+    @Bean
+    Binding tdEndBindingImmediate(Queue tdAuctionEndQueue, DirectExchange tdAuctionCommandExchange) {
+        return BindingBuilder.bind(tdAuctionEndQueue)
+                .to(tdAuctionCommandExchange)
+                .with(TD_END_ROUTING_KEY); // Reuse same routing key
     }
 
     // --- Message Converter (identical is fine) ---

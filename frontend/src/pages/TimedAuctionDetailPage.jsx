@@ -119,6 +119,11 @@ function TimedAuctionDetailPage() {
   const [isCancelling, setIsCancelling] = useState(false);
   const [cancelError, setCancelError] = useState("");
 
+  // --- NEW State for Hammer/End Early Action ---
+  const [isHammerConfirmOpen, setIsHammerConfirmOpen] = useState(false);
+  const [isHammering, setIsHammering] = useState(false); // Renamed for clarity
+  const [hammerError, setHammerError] = useState("");
+
   // Image Carousel State
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
 
@@ -206,7 +211,7 @@ function TimedAuctionDetailPage() {
       if (isInitialLoad) setIsLoadingComments(false);
     }
     // *** REMOVE isLoadingComments from dependency array ***
-  }, [auctionId]); // Depends only on auctionId
+  }, [auctionId, initialized]); // Depends only on auctionId
 
   // --- Initial Fetch & Polling Setup (useEffect) ---
   useEffect(() => {
@@ -219,7 +224,7 @@ function TimedAuctionDetailPage() {
       setIsLoadingDetails(true);
       setIsLoadingComments(true);
       setErrorDetails("");
-      setErrorComments("");
+      setCommentError("");
       setAuctionDetails(null);
       setComments([]);
 
@@ -229,8 +234,8 @@ function TimedAuctionDetailPage() {
 
       // Setup polling intervals
       // Use the stable function references from useCallback
-      detailsIntervalRef.current = setInterval(fetchAuctionDetails, 30 * 1000);
-      commentsIntervalRef.current = setInterval(fetchComments, 60 * 1000);
+      detailsIntervalRef.current = setInterval(fetchAuctionDetails, 15 * 1000);
+      commentsIntervalRef.current = setInterval(fetchComments, 30 * 1000);
     } else {
       setIsLoadingDetails(false);
       setIsLoadingComments(false);
@@ -250,7 +255,7 @@ function TimedAuctionDetailPage() {
       // Use != null to include 0
       const nextBid =
         auctionDetails.nextBidAmount ?? auctionDetails.startPrice ?? 0;
-      const options = generateBidOptions(nextBid, 25); // Generate 25 options
+      const options = generateBidOptions(nextBid, 50); // Generate 25 options
       setMaxBidOptions(options);
       // Set the default selected value to the first option (the minimum next bid)
       if (options.length > 0) {
@@ -266,17 +271,23 @@ function TimedAuctionDetailPage() {
 
   // --- Place Max Bid Handler ---
   const handlePlaceBid = async () => {
-    if (!auctionDetails || isBidding || !keycloak.authenticated || !selectedMaxBid) return;
+    if (
+      !auctionDetails ||
+      isBidding ||
+      !keycloak.authenticated ||
+      !selectedMaxBid
+    )
+      return;
 
     setBidError(""); // Clear previous error
     const maxBidNum = Number(selectedMaxBid);
-  
+
     // Validation
     if (isNaN(maxBidNum) || maxBidNum <= 0) {
       setBidError("Invalid bid amount selected."); // Should ideally not happen
       return;
     }
-     if (auctionDetails.status !== "ACTIVE") {
+    if (auctionDetails.status !== "ACTIVE") {
       setBidError("Auction is not currently active.");
       return;
     }
@@ -371,7 +382,7 @@ function TimedAuctionDetailPage() {
     setCancelError("");
     try {
       // Use correct endpoint for timed auctions
-      await apiClient.post(`/timed-auctions/${auctionId}/cancel`);
+      await apiClient.post(`/timedauctions/${auctionId}/cancel`);
       setIsCancelConfirmOpen(false);
       fetchAuctionDetails(); // Refresh details after cancel request
     } catch (err) {
@@ -383,6 +394,48 @@ function TimedAuctionDetailPage() {
       setIsCancelling(false);
     }
   };
+
+  // --- NEW Handlers for Hammer/End Early Action ---
+  const promptEndAuctionEarly = useCallback(() => {
+    // Basic check before showing prompt
+    if (
+      !auctionDetails ||
+      auctionDetails.status !== "ACTIVE" ||
+      !auctionDetails.highestBidderId
+    ) {
+      console.warn("End early prompted but conditions not met.");
+      // Optionally show a different message to the seller
+      return;
+    }
+    setHammerError(""); // Clear previous errors
+    setIsHammerConfirmOpen(true);
+  }, [auctionDetails]); // Depends on auctionDetails
+
+  const handleCloseHammerConfirm = useCallback(() => {
+    setIsHammerConfirmOpen(false);
+  }, []);
+
+  const handleConfirmEndAuctionEarly = useCallback(async () => {
+    setIsHammering(true);
+    setHammerError("");
+    console.log(`Attempting to END auction ${auctionId} early (hammer)`);
+    try {
+      // Use the hammer endpoint for timed auctions
+      await apiClient.post(`/timedauctions/${auctionId}/hammer`);
+      console.log(`Auction ${auctionId} end early request sent successfully.`);
+      setIsHammerConfirmOpen(false); // Close modal on success
+      fetchAuctionDetails(); // Refresh details immediately
+    } catch (err) {
+      console.error("Failed to end auction early:", err);
+      const message =
+        err.response?.data?.message ||
+        err.message ||
+        "Failed to end auction now.";
+      setHammerError(message); // Show error within the confirmation modal
+    } finally {
+      setIsHammering(false);
+    }
+  }, [auctionId, fetchAuctionDetails]);
 
   // --- Render Logic ---
   // Initial Loading State
@@ -604,17 +657,39 @@ function TimedAuctionDetailPage() {
                 </div>
               )}
 
-            {/* Seller Cancel Button */}
+            {/* Seller Cancel - Hammer Button */}
             {isSeller &&
               (auctionDetails.status === "SCHEDULED" ||
                 auctionDetails.status === "ACTIVE") && (
-                <div className="mt-4 pt-4 border-t">
+                <div className="flex flex-col sm:flex-row justify-between items-center gap-4 mt-4 pt-4 border-t">
+                  {/* Cancel Button */}
                   <button
                     onClick={promptCancelAuction}
-                    disabled={isCancelling}
-                    className="w-full px-4 py-2 bg-red-600 hover:bg-red-700 text-white font-semibold rounded text-sm disabled:opacity-60"
+                    disabled={isCancelling || isHammering} // Disable if processing either action
+                    className="flex-1 w-full sm:w-auto px-4 py-2 bg-red-600 hover:bg-red-700 text-white font-semibold rounded text-sm disabled:opacity-60 disabled:cursor-not-allowed"
                   >
                     {isCancelling ? "Cancelling..." : "Cancel Auction"}
+                  </button>
+                  {/* End Early (Hammer) Button */}
+                  <button
+                    onClick={promptEndAuctionEarly}
+                    // Disable if not ACTIVE, if no bids yet, or if already processing another action
+                    disabled={
+                      auctionDetails.status !== "ACTIVE" ||
+                      !auctionDetails.highestBidderId ||
+                      isCancelling ||
+                      isHammering
+                    }
+                    className="flex-1 w-full sm:w-auto px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded text-sm disabled:opacity-60 disabled:cursor-not-allowed"
+                    title={
+                      !auctionDetails.highestBidderId
+                        ? "Cannot end early without bids"
+                        : auctionDetails.status !== "ACTIVE"
+                        ? "Can only end early when active"
+                        : "End auction now at current bid"
+                    }
+                  >
+                    {isHammering ? "Ending..." : "End Auction Early"}
                   </button>
                 </div>
               )}
@@ -810,6 +885,18 @@ function TimedAuctionDetailPage() {
         confirmButtonClass="bg-red-600 hover:bg-red-700"
         isLoading={isCancelling}
         error={cancelError}
+      />
+      <ConfirmationModal
+        isOpen={isHammerConfirmOpen}
+        onClose={handleCloseHammerConfirm}
+        onConfirm={handleConfirmEndAuctionEarly}
+        title="Confirm End Auction Early"
+        message={`Are you sure you want to end this auction now?\n\nThe current leading bid is ${auctionDetails?.currentBid?.toLocaleString('vi-VN') ?? 'N/A'} VNĐ by '${auctionDetails?.highestBidderUsernameSnapshot ?? 'N/A'}'.\n\nThis will sell the item immediately at the current bid.`}
+        confirmText="Yes, End Auction Now"
+        cancelText="No, Continue Auction"
+        confirmButtonClass="bg-blue-600 hover:bg-blue-700" // Blue for hammer?
+        isLoading={isHammering}
+        error={hammerError}
       />
     </div> // End Page Container
   );

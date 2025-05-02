@@ -42,19 +42,108 @@ const calcFromDateParam = (timeKey) => {
   }
 };
 
+function AuctionCard({ auction, type, onClick }) {
+  return (
+    <div
+      key={auction.id}
+      className="border rounded-lg bg-white shadow hover:shadow-lg transition-shadow cursor-pointer flex flex-col overflow-hidden"
+      onClick={() => onClick(auction.id, type)} // Pass type back
+    >
+      <div className="w-full h-44 bg-gray-200">
+        <img
+          src={auction.productImageUrlSnapshot || "/placeholder.png"}
+          alt={auction.productTitleSnapshot}
+          className="w-full h-full object-cover"
+          loading="lazy"
+        />
+      </div>
+      <div className="p-4 flex flex-col flex-1">
+        <h3
+          className="font-semibold text-sm mb-1 truncate"
+          title={auction.productTitleSnapshot}
+        >
+          {auction.productTitleSnapshot}
+        </h3>
+        <p className="text-xs text-gray-500 mb-2">Status: {auction.status}</p>
+        <div className="mt-auto border-t pt-2 text-xs text-gray-600 grid grid-cols-2 gap-2">
+          <span>Current Bid:</span>
+          <span className="text-right font-medium">
+            {(auction.currentBid ?? 0).toLocaleString("vi-VN")} VNĐ
+          </span>
+          <span>Ends In/At:</span>
+          <span className="text-right font-medium">
+            {" "}
+            {/* Make text bold/medium */}
+            {auction.status === "ACTIVE" ? (
+              <CountdownTimer
+                endTimeMillis={new Date(auction.endTime).getTime()}
+              />
+            ) : (
+              // Display end time more nicely for non-active
+              new Date(auction.endTime).toLocaleDateString("en-GB", {
+                day: "2-digit",
+                month: "short",
+                year: "numeric",
+              })
+            )}
+          </span>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// --- Reusable Pagination ---
+function PaginationControls({ pagination, onPageChange, isLoading }) {
+  if (pagination.totalPages <= 1) return null;
+  return (
+    <div className="flex justify-center items-center gap-4 my-6">
+      <button
+        className="px-4 py-2 bg-white border rounded disabled:opacity-50"
+        disabled={pagination.page === 0 || isLoading}
+        onClick={() => onPageChange(pagination.page - 1)}
+      >
+        Previous
+      </button>
+      <span className="text-sm text-gray-600">
+        Page {pagination.page + 1} of {Math.max(pagination.totalPages, 1)}
+      </span>
+      <button
+        className="px-4 py-2 bg-white border rounded disabled:opacity-50"
+        disabled={pagination.page >= pagination.totalPages - 1 || isLoading}
+        onClick={() => onPageChange(pagination.page + 1)}
+      >
+        Next
+      </button>
+    </div>
+  );
+}
+
 function MyAuctionsPage() {
   const { keycloak, initialized } = useKeycloak();
   const navigate = useNavigate();
 
   /* ------------------------------- state ---------------------------------*/
-  const [auctions, setAuctions] = useState([]);
-  const [pagination, setPagination] = useState({
+  const [liveAuctions, setLiveAuctions] = useState([]);
+  const [timedAuctions, setTimedAuctions] = useState([]);
+  const [livePagination, setLivePagination] = useState({
     page: 0,
-    size: 12,
+    size: 6,
     totalPages: 0,
   });
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState("");
+  const [timedPagination, setTimedPagination] = useState({
+    page: 0,
+    size: 6,
+    totalPages: 0,
+  });
+
+  const [isLoadingLive, setIsLoadingLive] = useState(true);
+  const [isLoadingTimed, setIsLoadingTimed] = useState(true);
+  const [errorLive, setErrorLive] = useState("");
+  const [errorTimed, setErrorTimed] = useState("");
+
+  // Combined Loading for initial view
+  const isLoading = isLoadingLive || isLoadingTimed;
 
   const [statusFilter, setStatusFilter] = useState("ALL");
   const [timeFilter, setTimeFilter] = useState("ALL");
@@ -79,88 +168,181 @@ function MyAuctionsPage() {
     }
   }, [initialized, keycloak.authenticated]);
 
-  const fetchAuctions = useCallback(async () => {
-    if (!(initialized && keycloak.authenticated)) return;
-    setIsLoading(true);
-    setError("");
-    try {
-      const params = {
-        page: pagination.page,
-        size: pagination.size,
-      };
-      /* status / ended handling */
-      if (statusFilter === "ACTIVE" || statusFilter === "SCHEDULED") {
-        params.status = statusFilter; // enum value understood by backend
-      } else if (statusFilter === "ENDED") {
-        params.ended = true; // custom flag – backend groups SOLD/RESERVE_NOT_MET/CANCELLED
-      }
-      /* category filter */
-      if (selectedCatIds.size)
-        params.categoryIds = Array.from(selectedCatIds).join(",");
-      /* time filter */
-      const fromIso = calcFromDateParam(timeFilter);
-      if (fromIso) params.from = fromIso;
+  // fire it once on mount (and whenever auth flips)
+  useEffect(() => {
+    fetchCategories();
+  }, [fetchCategories]);
 
-      const { data } = await apiClient.get("/liveauctions/my-auctions", {
-        params,
-      });
-      setAuctions(data.content || []);
-      setPagination((p) => ({ ...p, totalPages: data.totalPages || 0 }));
-    } catch (e) {
-      console.error("Failed to fetch my auctions", e);
-      setError(e.response?.data?.message || "Unable to load auctions.");
-      setAuctions([]);
-    } finally {
-      setIsLoading(false);
+  /* --- MODIFIED: Fetch Auctions Logic --- */
+  const fetchAllMyAuctions = useCallback(
+    async (
+      livePage = livePagination.page,
+      timedPage = timedPagination.page
+    ) => {
+      if (!(initialized && keycloak.authenticated)) return;
+
+      // Set loading states only if not already loading (avoids flicker on filter change)
+      if (!isLoadingLive) setIsLoadingLive(true);
+      if (!isLoadingTimed) setIsLoadingTimed(true);
+      setErrorLive("");
+      setErrorTimed("");
+
+      // --- Prepare Common Params ---
+      const commonParams = {};
+      // Status / ended handling
+      if (statusFilter === "ACTIVE" || statusFilter === "SCHEDULED") {
+        commonParams.status = statusFilter;
+      } else if (statusFilter === "ENDED") {
+        commonParams.ended = true; // Use boolean flag
+      }
+      // Category filter
+      if (selectedCatIds.size)
+        commonParams.categoryIds = Array.from(selectedCatIds).join(",");
+      // Time filter
+      const fromIso = calcFromDateParam(timeFilter);
+      if (fromIso) commonParams.from = fromIso;
+
+      // --- API Calls ---
+      const livePromise = apiClient
+        .get("/liveauctions/my-auctions", {
+          params: {
+            ...commonParams,
+            page: livePage,
+            size: livePagination.size,
+          },
+        })
+        .catch((err) => ({
+          error: true,
+          type: "live",
+          message:
+            err.response?.data?.message || "Unable to load live auctions.",
+          errorObj: err,
+        })); // Catch errors individually
+
+      const timedPromise = apiClient
+        .get("/timedauctions/my-auctions", {
+          // New endpoint
+          params: {
+            ...commonParams,
+            page: timedPage,
+            size: timedPagination.size,
+          },
+        })
+        .catch((err) => ({
+          error: true,
+          type: "timed",
+          message:
+            err.response?.data?.message || "Unable to load timed auctions.",
+          errorObj: err,
+        })); // Catch errors individually
+
+      // --- Process Results ---
+      const [liveResult, timedResult] = await Promise.all([
+        livePromise,
+        timedPromise,
+      ]);
+
+      // Process Live Auctions
+      if (liveResult.error) {
+        console.error("Failed to fetch my live auctions", liveResult.errorObj);
+        setErrorLive(liveResult.message);
+        setLiveAuctions([]);
+      } else {
+        setLiveAuctions(liveResult.data.content || []);
+        setLivePagination((p) => ({
+          ...p,
+          page: liveResult.data.number,
+          totalPages: liveResult.data.totalPages || 0,
+        }));
+      }
+      setIsLoadingLive(false);
+
+      // Process Timed Auctions
+      if (timedResult.error) {
+        console.error(
+          "Failed to fetch my timed auctions",
+          timedResult.errorObj
+        );
+        setErrorTimed(timedResult.message);
+        setTimedAuctions([]);
+      } else {
+        setTimedAuctions(timedResult.data.content || []);
+        setTimedPagination((p) => ({
+          ...p,
+          page: timedResult.data.number,
+          totalPages: timedResult.data.totalPages || 0,
+        }));
+      }
+      setIsLoadingTimed(false);
+    },
+    [
+      // --- STABLE DEPENDENCIES ---
+      // Dependencies that define the query parameters or auth state:
+      initialized,
+      keycloak.authenticated,
+      livePagination.size, // Depend on size used in query
+      timedPagination.size, // Depend on size used in query
+      statusFilter,
+      selectedCatIds,
+      timeFilter,
+    ]
+  );
+
+  /* ------------------------------ effects -------------------------------*/
+  /* --- Effect to Fetch Auctions on Filter/Page Change --- */
+  useEffect(() => {
+    if (initialized && keycloak.authenticated) {
+      console.log("Triggering fetch due to auth/page/filter change...");
+      fetchAllMyAuctions(livePagination.page, timedPagination.page);
+    } else {
+      setLiveAuctions([]);
+      setTimedAuctions([]);
+      setIsLoadingLive(false);
+      setIsLoadingTimed(false);
     }
   }, [
     initialized,
     keycloak.authenticated,
-    pagination.page,
-    pagination.size,
+    livePagination.page,
+    timedPagination.page,
     statusFilter,
     selectedCatIds,
     timeFilter,
   ]);
 
-  /* ------------------------------ effects -------------------------------*/
-  useEffect(() => {
-    fetchCategories();
-  }, [fetchCategories]);
-  useEffect(() => {
-    fetchAuctions();
-  }, [fetchAuctions]);
-
   /* -------------------------- render helpers ----------------------------*/
-  const filteredAuctions = useMemo(() => auctions, [auctions]);
-  const handleCardClick = (id) => navigate(`/live-auctions/${id}`);
+  const handleCardClick = useCallback(
+    (id, type) => {
+      const path =
+        type === "LIVE" ? `/live-auctions/${id}` : `/timed-auctions/${id}`;
+      navigate(path);
+    },
+    [navigate]
+  );
 
-  const pageControls = (
-    <div className="flex justify-center items-center gap-4 my-6">
-      <button
-        className="px-4 py-2 bg-white border rounded disabled:opacity-50"
-        disabled={pagination.page === 0 || isLoading}
-        onClick={() => setPagination((p) => ({ ...p, page: p.page - 1 }))}
-      >
-        Previous
-      </button>
-      <span className="text-sm text-gray-600">
-        Page {pagination.page + 1} of {Math.max(pagination.totalPages, 1)}
-      </span>
-      <button
-        className="px-4 py-2 bg-white border rounded disabled:opacity-50"
-        disabled={pagination.page >= pagination.totalPages - 1 || isLoading}
-        onClick={() => setPagination((p) => ({ ...p, page: p.page + 1 }))}
-      >
-        Next
-      </button>
-    </div>
+  // --- Pagination Handlers ---
+  const handleLivePageChange = useCallback(
+    (newPage) => {
+      if (newPage !== livePagination.page) {
+        setLivePagination((p) => ({ ...p, page: newPage }));
+      }
+    },
+    [livePagination.page]
+  );
+
+  const handleTimedPageChange = useCallback(
+    (newPage) => {
+      if (newPage !== timedPagination.page) {
+        setTimedPagination((p) => ({ ...p, page: newPage }));
+      }
+    },
+    [timedPagination.page]
   );
 
   /* ------------------------------- UI ----------------------------------*/
   return (
     <div className="flex flex-grow" style={{ height: "calc(100vh - 4rem)" }}>
-      {/* sidebar */}
+      {/* Sidebar (No Change) */}
       <aside className="w-60 md:w-72 flex-shrink-0 bg-white p-4 border-r overflow-y-auto">
         <h3 className="text-lg font-semibold border-b pb-2 mb-4">
           Filter by Category
@@ -174,12 +356,13 @@ function MyAuctionsPage() {
         />
       </aside>
 
-      {/* main content */}
+      {/* Main Content */}
       <div className="flex-1 flex flex-col overflow-y-auto bg-gray-50">
-        {/* top bar */}
+        {/* Top Bar (No Change) */}
         <div className="border-b bg-white px-6 py-3 flex flex-wrap items-center gap-6 sticky top-0 z-10">
-          {/* tabs */}
           <div className="flex gap-4">
+            {" "}
+            {/* Tabs */}
             {STATUS_TABS.map((t) => (
               <button
                 key={t.key}
@@ -194,8 +377,9 @@ function MyAuctionsPage() {
               </button>
             ))}
           </div>
-          {/* time range */}
           <div className="ml-auto flex items-center gap-2 text-sm">
+            {" "}
+            {/* Time */}
             <label htmlFor="tFilter" className="text-gray-600">
               Time:
             </label>
@@ -214,78 +398,85 @@ function MyAuctionsPage() {
           </div>
         </div>
 
-        {/* body */}
+        {/* Body - Split into Sections */}
         <div className="p-6 flex-1 overflow-y-auto">
           {isLoading && (
             <div className="text-center p-10">Loading auctions…</div>
           )}
-          {error && (
-            <div className="text-center p-10 text-red-600">{error}</div>
-          )}
 
-          {!isLoading && !error && filteredAuctions.length === 0 && (
-            <div className="text-center p-10 border rounded bg-white shadow-sm">
-              <p className="text-gray-500">
-                No auctions match current filters.
-              </p>
-            </div>
-          )}
-
-          {!isLoading && !error && filteredAuctions.length > 0 && (
-            <>
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-                {filteredAuctions.map((a) => (
-                  <div
-                    key={a.id}
-                    className="border rounded-lg bg-white shadow hover:shadow-lg transition-shadow cursor-pointer flex flex-col overflow-hidden"
-                    onClick={() => handleCardClick(a.id)}
-                  >
-                    <div className="w-full h-44 bg-gray-200">
-                      <img
-                        src={a.productImageUrlSnapshot || "/placeholder.png"}
-                        alt={a.productTitleSnapshot}
-                        className="w-full h-full object-cover"
-                        loading="lazy"
-                      />
-                    </div>
-                    <div className="p-4 flex flex-col flex-1">
-                      <h3
-                        className="font-semibold text-sm mb-1 truncate"
-                        title={a.productTitleSnapshot}
-                      >
-                        {a.productTitleSnapshot}
-                      </h3>
-                      <p className="text-xs text-gray-500 mb-2">
-                        Status: {a.status}
-                      </p>
-                      {a.fastFinishOnReserve && (
-                        <span className="ml-1 inline-block text-[10px] bg-purple-600 text-white px-1.5 py-0.5 rounded">
-                          Fast-finish
-                        </span>
-                      )}
-                      <div className="mt-auto border-t pt-2 text-xs text-gray-600 grid grid-cols-2 gap-2">
-                        <span>Current Bid:</span>
-                        <span className="text-right font-medium">
-                          {(a.currentBid ?? 0).toLocaleString("vi-VN")} VNĐ
-                        </span>
-                        <span>Ends In:</span>
-                        <span className="text-right">
-                          {a.status === "ACTIVE" ? (
-                            <CountdownTimer
-                              endTimeMillis={new Date(a.endTime).getTime()}
-                            />
-                          ) : (
-                            new Date(a.endTime).toLocaleString()
-                          )}
-                        </span>
-                      </div>
-                    </div>
-                  </div>
-                ))}
+          {/* Live Auctions Section */}
+          <section className="mb-10">
+            <h2 className="text-xl font-semibold mb-4">My Live Auctions</h2>
+            {isLoadingLive && !isLoading && (
+              <div className="text-center p-4 text-sm text-gray-500">
+                Loading live auctions...
               </div>
-              {pagination.totalPages > 1 && pageControls}
-            </>
-          )}
+            )}
+            {errorLive && (
+              <div className="text-center p-4 text-red-600">{errorLive}</div>
+            )}
+            {!isLoadingLive && !errorLive && liveAuctions.length === 0 && (
+              <div className="text-center p-4 border rounded bg-white text-gray-500">
+                No live auctions match current filters.
+              </div>
+            )}
+            {!isLoadingLive && !errorLive && liveAuctions.length > 0 && (
+              <>
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+                  {liveAuctions.map((a) => (
+                    <AuctionCard
+                      key={a.id}
+                      auction={a}
+                      type="LIVE"
+                      onClick={handleCardClick}
+                    />
+                  ))}
+                </div>
+                <PaginationControls
+                  pagination={livePagination}
+                  onPageChange={handleLivePageChange}
+                  isLoading={isLoadingLive}
+                />
+              </>
+            )}
+          </section>
+
+          {/* Timed Auctions Section */}
+          <section>
+            <h2 className="text-xl font-semibold mb-4">My Timed Auctions</h2>
+            {isLoadingTimed && !isLoading && (
+              <div className="text-center p-4 text-sm text-gray-500">
+                Loading timed auctions...
+              </div>
+            )}
+            {errorTimed && (
+              <div className="text-center p-4 text-red-600">{errorTimed}</div>
+            )}
+            {!isLoadingTimed && !errorTimed && timedAuctions.length === 0 && (
+              <div className="text-center p-4 border rounded bg-white text-gray-500">
+                No timed auctions match current filters.
+              </div>
+            )}
+            {!isLoadingTimed && !errorTimed && timedAuctions.length > 0 && (
+              <>
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+                  {timedAuctions.map((a) => (
+                    <AuctionCard
+                      key={a.id}
+                      auction={a}
+                      type="TIMED"
+                      onClick={handleCardClick}
+                    />
+                  ))}
+                </div>
+                <PaginationControls
+                  pagination={timedPagination}
+                  onPageChange={handleTimedPageChange}
+                  isLoading={isLoadingTimed}
+                />
+              </>
+            )}
+          </section>
         </div>
       </div>
     </div>

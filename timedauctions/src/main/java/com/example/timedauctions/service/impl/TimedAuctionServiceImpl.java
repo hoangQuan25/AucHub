@@ -17,7 +17,11 @@ import com.example.timedauctions.repository.AuctionCommentRepository;
 import com.example.timedauctions.repository.AuctionProxyBidRepository; // Add later
 import com.example.timedauctions.repository.BidRepository;
 import com.example.timedauctions.repository.TimedAuctionRepository;
+import com.example.timedauctions.service.AuctionSchedulingService;
 import com.example.timedauctions.service.TimedAuctionService;
+import jakarta.persistence.criteria.JoinType;
+import jakarta.persistence.criteria.Predicate;
+import jakarta.persistence.criteria.SetJoin;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.redisson.api.RLock;
@@ -27,6 +31,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
+import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -45,6 +50,7 @@ public class TimedAuctionServiceImpl implements TimedAuctionService {
 
     private final TimedAuctionRepository timedAuctionRepository;
     private final BidRepository bidRepository;
+    private final AuctionSchedulingService auctionSchedulingService;
     // private final AuctionProxyBidRepository auctionProxyBidRepository; // Inject when needed
     // private final AuctionCommentRepository auctionCommentRepository; // Inject when needed
 
@@ -121,10 +127,10 @@ public class TimedAuctionServiceImpl implements TimedAuctionService {
 
         // 7. Schedule Start/End via RabbitMQ Delayed Messages
         if (savedAuction.getStatus() == AuctionStatus.SCHEDULED) {
-            scheduleAuctionStart(savedAuction);
+            auctionSchedulingService.scheduleAuctionStart(savedAuction);
         } else if (savedAuction.getStatus() == AuctionStatus.ACTIVE) {
             // Auction starts immediately, schedule the end
-            scheduleAuctionEnd(savedAuction);
+            auctionSchedulingService.scheduleAuctionEnd(savedAuction);
             // Potentially publish an 'AuctionStarted' internal event
             publishInternalEvent(savedAuction, "STARTED");
         }
@@ -191,6 +197,78 @@ public class TimedAuctionServiceImpl implements TimedAuctionService {
         // Map the Page<TimedAuction> to Page<TimedAuctionSummaryDto> using the mapper
         // The .map function on Page handles the conversion for each element
         return auctionPage.map(auctionMapper::mapToTimedAuctionSummaryDto);
+    }
+
+    /**
+     * Initiates the cancellation of a timed auction by the seller.
+     *
+     * @param auctionId The ID of the auction to cancel.
+     * @param sellerId  The ID of the user attempting to cancel.
+     */
+    @Override
+    public void cancelAuction(UUID auctionId, String sellerId) {
+        log.info("User {} attempting to cancel auction {}", sellerId, auctionId);
+        TimedAuction auction = timedAuctionRepository.findById(auctionId)
+                .orElseThrow(() -> new AuctionNotFoundException("Cannot cancel, auction not found: " + auctionId));
+
+        // 1. Validate Seller
+        if (!auction.getSellerId().equals(sellerId)) {
+            throw new InvalidAuctionStateException("Only the seller can cancel the auction.");
+        }
+
+        // 2. Validate Status (Only Scheduled or Active can be cancelled)
+        if (!(auction.getStatus() == AuctionStatus.SCHEDULED || auction.getStatus() == AuctionStatus.ACTIVE)) {
+            throw new InvalidAuctionStateException("Auction cannot be cancelled in its current state: " + auction.getStatus());
+        }
+
+        // 3. Send Command to RabbitMQ
+        AuctionLifecycleCommands.CancelAuctionCommand command = new AuctionLifecycleCommands.CancelAuctionCommand(auctionId, sellerId);
+        rabbitTemplate.convertAndSend(
+                RabbitMqConfig.TD_AUCTION_COMMAND_EXCHANGE,
+                RabbitMqConfig.TD_CANCEL_ROUTING_KEY,
+                command
+        );
+        log.info("CancelAuctionCommand sent for auction {}", auctionId);
+    }
+
+    /**
+     * Initiates an early end ("hammer down") for a timed auction by the seller.
+     * Requires bids to be present. Reserve price status might not be strictly required.
+     *
+     * @param auctionId The ID of the auction to end early.
+     * @param sellerId  The ID of the user attempting to end the auction.
+     */
+    @Override
+    public void endAuctionEarly(UUID auctionId, String sellerId) {
+        log.info("User {} attempting to end auction {} early", sellerId, auctionId);
+        TimedAuction auction = timedAuctionRepository.findById(auctionId)
+                .orElseThrow(() -> new AuctionNotFoundException("Cannot end early, auction not found: " + auctionId));
+
+        // 1. Validate Seller
+        if (!auction.getSellerId().equals(sellerId)) {
+            throw new InvalidAuctionStateException("Only the seller can end the auction early.");
+        }
+
+        // 2. Validate Status (Must be Active)
+        if (auction.getStatus() != AuctionStatus.ACTIVE) {
+            throw new InvalidAuctionStateException("Auction must be ACTIVE to be ended early. Current state: " + auction.getStatus());
+        }
+
+        // 3. Validate Bids Exist (Crucial for selling early)
+        if (auction.getHighestBidderId() == null) {
+            throw new InvalidAuctionStateException("Cannot end auction early - no bids have been placed yet.");
+        }
+
+        // 4. Optional: Check reserve? Decided not to enforce reserve check for manual end.
+
+        // 5. Send Command to RabbitMQ
+        AuctionLifecycleCommands.HammerDownCommand command = new AuctionLifecycleCommands.HammerDownCommand(auctionId, sellerId); // Reuse command structure
+        rabbitTemplate.convertAndSend(
+                RabbitMqConfig.TD_AUCTION_COMMAND_EXCHANGE,
+                RabbitMqConfig.TD_HAMMER_ROUTING_KEY, // Use specific key
+                command
+        );
+        log.info("HammerDownCommand (end early) sent for auction {}", auctionId);
     }
 
 
@@ -396,7 +474,7 @@ public class TimedAuctionServiceImpl implements TimedAuctionService {
                         auction.setEndTime(newEndTime);
                         log.info("Soft-close triggered for auction {}. New end time: {}", auction.getId(), newEndTime);
                         // Reschedule the end task via RabbitMQ
-                        scheduleAuctionEnd(auction); // Reschedule with new end time
+                        auctionSchedulingService.scheduleAuctionEnd(auction); // Reschedule with new end time
                     }
                 }
             }
@@ -443,53 +521,6 @@ public class TimedAuctionServiceImpl implements TimedAuctionService {
             log.error("Failed to fetch user info for ID: {}", userId, e);
             // Wrap or rethrow appropriate exception
             throw new UserNotFoundException("User info retrieval failed for ID: " + userId);
-        }
-    }
-
-    private void scheduleAuctionStart(TimedAuction auction) {
-        long delayMillis = Duration.between(LocalDateTime.now(), auction.getStartTime()).toMillis();
-        if (delayMillis > 0) {
-            log.info("Scheduling start for auction {} in {} ms", auction.getId(), delayMillis);
-            AuctionLifecycleCommands.StartAuctionCommand command = new AuctionLifecycleCommands.StartAuctionCommand(auction.getId());
-            rabbitTemplate.convertAndSend(
-                    RabbitMqConfig.TD_AUCTION_SCHEDULE_EXCHANGE, // Use timed auction exchange
-                    RabbitMqConfig.TD_START_ROUTING_KEY,       // Use timed auction routing key
-                    command,
-                    message -> {
-                        message.getMessageProperties().setHeader("x-delay", (int) Math.min(delayMillis, Integer.MAX_VALUE));
-                        return message;
-                    }
-            );
-        } else {
-            log.warn("Attempted to schedule start for auction {} but delay was not positive.", auction.getId());
-            // Consider immediate start or error handling
-        }
-    }
-
-    private void scheduleAuctionEnd(TimedAuction auction) {
-        long delayMillis = Duration.between(LocalDateTime.now(), auction.getEndTime()).toMillis();
-        if (delayMillis > 0) {
-            log.info("Scheduling end for auction {} in {} ms", auction.getId(), delayMillis);
-            // Ensure AuctionLifecycleCommands exist or create equivalents
-            AuctionLifecycleCommands.EndAuctionCommand command = new AuctionLifecycleCommands.EndAuctionCommand(auction.getId());
-            rabbitTemplate.convertAndSend(
-                    RabbitMqConfig.TD_AUCTION_SCHEDULE_EXCHANGE, // Use timed auction exchange
-                    RabbitMqConfig.TD_END_ROUTING_KEY,         // Use timed auction routing key
-                    command,
-                    message -> {
-                        // RabbitMQ delayed message plugin uses integer for header
-                        int delayHeaderValue = (int) Math.min(delayMillis, Integer.MAX_VALUE);
-                        // Handle potential overflow for very long delays if necessary, although 49 days is usually enough
-                        if (delayMillis > Integer.MAX_VALUE) {
-                            log.warn("Auction {} end delay ({}) exceeds max RabbitMQ delay. Clamping to MAX_VALUE.", auction.getId(), delayMillis);
-                        }
-                        message.getMessageProperties().setHeader("x-delay", delayHeaderValue);
-                        return message;
-                    }
-            );
-        } else {
-            log.warn("Attempted to schedule end for auction {} but delay was not positive. It might end immediately.", auction.getId());
-            // Potentially trigger end logic directly or via non-delayed message
         }
     }
 
@@ -652,26 +683,63 @@ public class TimedAuctionServiceImpl implements TimedAuctionService {
         return nestedCommentDtos;
     }
 
+    @Override
+    @Transactional(readOnly = true)
+    public Page<TimedAuctionSummaryDto> getSellerAuctions(
+            String sellerId,
+            AuctionStatus status, // Explicit status filter
+            Boolean ended,      // Flag for all ended types
+            Set<Long> categoryIds,
+            LocalDateTime from,
+            Pageable pageable
+    ) {
+        log.debug("Service fetching seller {} auctions: status={}, ended={}, cats={}, from={}, page={}",
+                sellerId, status, ended, categoryIds, from, pageable);
 
-    // --- TODO: Create Commands Package ---
-    // Create package com.example.timedauctions.commands
-    // Create record StartAuctionCommand(UUID auctionId) {}
-    // Create record EndAuctionCommand(UUID auctionId) {}
-    // Create record CancelAuctionCommand(UUID auctionId, String sellerId) {} // if needed
+        // Use Specifications for dynamic query building
+        Specification<TimedAuction> spec = (root, query, cb) -> {
+            List<Predicate> predicates = new ArrayList<>();
 
-    // --- TODO: Create Exceptions Package ---
-    // Create package com.example.timedauctions.exception
-    // Create AuctionNotFoundException extends RuntimeException
-    // Create ProductNotFoundException extends RuntimeException
-    // Create UserNotFoundException extends RuntimeException
-    // Create InvalidAuctionStateException extends RuntimeException
-    // Create InvalidBidException extends RuntimeException
+            // Always filter by sellerId
+            predicates.add(cb.equal(root.get("sellerId"), sellerId));
 
-    // --- TODO: Setup Feign Clients ---
-    // Ensure Feign clients (ProductServiceClient, UserServiceClient) interfaces exist
-    // and are configured with @FeignClient annotation pointing to correct service names.
-    // Ensure client DTOs (ProductDto, UserBasicInfoDto, CategoryDto) exist.
-    // Add @EnableFeignClients to the main application class.
+            // Handle status filtering
+            if (Boolean.TRUE.equals(ended)) {
+                // If ended=true, fetch all terminal states
+                predicates.add(root.get("status").in(
+                        AuctionStatus.SOLD,
+                        AuctionStatus.RESERVE_NOT_MET,
+                        AuctionStatus.CANCELLED
+                ));
+            } else if (status != null) {
+                // If specific status provided (and not ended=true), use it
+                predicates.add(cb.equal(root.get("status"), status));
+            }
+            // If status is null and ended is not true, no status filter is applied (fetches all)
+
+            // Handle 'from' date filter (filter on startTime >= from)
+            if (from != null) {
+                predicates.add(cb.greaterThanOrEqualTo(root.get("startTime"), from));
+            }
+
+            // Handle category filter (using snapshot)
+            // This requires joining the element collection table
+            if (categoryIds != null && !categoryIds.isEmpty()) {
+                // Ensure correct join and path to the element collection field
+                SetJoin<TimedAuction, Long> categoryJoin = root.joinSet("productCategoryIdsSnapshot", JoinType.INNER);
+                predicates.add(categoryJoin.in(categoryIds));
+
+                // If using join, we need distinct results or group by
+                query.distinct(true);
+
+            }
 
 
+            return cb.and(predicates.toArray(new Predicate[0]));
+        };
+
+        Page<TimedAuction> auctionPage = timedAuctionRepository.findAll(spec, pageable);
+
+        return auctionPage.map(auctionMapper::mapToTimedAuctionSummaryDto);
+    }
 }

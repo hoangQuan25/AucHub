@@ -70,6 +70,30 @@ public interface TimedAuctionService {
 
     Page<TimedAuctionSummaryDto> getActiveAuctions(Pageable pageable);
 
+    /**
+     * Initiates the cancellation of a timed auction by the seller.
+     * @param auctionId The ID of the auction to cancel.
+     * @param sellerId The ID of the user attempting to cancel.
+     */
+    void cancelAuction(UUID auctionId, String sellerId);
+
+    /**
+     * Initiates an early end ("hammer down") for a timed auction by the seller.
+     * Requires bids to be present. Reserve price status might not be strictly required.
+     * @param auctionId The ID of the auction to end early.
+     * @param sellerId The ID of the user attempting to end the auction.
+     */
+    void endAuctionEarly(UUID auctionId, String sellerId);
+
+    Page<TimedAuctionSummaryDto> getSellerAuctions(
+            String sellerId,
+            AuctionStatus status, // Explicit status filter
+            Boolean ended,      // Flag for all ended types
+            Set<Long> categoryIds,
+            LocalDateTime from,
+            Pageable pageable
+    );
+
 // --- Alternative with Pagination for Top-Level ---
 /**
  * Retrieves a paginated list of top-level comments for a specific auction.
