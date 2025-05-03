@@ -40,7 +40,7 @@ function StartAuctionModal({ isOpen, onClose, product, onStartAuctionSubmit }) {
   // Calculate minimum allowed end time for timed auctions (+24 hours)
   const minTimedEndTime = getMinDateTimeLocal(24 * 60 * 60 * 1000); // 24 hours in ms
   // Calculate minimum allowed start time for scheduled auctions (+ buffer)
-  const minScheduledStartTime = getMinDateTimeLocal(60 * 1000); // 1 min in ms buffer
+  const minScheduledStartTime = getMinDateTimeLocal(5 * 60 * 1000); // 1 min in ms buffer
 
   // Reset form when modal opens or product changes
   useEffect(() => {
@@ -163,7 +163,7 @@ function StartAuctionModal({ isOpen, onClose, product, onStartAuctionSubmit }) {
       startTime:
         startTimeOption === "NOW"
           ? null
-          : new Date(scheduledStartTime).toISOString(), // Send ISO string or null
+          : scheduledStartTime,
       // Type & EndTime/Duration
       auctionType: auctionType,
       // Send EITHER endTime OR durationMinutes, backend needs adaptation
@@ -217,7 +217,9 @@ function StartAuctionModal({ isOpen, onClose, product, onStartAuctionSubmit }) {
         durationMinutes: auctionDataToConfirm.durationMinutes, // Send duration
         startPrice: auctionDataToConfirm.startPrice,
         reservePrice: auctionDataToConfirm.reservePrice,
-        startTime: auctionDataToConfirm.startTime, // Send optional start time
+        ...(auctionDataToConfirm.startTime && {
+          startTime: `${auctionDataToConfirm.startTime}:00`
+        }),
       };
     } else {
       // TIMED auction
@@ -228,7 +230,9 @@ function StartAuctionModal({ isOpen, onClose, product, onStartAuctionSubmit }) {
         endTime: auctionDataToConfirm.endTime, // Send selected end time
         startPrice: auctionDataToConfirm.startPrice,
         reservePrice: auctionDataToConfirm.reservePrice,
-        startTime: auctionDataToConfirm.startTime, // Send optional start time
+        ...(auctionDataToConfirm.startTime && {
+          startTime: `${auctionDataToConfirm.startTime}:00`
+        }),
       };
     }
 

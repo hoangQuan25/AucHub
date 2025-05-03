@@ -76,6 +76,7 @@ public class UserMapperImpl implements UserMapper {
         return UserBasicInfoDto.builder()
                 .id(user.getId())
                 .username(user.getUsername())
+                .email(user.getEmail())
                 // Add any other basic fields needed here
                 .build();
         /* Or using setters:

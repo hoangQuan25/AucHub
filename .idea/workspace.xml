@@ -4,20 +4,44 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="0e638229-04b9-4bfe-bce8-937ee8354b9b" name="Changes" comment="">
-      <change afterPath="$PROJECT_DIR$/timedauctions/src/main/java/com/example/timedauctions/service/AuctionSchedulingService.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/timedauctions/src/main/java/com/example/timedauctions/service/impl/AuctionSchedulingServiceImpl.java" afterDir="false" />
+    <list default="true" id="c0301b2b-c0ca-4124-9d59-5f8f9e6e66b6" name="Changes" comment="">
+      <change afterPath="$PROJECT_DIR$/liveauctions/src/main/java/com/example/liveauctions/listener/LiveAuctionLifecycleListener.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/liveauctions/src/main/java/com/example/liveauctions/service/LiveAuctionSchedulingService.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/liveauctions/src/main/java/com/example/liveauctions/service/impl/LiveAuctionSchedulingServiceImpl.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/notifications/src/main/java/com/example/notifications/client/UserServiceClient.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/notifications/src/main/java/com/example/notifications/client/dto/UserBasicInfoDto.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/notifications/src/main/java/com/example/notifications/config/RabbitMqConfig.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/notifications/src/main/java/com/example/notifications/config/WebSocketStompConfig.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/notifications/src/main/java/com/example/notifications/controller/NotificationController.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/notifications/src/main/java/com/example/notifications/dto/NotificationDto.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/notifications/src/main/java/com/example/notifications/entity/AuctionStatus.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/notifications/src/main/java/com/example/notifications/entity/Notification.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/notifications/src/main/java/com/example/notifications/event/NotificationEvents.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/notifications/src/main/java/com/example/notifications/listener/NotificationEventListener.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/notifications/src/main/java/com/example/notifications/mapper/NotificationMapper.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/notifications/src/main/java/com/example/notifications/repository/NotificationRepository.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/notifications/src/main/java/com/example/notifications/service/NotificationService.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/notifications/src/main/java/com/example/notifications/service/impl/NotificationServiceImpl.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/timedauctions/src/main/java/com/example/timedauctions/event/NotificationEvents.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/compiler.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/compiler.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/encodings.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/encodings.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/misc.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/misc.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/frontend/src/components/CountdownTimer.jsx" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/components/CountdownTimer.jsx" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/frontend/src/pages/MyAuctionsPage.jsx" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/pages/MyAuctionsPage.jsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/frontend/src/App.jsx" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/App.jsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/frontend/src/components/Header.jsx" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/components/Header.jsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/frontend/src/components/StartAuctionModal.jsx" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/components/StartAuctionModal.jsx" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/frontend/src/pages/TimedAuctionDetailPage.jsx" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/pages/TimedAuctionDetailPage.jsx" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/timedauctions/src/main/java/com/example/timedauctions/commands/AuctionLifecycleCommands.java" beforeDir="false" afterPath="$PROJECT_DIR$/timedauctions/src/main/java/com/example/timedauctions/commands/AuctionLifecycleCommands.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/gatewayserver/src/main/java/com/example/gatewayserver/GatewayserverApplication.java" beforeDir="false" afterPath="$PROJECT_DIR$/gatewayserver/src/main/java/com/example/gatewayserver/GatewayserverApplication.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/liveauctions/src/main/java/com/example/liveauctions/listener/AuctionEventListener.java" beforeDir="false" afterPath="$PROJECT_DIR$/liveauctions/src/main/java/com/example/liveauctions/listener/AuctionEventListener.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/liveauctions/src/main/java/com/example/liveauctions/manager/AuctionLifecycleManager.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/liveauctions/src/main/java/com/example/liveauctions/service/impl/LiveAuctionServiceImpl.java" beforeDir="false" afterPath="$PROJECT_DIR$/liveauctions/src/main/java/com/example/liveauctions/service/impl/LiveAuctionServiceImpl.java" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/timedauctions/src/main/java/com/example/timedauctions/config/RabbitMqConfig.java" beforeDir="false" afterPath="$PROJECT_DIR$/timedauctions/src/main/java/com/example/timedauctions/config/RabbitMqConfig.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/timedauctions/src/main/java/com/example/timedauctions/controller/TimedAuctionController.java" beforeDir="false" afterPath="$PROJECT_DIR$/timedauctions/src/main/java/com/example/timedauctions/controller/TimedAuctionController.java" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/timedauctions/src/main/java/com/example/timedauctions/listener/AuctionLifecycleListener.java" beforeDir="false" afterPath="$PROJECT_DIR$/timedauctions/src/main/java/com/example/timedauctions/listener/AuctionLifecycleListener.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/timedauctions/src/main/java/com/example/timedauctions/repository/TimedAuctionRepository.java" beforeDir="false" afterPath="$PROJECT_DIR$/timedauctions/src/main/java/com/example/timedauctions/repository/TimedAuctionRepository.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/timedauctions/src/main/java/com/example/timedauctions/service/TimedAuctionService.java" beforeDir="false" afterPath="$PROJECT_DIR$/timedauctions/src/main/java/com/example/timedauctions/service/TimedAuctionService.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/timedauctions/src/main/java/com/example/timedauctions/repository/BidRepository.java" beforeDir="false" afterPath="$PROJECT_DIR$/timedauctions/src/main/java/com/example/timedauctions/repository/BidRepository.java" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/timedauctions/src/main/java/com/example/timedauctions/service/impl/TimedAuctionServiceImpl.java" beforeDir="false" afterPath="$PROJECT_DIR$/timedauctions/src/main/java/com/example/timedauctions/service/impl/TimedAuctionServiceImpl.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/timedauctions/src/main/resources/application.yml" beforeDir="false" afterPath="$PROJECT_DIR$/timedauctions/src/main/resources/application.yml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/users/src/main/java/com/example/users/dto/UserBasicInfoDto.java" beforeDir="false" afterPath="$PROJECT_DIR$/users/src/main/java/com/example/users/dto/UserBasicInfoDto.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/users/src/main/java/com/example/users/mapper/impl/UserMapperImpl.java" beforeDir="false" afterPath="$PROJECT_DIR$/users/src/main/java/com/example/users/mapper/impl/UserMapperImpl.java" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -43,7 +67,7 @@
   &quot;customColor&quot;: &quot;&quot;,
   &quot;associatedIndex&quot;: 1
 }</component>
-  <component name="ProjectId" id="2wUOE6gGZcyLWp0kbZoYaRRpjKM" />
+  <component name="ProjectId" id="2wYMTkm4O1XAIKntO1OoZSfCy53" />
   <component name="ProjectLevelVcsManager">
     <ConfirmationsSetting value="2" id="Add" />
   </component>
@@ -63,18 +87,16 @@
     "Spring Boot.EurekaserverApplication.executor": "Run",
     "Spring Boot.GatewayserverApplication.executor": "Run",
     "Spring Boot.LiveAuctionsApplication.executor": "Run",
+    "Spring Boot.NotificationsApplication.executor": "Run",
     "Spring Boot.ProductsApplication.executor": "Run",
-    "Spring Boot.TimedAuctionApplication.executor": "Run",
+    "Spring Boot.TimedAuctionsApplication.executor": "Run",
     "Spring Boot.UsersApplication.executor": "Run",
-    "git-widget-placeholder": "tinyfix",
+    "git-widget-placeholder": "notification-service",
     "node.js.detected.package.eslint": "true",
     "node.js.detected.package.tslint": "true",
     "node.js.selected.package.eslint": "(autodetect)",
     "node.js.selected.package.tslint": "(autodetect)",
     "nodejs_package_manager_path": "npm",
-    "project.structure.last.edited": "Modules",
-    "project.structure.proportion": "0.0",
-    "project.structure.side.proportion": "0.0",
     "run.configurations.included.in.services": "true",
     "vue.rearranger.settings.migration": "true"
   }
@@ -92,55 +114,57 @@
     </option>
   </component>
   <component name="RunManager" selected="Spring Boot.GatewayserverApplication">
-    <configuration name="ConfigserverApplication" type="SpringBootApplicationConfigurationType" factoryName="Spring Boot" nameIsGenerated="true">
+    <configuration name="ConfigserverApplication" type="SpringBootApplicationConfigurationType" factoryName="Spring Boot">
       <module name="configserver" />
       <option name="SPRING_BOOT_MAIN_CLASS" value="com.example.configserver.ConfigserverApplication" />
       <method v="2">
         <option name="Make" enabled="true" />
       </method>
     </configuration>
-    <configuration name="EurekaserverApplication" type="SpringBootApplicationConfigurationType" factoryName="Spring Boot" nameIsGenerated="true">
+    <configuration name="EurekaserverApplication" type="SpringBootApplicationConfigurationType" factoryName="Spring Boot">
       <module name="eurekaserver" />
       <option name="SPRING_BOOT_MAIN_CLASS" value="com.example.eurekaserver.EurekaserverApplication" />
       <method v="2">
         <option name="Make" enabled="true" />
       </method>
     </configuration>
-    <configuration name="GatewayserverApplication" type="SpringBootApplicationConfigurationType" factoryName="Spring Boot" nameIsGenerated="true">
-      <option name="FRAME_DEACTIVATION_UPDATE_POLICY" value="UpdateClassesAndResources" />
+    <configuration name="GatewayserverApplication" type="SpringBootApplicationConfigurationType" factoryName="Spring Boot">
       <module name="gatewayserver" />
       <option name="SPRING_BOOT_MAIN_CLASS" value="com.example.gatewayserver.GatewayserverApplication" />
       <method v="2">
         <option name="Make" enabled="true" />
       </method>
     </configuration>
-    <configuration name="LiveAuctionsApplication" type="SpringBootApplicationConfigurationType" factoryName="Spring Boot" nameIsGenerated="true">
-      <option name="FRAME_DEACTIVATION_UPDATE_POLICY" value="UpdateClassesAndResources" />
+    <configuration name="LiveAuctionsApplication" type="SpringBootApplicationConfigurationType" factoryName="Spring Boot">
       <module name="liveauctions" />
       <option name="SPRING_BOOT_MAIN_CLASS" value="com.example.liveauctions.LiveAuctionsApplication" />
       <method v="2">
         <option name="Make" enabled="true" />
       </method>
     </configuration>
-    <configuration name="ProductsApplication" type="SpringBootApplicationConfigurationType" factoryName="Spring Boot" nameIsGenerated="true">
-      <option name="FRAME_DEACTIVATION_UPDATE_POLICY" value="UpdateClassesAndResources" />
+    <configuration name="NotificationsApplication" type="SpringBootApplicationConfigurationType" factoryName="Spring Boot" nameIsGenerated="true">
+      <module name="notifications" />
+      <option name="SPRING_BOOT_MAIN_CLASS" value="com.example.notifications.NotificationsApplication" />
+      <method v="2">
+        <option name="Make" enabled="true" />
+      </method>
+    </configuration>
+    <configuration name="ProductsApplication" type="SpringBootApplicationConfigurationType" factoryName="Spring Boot">
       <module name="products" />
       <option name="SPRING_BOOT_MAIN_CLASS" value="com.example.products.ProductsApplication" />
       <method v="2">
         <option name="Make" enabled="true" />
       </method>
     </configuration>
-    <configuration name="TimedAuctionApplication" type="SpringBootApplicationConfigurationType" factoryName="Spring Boot">
-      <option name="ALTERNATIVE_JRE_PATH" value="17" />
-      <option name="ALTERNATIVE_JRE_PATH_ENABLED" value="true" />
+    <configuration name="TimedAuctionsApplication" type="SpringBootApplicationConfigurationType" factoryName="Spring Boot" nameIsGenerated="true">
+      <option name="FRAME_DEACTIVATION_UPDATE_POLICY" value="UpdateClassesAndResources" />
       <module name="timedauctions" />
       <option name="SPRING_BOOT_MAIN_CLASS" value="com.example.timedauctions.TimedAuctionsApplication" />
       <method v="2">
         <option name="Make" enabled="true" />
       </method>
     </configuration>
-    <configuration name="UsersApplication" type="SpringBootApplicationConfigurationType" factoryName="Spring Boot" nameIsGenerated="true">
-      <option name="FRAME_DEACTIVATION_UPDATE_POLICY" value="UpdateClassesAndResources" />
+    <configuration name="UsersApplication" type="SpringBootApplicationConfigurationType" factoryName="Spring Boot">
       <module name="users" />
       <option name="SPRING_BOOT_MAIN_CLASS" value="com.example.users.UsersApplication" />
       <method v="2">
@@ -148,13 +172,14 @@
       </method>
     </configuration>
     <list>
+      <item itemvalue="Spring Boot.NotificationsApplication" />
       <item itemvalue="Spring Boot.ConfigserverApplication" />
-      <item itemvalue="Spring Boot.TimedAuctionApplication" />
       <item itemvalue="Spring Boot.EurekaserverApplication" />
-      <item itemvalue="Spring Boot.GatewayserverApplication" />
-      <item itemvalue="Spring Boot.LiveAuctionsApplication" />
       <item itemvalue="Spring Boot.ProductsApplication" />
+      <item itemvalue="Spring Boot.LiveAuctionsApplication" />
       <item itemvalue="Spring Boot.UsersApplication" />
+      <item itemvalue="Spring Boot.GatewayserverApplication" />
+      <item itemvalue="Spring Boot.TimedAuctionsApplication" />
     </list>
   </component>
   <component name="SharedIndexes">
@@ -168,14 +193,16 @@
   <component name="SpellCheckerSettings" RuntimeDictionaries="0" Folders="0" CustomDictionaries="0" DefaultDictionary="application-level" UseSingleDictionary="true" transferred="true" />
   <component name="TaskManager">
     <task active="true" id="Default" summary="Default task">
-      <changelist id="0e638229-04b9-4bfe-bce8-937ee8354b9b" name="Changes" comment="" />
-      <created>1746092573867</created>
+      <changelist id="c0301b2b-c0ca-4124-9d59-5f8f9e6e66b6" name="Changes" comment="" />
+      <created>1746214066932</created>
       <option name="number" value="Default" />
       <option name="presentableId" value="Default" />
-      <updated>1746092573867</updated>
-      <workItem from="1746092576381" duration="12906000" />
-      <workItem from="1746116555117" duration="7319000" />
-      <workItem from="1746178881167" duration="10988000" />
+      <updated>1746214066932</updated>
+      <workItem from="1746214068906" duration="1066000" />
+      <workItem from="1746256584273" duration="664000" />
+      <workItem from="1746259734077" duration="19316000" />
+      <workItem from="1746287945792" duration="885000" />
+      <workItem from="1746289141194" duration="6261000" />
     </task>
     <servers />
   </component>

@@ -8,5 +8,6 @@ import lombok.Data;
  public class UserBasicInfoDto {
     private String id;
     private String username;
+    private String email;
     // Add other basic fields if needed (e.g., avatarUrl)
  }

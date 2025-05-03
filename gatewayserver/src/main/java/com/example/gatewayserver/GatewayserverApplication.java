@@ -34,6 +34,7 @@ public class GatewayserverApplication {
 								.addResponseHeader("X-Response-Time", responseTime.toString())
 						)
 						.uri("lb://PRODUCTS"))
+
 				.route("liveauctions_api_route", p -> p // Specific ID for the API route
 						.path("/api/liveauctions/**")
 						.filters(f -> f
@@ -42,11 +43,8 @@ public class GatewayserverApplication {
 						)
 						.uri("lb://LIVEAUCTIONS"))
 				// --- ADD THIS ROUTE FOR WEBSOCKETS ---
-				.route("liveauctions_ws_route", p -> p // ID for the WebSocket route
-						.path("/ws/**") // Match the specific WebSocket path
-						// NO rewritePath filter here - backend expects the full path
-						.uri("lb://LIVEAUCTIONS")) // Route to the same backend service
-				// --- END OF ADDED ROUTE ---
+
+
 				.route("timedauctions_api_route", p -> p // Specific ID for the API route
 						.path("/api/timedauctions/**")
 						.filters(f -> f
@@ -54,6 +52,24 @@ public class GatewayserverApplication {
 								.addResponseHeader("X-Response-Time", responseTime.toString())
 						)
 						.uri("lb://TIMEDAUCTIONS"))
+
+				.route("notifications_api_route", p -> p // Specific ID for the API route
+						.path("/api/notifications/**")
+						.filters(f -> f
+								.rewritePath("/api/notifications/(?<segment>.*)", "/${segment}")
+								.addResponseHeader("X-Response-Time", responseTime.toString())
+						)
+						.uri("lb://NOTIFICATIONS"))
+				.route("notifications_ws_route", p -> p
+						.path("/ws/notifications/**") // Match the STOMP endpoint path in Notification service's WebSocketStompConfig
+						// NO rewritePath needed for WebSockets typically
+						// TODO: Ensure authentication/headers are handled correctly for WS upgrades if required
+						.uri("lb://NOTIFICATIONS")) // Route to the NOTIFICATIONS service (using its Eureka name)
+
+				.route("liveauctions_ws_route", p -> p // ID for the WebSocket route
+						.path("/ws/**") // Match the specific WebSocket path
+						// NO rewritePath filter here - backend expects the full path
+						.uri("lb://LIVEAUCTIONS")) // Route to the same backend service
 
 				.build();
 	}

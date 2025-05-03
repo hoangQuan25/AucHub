@@ -1,0 +1,265 @@
+// src/context/NotificationContext.jsx
+import React, { createContext, useState, useEffect, useContext, useRef, useCallback } from 'react';
+import { useKeycloak } from '@react-keycloak/web';
+import SockJS from 'sockjs-client/dist/sockjs'; // Import SockJS
+import { Client } from '@stomp/stompjs'; // Import STOMP client
+import apiClient from '../api/apiClient'; // If needed for mark as read API calls
+
+// --- Helper: Create Context ---
+const NotificationContext = createContext({
+  notifications: [],
+  unreadCount: 0,
+  isConnected: false,
+  connectNotifications: () => {},
+  disconnectNotifications: () => {},
+  markAsRead: (notificationId) => {}, // Placeholder
+  markAllAsRead: () => {}, // Placeholder
+});
+
+// --- Custom Hook for easy consumption ---
+export const useNotifications = () => useContext(NotificationContext);
+
+// --- Provider Component ---
+export const NotificationProvider = ({ children }) => {
+  const { keycloak, initialized } = useKeycloak();
+  const [notifications, setNotifications] = useState([]);
+  const [unreadCount, setUnreadCount] = useState(0);
+  const [isConnected, setIsConnected] = useState(false);
+
+  
+  const stompClientRef = useRef(null);
+  const notificationSubscriptionRef = useRef(null);
+  // --- NEW: Ref for unread count subscription ---
+  const countSubscriptionRef = useRef(null);
+  const currentUserId = useRef(null);
+
+  // Function to handle incoming notification messages
+  const handleIncomingNotification = useCallback((message) => {
+    try {
+      const notificationDto = JSON.parse(message.body); // Assuming body is NotificationDto JSON
+      console.log("Received Notification:", notificationDto);
+
+      // Add to the beginning of the list (newest first)
+      // Limit the number of stored notifications if desired (e.g., keep last 50)
+      setNotifications(prev => [notificationDto, ...prev.slice(0, 49)]);
+
+      // Increment unread count if it's marked as unread (backend should set isRead=false)
+      if (!notificationDto.isRead) {
+        setUnreadCount(prev => prev + 1);
+      }
+      // TODO: Optionally show a browser notification/toast here too
+      // Example: new Notification(notificationDto.type, { body: notificationDto.message });
+
+    } catch (e) {
+      console.error("Failed to parse notification message:", message.body, e);
+    }
+  }, []);
+
+  // --- NEW: Function to handle incoming unread count updates ---
+  const handleUnreadCountUpdate = useCallback((message) => {
+    try {
+       const payload = JSON.parse(message.body);
+       if (payload && typeof payload.unreadCount === 'number') {
+           console.log("Received unread count update:", payload.unreadCount);
+           setUnreadCount(payload.unreadCount);
+       } else {
+            console.warn("Received invalid unread count update payload:", payload);
+       }
+    } catch(e) {
+        console.error("Failed to parse unread count update:", message.body, e);
+    }
+ }, [initialized, keycloak.authenticated]);
+
+ const fetchUnreadCount = useCallback(async () => {
+  if (!(initialized && keycloak.authenticated)) return;
+  console.log("Fetching initial unread count...");
+  try {
+      const response = await apiClient.get('/notifications/unread-count');
+      setUnreadCount(response.data?.unreadCount ?? 0);
+  } catch (err) {
+      console.error("Failed to fetch unread count:", err);
+      // Optionally set an error state or just default to 0
+      setUnreadCount(0);
+  }
+}, [initialized, keycloak.authenticated]);
+
+  // Function to connect WebSocket/STOMP
+  const connectNotifications = useCallback(() => {
+    // Prevent connection if not authenticated, not initialized, or already connected/connecting
+    if (!initialized || !keycloak.authenticated || stompClientRef.current?.active) {
+         console.log("Notification connect prerequisites not met or already active.");
+         setIsConnected(stompClientRef.current?.active || false); // Update connected state
+         return;
+    }
+
+    const userId = keycloak.subject;
+    currentUserId.current = userId; // Store current user ID
+    console.log(`Attempting STOMP connection for user ${userId}...`);
+    setIsConnected(false); // Set connecting state
+
+    const client = new Client({
+      webSocketFactory: () => {
+        const gatewayHost = "localhost:8072"; // Your API Gateway
+        const sockjsUrl = `${window.location.protocol}//${gatewayHost}/ws/notifications`; // Use the correct notification endpoint path
+        console.log(`Creating SockJS connection to: ${sockjsUrl}`);
+        return new SockJS(sockjsUrl);
+        // Note: Authentication (Keycloak token) needs to be handled.
+        // Usually done via cookies set by the Gateway, or potentially query params if needed & secure.
+        // Sending token in connectHeaders often DOES NOT WORK with SockJS/WebSockets due to browser limitations.
+      },
+      reconnectDelay: 10000, // Reconnect every 10 seconds
+      heartbeatIncoming: 4000,
+      heartbeatOutgoing: 4000,
+      debug: (str) => console.log("STOMP NOTIF DEBUG:", str), // Enable debug logging
+    });
+
+    client.onConnect = (frame) => {
+      console.log(`NOTIFICATIONS STOMP Connected for user ${userId}: ${frame}`);
+      setIsConnected(true);
+
+      // Subscribe to user-specific notifications
+      const notificationDest = `/user/${userId}/queue/notifications`;
+      console.log(`Subscribing to STOMP destination: ${notificationDest}`);
+      notificationSubscriptionRef.current = client.subscribe(notificationDest, handleIncomingNotification);
+
+      // --- NEW: Subscribe to unread count updates (Optional) ---
+      const countDest = `/user/${userId}/queue/unread-count`;
+      console.log(`Subscribing to STOMP destination: ${countDest}`);
+      countSubscriptionRef.current = client.subscribe(countDest, handleUnreadCountUpdate);
+      // --- End Subscribe to count ---
+
+      console.log("Notification subscriptions active.");
+
+      // Fetch initial unread count AFTER connecting/subscribing
+      fetchUnreadCount();
+    };
+
+    client.onStompError = (frame) => {
+      console.error("NOTIFICATIONS STOMP Error:", frame.headers['message'], frame.body);
+      setIsConnected(false);
+    };
+    client.onWebSocketError = (error) => {
+      console.error("NOTIFICATIONS WebSocket Error:", error);
+      setIsConnected(false);
+    };
+
+     client.onWebSocketClose = (event) => {
+       console.log(`NOTIFICATIONS WebSocket Closed: Code=${event?.code}`);
+       setIsConnected(false);
+       notificationSubscriptionRef.current = null;
+       countSubscriptionRef.current = null; // Clear count subscription too
+     };
+
+    client.activate();
+    stompClientRef.current = client;
+
+  }, [initialized, keycloak.authenticated, handleIncomingNotification, handleUnreadCountUpdate, fetchUnreadCount]); // Dependencies for connect function
+
+
+  // Function to disconnect WebSocket/STOMP
+  const disconnectNotifications = useCallback(() => {
+    console.log("Attempting to disconnect notifications STOMP client...");
+    // Unsubscribe explicitly before deactivating
+    if (notificationSubscriptionRef.current) {
+        try { notificationSubscriptionRef.current.unsubscribe(); } catch (e) { console.error("Error unsubscribing notifications:", e); }
+        notificationSubscriptionRef.current = null;
+    }
+    if (countSubscriptionRef.current) { // Unsubscribe from count too
+        try { countSubscriptionRef.current.unsubscribe(); } catch (e) { console.error("Error unsubscribing count:", e); }
+        countSubscriptionRef.current = null;
+    }
+     if (stompClientRef.current?.active) {
+        try { stompClientRef.current.deactivate(); } catch (e) { console.error("Error deactivating client:", e); }
+        console.log("Notifications STOMP client deactivated.");
+     }
+     stompClientRef.current = null;
+     setIsConnected(false);
+     setNotifications([]);
+     setUnreadCount(0);
+     currentUserId.current = null;
+  }, []);
+
+  
+  // Effect to connect/disconnect based on auth state
+  useEffect(() => {
+    if (initialized && keycloak.authenticated) {
+      connectNotifications();
+    } else {
+      disconnectNotifications();
+    }
+    return () => disconnectNotifications();
+  }, [initialized, keycloak.authenticated]);
+
+  const markAsRead = useCallback(async (notificationIdInput) => {
+    // Allow single ID or array
+    const notificationIds = Array.isArray(notificationIdInput) ? notificationIdInput : [notificationIdInput];
+    if (notificationIds.length === 0) return;
+
+    const userId = currentUserId.current;
+    if (!userId) return; // Need user context
+
+    console.log(`Attempting to mark notifications ${notificationIds} as read for user ${userId}`);
+
+    // Optimistic UI update
+    let actuallyMarkedCount = 0;
+    setNotifications(prev => prev.map(n => {
+        if (notificationIds.includes(n.id) && !n.isRead) {
+            actuallyMarkedCount++; // Count how many were actually unread
+            return { ...n, isRead: true };
+        }
+        return n;
+    }));
+     // Decrement count optimistically ONLY by the number that were actually unread
+    if (actuallyMarkedCount > 0) {
+        setUnreadCount(prev => Math.max(0, prev - actuallyMarkedCount));
+    }
+
+    try {
+      await apiClient.post('/notifications/mark-read', notificationIds); // Send array of IDs
+      // Optional: If backend doesn't push count updates, fetch count again here
+      // if (!backend_pushes_count_updates) fetchUnreadCount();
+    } catch (err) {
+      console.error("Failed to mark notification(s) as read:", err);
+      // TODO: Revert optimistic update on failure? More complex state needed.
+       // For now, log the error. Might fetch count again to resync.
+       fetchUnreadCount();
+    }
+  }, [fetchUnreadCount]);
+
+
+  const markAllAsRead = useCallback(async () => {
+    const userId = currentUserId.current;
+    if (!userId) return;
+
+    console.log(`Attempting to mark all notifications as read for user ${userId}`);
+
+    // Optimistic UI update
+    setNotifications(prev => prev.map(n => ({ ...n, isRead: true })));
+    setUnreadCount(0); // Reset count optimistically
+
+   try {
+     await apiClient.post('/notifications/mark-all-read'); // No body needed
+      // Optional: If backend doesn't push count updates, fetch count again (should be 0)
+      // if (!backend_pushes_count_updates) fetchUnreadCount(); // Should ideally result in 0
+   } catch (err) {
+     console.error("Failed to mark all notifications as read:", err);
+     // TODO: Revert optimistic update? Fetch real count.
+     fetchUnreadCount();
+   }
+ }, [fetchUnreadCount]);
+
+  // --- Provide state and functions through context ---
+  const value = {
+    notifications,
+    unreadCount,
+    isConnected,
+    markAsRead,
+    markAllAsRead,
+  };
+
+  return (
+    <NotificationContext.Provider value={value}>
+      {children}
+    </NotificationContext.Provider>
+  );
+};

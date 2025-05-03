@@ -19,13 +19,13 @@ public class RabbitMqConfig {
     public static final String TD_AUCTION_COMMAND_EXCHANGE = "td_auction_command_exchange";
     // Events exchange might be shared or separate
     public static final String TD_AUCTION_EVENTS_EXCHANGE = "td_auction_events_exchange";
+    public static final String NOTIFICATIONS_EXCHANGE = "notifications_exchange";
 
     public static final String TD_AUCTION_START_QUEUE = "td_auction_start_queue";
     public static final String TD_AUCTION_END_QUEUE = "td_auction_end_queue";
     public static final String TD_AUCTION_CANCEL_QUEUE  = "td_auction_cancel_queue";
     public static final String TD_AUCTION_HAMMER_QUEUE = "td_auction_hammer_queue";
     // No hammer queue needed? Or add if required:
-    // public static final String TD_AUCTION_HAMMER_QUEUE = "td_auction_hammer_queue";
 
 
     // Define specific routing keys for timed auctions
@@ -33,9 +33,11 @@ public class RabbitMqConfig {
     public static final String TD_END_ROUTING_KEY = "td.auction.command.end";
     public static final String TD_CANCEL_ROUTING_KEY = "td.auction.command.cancel";
     public static final String TD_HAMMER_ROUTING_KEY = "td.auction.command.hammer";
-    // public static final String TD_HAMMER_ROUTING_KEY = "td.auction.command.hammer";
 
-    // public static final String TD_UPDATE_ROUTING_KEY_PREFIX = "td.auction.update."; // If needed
+    // For notifications
+    public static final String AUCTION_ENDED_ROUTING_KEY = "auction.timed.ended";
+    public static final String AUCTION_OUTBID_ROUTING_KEY = "auction.timed.outbid";
+    public static final String COMMENT_REPLIED_ROUTING_KEY = "comment.timed.replied";
 
 
     // --- Exchanges ---
@@ -55,6 +57,12 @@ public class RabbitMqConfig {
     TopicExchange tdAuctionEventsExchange() {
         // If publishing internal events
         return new TopicExchange(TD_AUCTION_EVENTS_EXCHANGE);
+    }
+
+    @Bean
+    TopicExchange notificationsExchange() {
+        // Declare the topic exchange used for publishing notification events
+        return new TopicExchange(NOTIFICATIONS_EXCHANGE);
     }
 
 
