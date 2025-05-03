@@ -75,34 +75,4 @@ public class AuctionEventListener {
             log.error("Failed to broadcast STOMP message to destination {}: {}", destination, e.getMessage(), e);
         }
     }
-
-    // AuctionLifecycleManager.java
-    @RabbitListener(queues = RabbitMqConfig.AUCTION_HAMMER_QUEUE)
-    @Transactional
-    public void handleHammerDownCommand(AuctionLifecycleCommands.HammerDownCommand cmd) {
-
-        LiveAuction a = liveAuctionRepository.findById(cmd.auctionId())
-                .orElseThrow(() -> new AuctionNotFoundException("Auction not found "+cmd.auctionId()));
-
-        // repeat critical validations (defence-in-depth)
-        if (!a.getSellerId().equals(cmd.sellerId())) {
-            log.warn("Invalid hammer cmd: seller mismatch {}", cmd);
-            return;
-        }
-        if (a.getStatus() != AuctionStatus.ACTIVE || a.getHighestBidderId() == null) {
-            log.warn("Ignoring hammer cmd: auction {} not hammerable (status {}, bids={})",
-                    a.getId(), a.getStatus(), a.getHighestBidderId());
-            return;
-        }
-
-        a.setStatus(AuctionStatus.SOLD);
-        a.setWinnerId(a.getHighestBidderId());
-        a.setWinningBid(a.getCurrentBid());
-        a.setActualEndTime(LocalDateTime.now());
-
-        LiveAuction saved = liveAuctionRepository.save(a);
-        webSocketEventPublisher.publishAuctionStateUpdate(saved, null);
-
-        log.info("Auction {} hammered down by seller {}", a.getId(), cmd.sellerId());
-    }
 }

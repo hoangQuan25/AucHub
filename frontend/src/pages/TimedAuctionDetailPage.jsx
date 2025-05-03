@@ -689,7 +689,7 @@ function TimedAuctionDetailPage() {
                         : "End auction now at current bid"
                     }
                   >
-                    {isHammering ? "Ending..." : "End Auction Early"}
+                    {isHammering ? "Hammering..." : "Hammer down"}
                   </button>
                 </div>
               )}

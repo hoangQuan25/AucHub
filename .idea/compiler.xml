@@ -35,15 +35,14 @@
         <module name="eurekaserver" />
         <module name="configserver" />
       </profile>
-      <profile name="Annotation profile for liveauctions" enabled="true">
+      <profile name="Annotation profile for notifications" enabled="true">
         <sourceOutputDir name="target/generated-sources/annotations" />
         <sourceTestOutputDir name="target/generated-test-sources/test-annotations" />
         <outputRelativeToContentRoot value="true" />
         <processorPath useClasspath="false">
-          <entry name="$MAVEN_REPOSITORY$/org/projectlombok/lombok/1.18.36/lombok-1.18.36.jar" />
+          <entry name="$MAVEN_REPOSITORY$/org/projectlombok/lombok/1.18.38/lombok-1.18.38.jar" />
         </processorPath>
-        <module name="gatewayserver" />
-        <module name="liveauctions" />
+        <module name="notifications" />
       </profile>
       <profile name="Annotation profile for timedauctions" enabled="true">
         <sourceOutputDir name="target/generated-sources/annotations" />
@@ -51,9 +50,10 @@
         <outputRelativeToContentRoot value="true" />
         <processorPath useClasspath="false">
           <entry name="$MAVEN_REPOSITORY$/org/projectlombok/lombok/1.18.36/lombok-1.18.36.jar" />
-          <entry name="$MAVEN_REPOSITORY$/org/projectlombok/lombok/1.18.36/lombok-1.18.36.jar" />
         </processorPath>
         <module name="timedauctions" />
+        <module name="gatewayserver" />
+        <module name="liveauctions" />
       </profile>
     </annotationProcessing>
   </component>
@@ -63,6 +63,7 @@
       <module name="eurekaserver" options="-parameters" />
       <module name="gatewayserver" options="-parameters" />
       <module name="liveauctions" options="-parameters" />
+      <module name="notifications" options="-parameters" />
       <module name="products" options="-parameters" />
       <module name="timedauctions" options="-parameters" />
       <module name="users" options="-parameters" />

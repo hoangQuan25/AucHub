@@ -1,17 +1,18 @@
-import React, { useEffect } from 'react';
-import { useKeycloak } from '@react-keycloak/web';
-import { BrowserRouter, Route, Routes, Navigate } from 'react-router-dom';
-import HomePage from './pages/HomePage';
-import LoginPage from './pages/LoginPage';
-import UserInfoPage from './pages/UserInfoPage'; // Renamed/New page
-import ProductsPage from './pages/ProductsPage'; // New page for sellers
-import MainLayout from './layouts/MainLayout';   // Import the layout
-import apiClient, { setupAuthInterceptor } from './api/apiClient';
-import LiveAuctionDetailPage from './pages/LiveAuctionDetailPage'; // New page for auction details
-import TestPage from './pages/TestPage';
-import MyAuctionsPage from './pages/MyAuctionsPage';
-import TimedAuctionDetailPage from './pages/TimedAuctionDetailPage';
-import AllAuctionsPage from './pages/AllAuctionsPage';
+import React, { useEffect } from "react";
+import { useKeycloak } from "@react-keycloak/web";
+import { BrowserRouter, Route, Routes, Navigate } from "react-router-dom";
+import HomePage from "./pages/HomePage";
+import LoginPage from "./pages/LoginPage";
+import UserInfoPage from "./pages/UserInfoPage"; // Renamed/New page
+import ProductsPage from "./pages/ProductsPage"; // New page for sellers
+import MainLayout from "./layouts/MainLayout"; // Import the layout
+import apiClient, { setupAuthInterceptor } from "./api/apiClient";
+import LiveAuctionDetailPage from "./pages/LiveAuctionDetailPage"; // New page for auction details
+import TestPage from "./pages/TestPage";
+import MyAuctionsPage from "./pages/MyAuctionsPage";
+import TimedAuctionDetailPage from "./pages/TimedAuctionDetailPage";
+import AllAuctionsPage from "./pages/AllAuctionsPage";
+import { NotificationProvider } from "./context/NotificationContext";
 
 // PrivateRoute now just checks auth, Layout handles UI structure
 const PrivateRoute = ({ children }) => {
@@ -21,13 +22,14 @@ const PrivateRoute = ({ children }) => {
 
 // Component to specifically check for Seller role
 const SellerRoute = ({ children }) => {
-    const { keycloak } = useKeycloak();
-    // Must be authenticated AND have the seller role
-    return keycloak.authenticated && keycloak.hasRealmRole('ROLE_SELLER')
-           ? children
-           : <Navigate to="/" />; // Or redirect to an "unauthorized" page
+  const { keycloak } = useKeycloak();
+  // Must be authenticated AND have the seller role
+  return keycloak.authenticated && keycloak.hasRealmRole("ROLE_SELLER") ? (
+    children
+  ) : (
+    <Navigate to="/" />
+  ); // Or redirect to an "unauthorized" page
 };
-
 
 function App() {
   const { keycloak, initialized } = useKeycloak();
@@ -46,18 +48,51 @@ function App() {
     <BrowserRouter>
       <Routes>
         {/* Public Login Route */}
-        <Route path="/login" element={!keycloak.authenticated ? <LoginPage /> : <Navigate to="/" />} />
+        <Route
+          path="/login"
+          element={
+            !keycloak.authenticated ? <LoginPage /> : <Navigate to="/" />
+          }
+        />
 
         {/* Protected Routes using MainLayout */}
-        <Route element={<PrivateRoute><MainLayout /></PrivateRoute>}>
+        <Route
+          element={
+            <PrivateRoute>
+              <NotificationProvider>
+                <MainLayout />
+              </NotificationProvider>
+            </PrivateRoute>
+          }
+        >
           <Route path="/" element={<HomePage />} />
-          <Route path="/all-auctions" element={<AllAuctionsPage />} /> 
-          <Route path="/live-auctions/:auctionId" element={<LiveAuctionDetailPage />} />
-          <Route path="/timed-auctions/:auctionId" element={<TimedAuctionDetailPage />} />
+          <Route path="/all-auctions" element={<AllAuctionsPage />} />
+          <Route
+            path="/live-auctions/:auctionId"
+            element={<LiveAuctionDetailPage />}
+          />
+          <Route
+            path="/timed-auctions/:auctionId"
+            element={<TimedAuctionDetailPage />}
+          />
           <Route path="/profile" element={<UserInfoPage />} />
           {/* Seller-specific Route */}
-          <Route path="/my-products" element={<SellerRoute><ProductsPage /></SellerRoute>} />
-          <Route path="/my-auctions" element={<SellerRoute><MyAuctionsPage /></SellerRoute>} />
+          <Route
+            path="/my-products"
+            element={
+              <SellerRoute>
+                <ProductsPage />
+              </SellerRoute>
+            }
+          />
+          <Route
+            path="/my-auctions"
+            element={
+              <SellerRoute>
+                <MyAuctionsPage />
+              </SellerRoute>
+            }
+          />
           {/* Add other protected routes here */}
         </Route>
 

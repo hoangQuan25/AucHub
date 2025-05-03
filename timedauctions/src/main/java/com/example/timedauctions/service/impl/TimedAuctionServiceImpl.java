@@ -11,6 +11,7 @@ import com.example.timedauctions.config.AuctionTimingProperties;
 import com.example.timedauctions.config.RabbitMqConfig;
 import com.example.timedauctions.dto.*;
 import com.example.timedauctions.entity.*;
+import com.example.timedauctions.event.NotificationEvents;
 import com.example.timedauctions.exception.*; // Create custom exceptions
 import com.example.timedauctions.mapper.TimedAuctionMapper;
 import com.example.timedauctions.repository.AuctionCommentRepository;
@@ -425,9 +426,31 @@ public class TimedAuctionServiceImpl implements TimedAuctionService {
             log.info("Auction {} state changed. New Leader: {}, New Visible Bid: {}",
                     auction.getId(), winnerProxy.getBidderId(), newVisiblePrice);
 
-            // Fetch winner's username (needed for snapshot)
-            // TODO: Optimize - can we get username snapshot from AuctionProxyBid entity? No, fetch it.
             String winnerUsername = fetchUserDetails(winnerProxy.getBidderId()).getUsername();
+            // Check if someone was outbid
+            // winnerChanged boolean was calculated earlier based on originalLeaderId
+            if (originalLeaderId != null && winnerChanged) {
+                log.info("User {} was outbid on auction {} by user {}", originalLeaderId, auction.getId(), winnerProxy.getBidderId());
+
+                // Build the OutbidEvent
+                NotificationEvents.OutbidEvent event = NotificationEvents.OutbidEvent.builder()
+                        .auctionId(auction.getId())
+                        .productTitleSnapshot(auction.getProductTitleSnapshot()) // Ensure this is available
+                        .outbidUserId(originalLeaderId)
+                        .newCurrentBid(newVisiblePrice) // The new visible price
+                        .newHighestBidderId(winnerProxy.getBidderId())
+                        .newHighestBidderUsernameSnapshot(winnerUsername) // Winner username fetched earlier
+                        .build();
+
+                try {
+                    // RabbitTemplate needs to be injected in this service
+                    rabbitTemplate.convertAndSend(RabbitMqConfig.NOTIFICATIONS_EXCHANGE, RabbitMqConfig.AUCTION_OUTBID_ROUTING_KEY, event);
+                    log.info("Published OutbidEvent for auction {}, user {}", auction.getId(), originalLeaderId);
+                } catch (Exception e) {
+                    log.error("Failed to publish OutbidEvent for auction {}: {}", auction.getId(), e.getMessage(), e);
+                    // Log only, don't rollback transaction for notification failure?
+                }
+            }
 
             // Create a new *visible* Bid record
             // Determine if this specific visible bid update was directly caused by a manual action
@@ -575,31 +598,55 @@ public class TimedAuctionServiceImpl implements TimedAuctionService {
 
     // --- Increment Calculation Logic (Copy/Adapt from LiveAuction) ---
     private BigDecimal getIncrement(BigDecimal currentBid) {
-        // Handle null or zero current bid (use start price logic)
+        // If no bids yet, treat as 0 so we pick the first tier
         if (currentBid == null || currentBid.compareTo(BigDecimal.ZERO) <= 0) {
-            // For the very first bid, the required amount is startPrice,
-            // but the increment calculation might still be based on tiers starting from 0 or startPrice.
-            // Let's base it on tiers from 0 for simplicity, matching the proxy logic's use case.
             currentBid = BigDecimal.ZERO;
         }
-        // Define your increment tiers (same as live auction or different?)
-        // Example using VND tiers from previous context
-        if (currentBid.compareTo(new BigDecimal("10000000")) >= 0) return new BigDecimal("2000000");
-        if (currentBid.compareTo(new BigDecimal("5000000")) >= 0) return new BigDecimal("1000000");
-        if (currentBid.compareTo(new BigDecimal("2000000")) >= 0) return new BigDecimal("500000");
-        if (currentBid.compareTo(new BigDecimal("1000000")) >= 0) return new BigDecimal("200000");
-        if (currentBid.compareTo(new BigDecimal("500000")) >= 0) return new BigDecimal("100000");
-        if (currentBid.compareTo(new BigDecimal("200000")) >= 0) return new BigDecimal("50000");
-        if (currentBid.compareTo(new BigDecimal("100000")) >= 0) return new BigDecimal("20000");
-        if (currentBid.compareTo(new BigDecimal("50000")) >= 0) return new BigDecimal("10000");
-        return new BigDecimal("5000"); // Default lowest increment
+
+        // Tiers (descending)
+        if (currentBid.compareTo(new BigDecimal("50000000")) >= 0) {  // > 50 000 000
+            return new BigDecimal("2000000");
+        }
+        if (currentBid.compareTo(new BigDecimal("20000000")) >= 0) {  // 20 000 000–50 000 000
+            return new BigDecimal("1000000");
+        }
+        if (currentBid.compareTo(new BigDecimal("10000000")) >= 0) {  // 10 000 000–20 000 000
+            return new BigDecimal("500000");
+        }
+        if (currentBid.compareTo(new BigDecimal("5000000")) >= 0) {   // 5 000 000–10 000 000
+            return new BigDecimal("200000");
+        }
+        if (currentBid.compareTo(new BigDecimal("3000000")) >= 0) {   // 3 000 000–5 000 000
+            return new BigDecimal("100000");
+        }
+        if (currentBid.compareTo(new BigDecimal("1000000")) >= 0) {   // 1 000 000–3 000 000
+            return new BigDecimal("50000");
+        }
+        if (currentBid.compareTo(new BigDecimal("300000")) >= 0) {    // 300 000–1 000 000
+            return new BigDecimal("10000");
+        }
+        if (currentBid.compareTo(new BigDecimal("100000")) >= 0) {    // 100 000–300 000
+            return new BigDecimal("5000");
+        }
+        if (currentBid.compareTo(new BigDecimal("50000")) >= 0) {     // 50 000–100 000
+            return new BigDecimal("1000");
+        }
+        // below 50 000
+        return new BigDecimal("500");
     }
 
-    // --- TODO: Implement Proxy Bidding Logic ---
-    // @Transactional // This internal method likely needs its own transaction
-    // private void handleNewMaxBid(TimedAuction auction, String bidderId, String bidderUsername, BigDecimal maxBid) {
-    //    // ... Lock, Fetch Proxies, Save/Update Proxy, Sort, Calc Price, Save Bid, Update Auction ...
-    // }
+
+    private String getCommentSnippet(String text) {
+        int maxLength = 50; // Define max length for the snippet
+        if (text == null || text.isEmpty()) {
+            return "";
+        }
+        if (text.length() <= maxLength) {
+            return text;
+        }
+        // Return the first part plus ellipsis
+        return text.substring(0, maxLength) + "...";
+    }
 
 
     @Override
@@ -649,6 +696,41 @@ public class TimedAuctionServiceImpl implements TimedAuctionService {
 
         AuctionComment savedComment = auctionCommentRepository.save(comment);
         log.info("Saved comment with ID {} for auction {}", savedComment.getId(), auctionId);
+
+        if (savedComment.getParentId() != null) {
+            // Fetch parent comment to get original commenter ID
+            AuctionComment parentComment = auctionCommentRepository.findById(savedComment.getParentId())
+                    .orElse(null);
+
+            if (parentComment != null) {
+                String originalCommenterId = parentComment.getUserId();
+                // Don't notify if user replies to themselves
+                if (!Objects.equals(originalCommenterId, userId)) {
+                    log.info("User {} replied to user {}'s comment on auction {}", userId, originalCommenterId, auctionId);
+                    // Build event
+                    NotificationEvents.CommentReplyEvent event = NotificationEvents.CommentReplyEvent.builder()
+                            .auctionId(auctionId)
+                            // Need product title snapshot - fetch auction if not already available in method scope
+                            .productTitleSnapshot(auction.getProductTitleSnapshot())
+                            .parentCommentId(parentComment.getId())
+                            .originalCommenterId(originalCommenterId)
+                            .replyCommentId(savedComment.getId())
+                            .replierUserId(userId)
+                            .replierUsernameSnapshot(userInfo.getUsername()) // User info fetched earlier
+                            .replyCommentTextSample(getCommentSnippet(savedComment.getCommentText()))
+                            .build();
+
+                    try {
+                        rabbitTemplate.convertAndSend(RabbitMqConfig.NOTIFICATIONS_EXCHANGE, RabbitMqConfig.COMMENT_REPLIED_ROUTING_KEY, event);
+                        log.info("Published CommentReplyEvent for auction {}, original commenter {}", auctionId, originalCommenterId);
+                    } catch (Exception e) {
+                        log.error("Failed to publish CommentReplyEvent for auction {}: {}", auctionId, e.getMessage(), e);
+                    }
+                }
+            } else {
+                log.warn("Parent comment {} not found...", savedComment.getParentId());
+            }
+        }
 
         // 5. Map to DTO and Return (simple mapping, no replies needed for create response)
         return auctionMapper.mapToCommentDto(savedComment);
