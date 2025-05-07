@@ -3,8 +3,9 @@ import React, { useState, useEffect, useCallback, useMemo } from "react";
 import { useKeycloak } from "@react-keycloak/web";
 import { useNavigate } from "react-router-dom";
 import apiClient from "../api/apiClient";
-import CountdownTimer from "../components/CountdownTimer";
+import AuctionCard from "../components/AuctionCard";
 import CategorySelector from "../components/CategorySelector";
+import PaginationControls from "../components/PaginationControls";
 
 /* -------------------------------------------------------------------------
  * Tabs / filters: we expose raw enum values the backend knows about.
@@ -42,82 +43,6 @@ const calcFromDateParam = (timeKey) => {
   }
 };
 
-function AuctionCard({ auction, type, onClick }) {
-  return (
-    <div
-      key={auction.id}
-      className="border rounded-lg bg-white shadow hover:shadow-lg transition-shadow cursor-pointer flex flex-col overflow-hidden"
-      onClick={() => onClick(auction.id, type)} // Pass type back
-    >
-      <div className="w-full h-44 bg-gray-200">
-        <img
-          src={auction.productImageUrlSnapshot || "/placeholder.png"}
-          alt={auction.productTitleSnapshot}
-          className="w-full h-full object-cover"
-          loading="lazy"
-        />
-      </div>
-      <div className="p-4 flex flex-col flex-1">
-        <h3
-          className="font-semibold text-sm mb-1 truncate"
-          title={auction.productTitleSnapshot}
-        >
-          {auction.productTitleSnapshot}
-        </h3>
-        <p className="text-xs text-gray-500 mb-2">Status: {auction.status}</p>
-        <div className="mt-auto border-t pt-2 text-xs text-gray-600 grid grid-cols-2 gap-2">
-          <span>Current Bid:</span>
-          <span className="text-right font-medium">
-            {(auction.currentBid ?? 0).toLocaleString("vi-VN")} VNĐ
-          </span>
-          <span>Ends In/At:</span>
-          <span className="text-right font-medium">
-            {" "}
-            {/* Make text bold/medium */}
-            {auction.status === "ACTIVE" ? (
-              <CountdownTimer
-                endTimeMillis={new Date(auction.endTime).getTime()}
-              />
-            ) : (
-              // Display end time more nicely for non-active
-              new Date(auction.endTime).toLocaleDateString("en-GB", {
-                day: "2-digit",
-                month: "short",
-                year: "numeric",
-              })
-            )}
-          </span>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-// --- Reusable Pagination ---
-function PaginationControls({ pagination, onPageChange, isLoading }) {
-  if (pagination.totalPages <= 1) return null;
-  return (
-    <div className="flex justify-center items-center gap-4 my-6">
-      <button
-        className="px-4 py-2 bg-white border rounded disabled:opacity-50"
-        disabled={pagination.page === 0 || isLoading}
-        onClick={() => onPageChange(pagination.page - 1)}
-      >
-        Previous
-      </button>
-      <span className="text-sm text-gray-600">
-        Page {pagination.page + 1} of {Math.max(pagination.totalPages, 1)}
-      </span>
-      <button
-        className="px-4 py-2 bg-white border rounded disabled:opacity-50"
-        disabled={pagination.page >= pagination.totalPages - 1 || isLoading}
-        onClick={() => onPageChange(pagination.page + 1)}
-      >
-        Next
-      </button>
-    </div>
-  );
-}
 
 function MyAuctionsPage() {
   const { keycloak, initialized } = useKeycloak();

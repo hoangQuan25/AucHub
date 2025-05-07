@@ -120,20 +120,11 @@ function ProductsPage() {
     setEditingProduct(null); // Clear editing state
     fetchMyProducts(filterCategoryIds); // Refetch list to show changes/new item
   };
-  // --- END MODIFICATION ---
-  const handleAddProductSuccess = () => {
-    setIsAddModalOpen(false);
-    fetchMyProducts(filterCategoryIds);
-  };
+  
   const handleFilterCategoryChange = (newSelectedIdsSet) => {
     setFilterCategoryIds(newSelectedIdsSet);
   };
-  const applyFilters = () => {
-    console.log(
-      "Applying filters with selected IDs:",
-      filterCategoryIds
-    ); /* TODO: Trigger backend filtering later */
-  };
+  
   const handleViewDetails = (product) => {
     setSelectedProductForDetail(product);
     setIsDetailModalOpen(true);
@@ -275,12 +266,6 @@ function ProductsPage() {
           isLoading={categoryLoading}
           error={categoryError}
         />
-        <button
-          onClick={applyFilters}
-          className="w-full mt-4 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-2 px-3 rounded text-sm"
-        >
-          Apply Filters
-        </button>
       </aside>
       {/* Main Content Area (Takes remaining space, Scrollable) */}
       <div className="flex-grow p-6 bg-gray-50 overflow-y-auto">

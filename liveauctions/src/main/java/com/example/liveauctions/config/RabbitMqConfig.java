@@ -17,6 +17,7 @@ public class RabbitMqConfig {
     public static final String AUCTION_SCHEDULE_EXCHANGE = "auction_schedule_exchange";
     public static final String AUCTION_EVENTS_EXCHANGE = "auction_events_exchange";
     public static final String AUCTION_COMMAND_EXCHANGE = "auction_command_exchange";
+    public static final String NOTIFICATIONS_EXCHANGE = "notifications_exchange";
 
     public static final String AUCTION_START_QUEUE = "auction_start_queue";
     public static final String AUCTION_END_QUEUE = "auction_end_queue";
@@ -27,9 +28,11 @@ public class RabbitMqConfig {
     public static final String END_ROUTING_KEY = "auction.command.end";
     public static final String HAMMER_ROUTING_KEY = "auction.command.hammer";
     public static final String CANCEL_ROUTING_KEY = "auction.command.cancel";
+    public static final String AUCTION_LIVE_ENDED_ROUTING_KEY = "auction.live.ended";
 
 
     public static final String UPDATE_ROUTING_KEY_PREFIX = "auction.update."; // e.g., auction.update.uuid
+    public static final String AUCTION_STARTED_ROUTING_KEY_PREFIX = "auction.";
 
     @Bean
     TopicExchange auctionEventsExchange() {
@@ -50,6 +53,12 @@ public class RabbitMqConfig {
     @Bean
     DirectExchange auctionCommandExchange() {
         return new DirectExchange(AUCTION_COMMAND_EXCHANGE);
+    }
+
+    @Bean
+    TopicExchange notificationsExchange() {
+        // Declare the topic exchange for notifications (idempotent)
+        return new TopicExchange(NOTIFICATIONS_EXCHANGE);
     }
 
     @Bean

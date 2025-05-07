@@ -1,6 +1,6 @@
-package com.example.liveauctions.dto;
+package com.example.notifications.client.dto;
 
-import com.example.liveauctions.entity.AuctionStatus; // Optional: Maybe filter by status later
+import com.example.notifications.entity.AuctionStatus;
 import lombok.Builder;
 import lombok.Value;
 

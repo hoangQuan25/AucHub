@@ -427,4 +427,22 @@ public class LiveAuctionServiceImpl implements LiveAuctionService {
         log.info("CancelAuctionCommand sent for auction {}", auctionId);
     }
 
+    /**
+     * Fetches summary details for a list of auction IDs.
+     *
+     * @param auctionIds
+     */
+    @Override
+    @Transactional(readOnly = true)
+    public List<LiveAuctionSummaryDto> getAuctionSummariesByIds(Set<UUID> auctionIds) {
+        if (auctionIds == null || auctionIds.isEmpty()) {
+            return Collections.emptyList();
+        }
+        log.debug("Fetching live auction summaries for IDs: {}", auctionIds);
+        List<LiveAuction> auctions = liveAuctionRepository.findAllById(auctionIds); // Use JPA's built-in batch fetch
+        return auctions.stream()
+                .map(auctionMapper::mapToLiveAuctionSummaryDto) // Ensure mapper exists
+                .collect(Collectors.toList());
+    }
+
 }

@@ -18,6 +18,7 @@ import org.springframework.web.bind.annotation.*;
 
 import java.security.Principal; // Keep Principal if needed for direct access (though header is preferred)
 import java.time.LocalDateTime;
+import java.util.Collections;
 import java.util.List;
 import java.util.Set;
 import java.util.UUID;
@@ -105,5 +106,16 @@ public class LiveAuctionController {
         return ResponseEntity.ok().build();
     }
 
-
+    @GetMapping("/batch-summary")
+    public ResponseEntity<List<LiveAuctionSummaryDto>> getAuctionSummariesByIds(
+            // Accept comma-separated UUIDs
+            @RequestParam("ids") Set<UUID> auctionIds
+    ) {
+        log.info("Request received for live auction summaries by IDs: {}", auctionIds);
+        if (auctionIds == null || auctionIds.isEmpty()) {
+            return ResponseEntity.ok(Collections.emptyList());
+        }
+        List<LiveAuctionSummaryDto> summaries = liveAuctionService.getAuctionSummariesByIds(auctionIds);
+        return ResponseEntity.ok(summaries);
+    }
 }

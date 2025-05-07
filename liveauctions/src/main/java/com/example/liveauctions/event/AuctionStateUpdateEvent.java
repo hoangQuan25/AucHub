@@ -16,13 +16,11 @@ import java.util.UUID;
  * in a way that needs to be broadcast to WebSocket clients.
  * Contains the data needed to build the LiveAuctionStateDto.
  */
-@Data // Or @Value for immutable event
+@Data
 @Builder
-@NoArgsConstructor // Needed for Jackson deserialization if using @Data/@Value with Builder
-@AllArgsConstructor // Needed for Jackson deserialization if using @Data/@Value with Builder
+@NoArgsConstructor
+@AllArgsConstructor
 public class AuctionStateUpdateEvent {
-
-    // Fields closely mirroring LiveAuctionStateDto for easy mapping
 
     private UUID auctionId;
     private AuctionStatus status;
@@ -34,7 +32,7 @@ public class AuctionStateUpdateEvent {
     private boolean reserveMet;
     private LocalDateTime endTime;
 
-    private BidDto newBid;                     // <— sent only when placeBid() succeeds
-    private String winnerId;                   // <— filled when status = SOLD
+    private BidDto newBid;
+    private String winnerId;
     private BigDecimal winningBid;
 }

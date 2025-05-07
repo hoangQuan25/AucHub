@@ -10,10 +10,11 @@ const NotificationContext = createContext({
   notifications: [],
   unreadCount: 0,
   isConnected: false,
-  connectNotifications: () => {},
-  disconnectNotifications: () => {},
-  markAsRead: (notificationId) => {}, // Placeholder
-  markAllAsRead: () => {}, // Placeholder
+  followedAuctionIds: new Set(),
+  markAsRead: (notificationId) => {}, 
+  markAllAsRead: () => {}, 
+  followAuction: (auctionId, auctionType) => {},
+  unfollowAuction: (auctionId) => {},
 });
 
 // --- Custom Hook for easy consumption ---
@@ -25,6 +26,7 @@ export const NotificationProvider = ({ children }) => {
   const [notifications, setNotifications] = useState([]);
   const [unreadCount, setUnreadCount] = useState(0);
   const [isConnected, setIsConnected] = useState(false);
+  const [followedAuctionIds, setFollowedAuctionIds] = useState(new Set());
 
   
   const stompClientRef = useRef(null);
@@ -83,6 +85,25 @@ export const NotificationProvider = ({ children }) => {
   }
 }, [initialized, keycloak.authenticated]);
 
+const fetchFollowedIds = useCallback(async () => {
+  if (!(initialized && keycloak.authenticated)) return;
+  console.log("Fetching followed auction IDs...");
+  try {
+    const response = await apiClient.get('/notifications/following/ids');
+    // Assuming response.data is an array/list of UUID strings
+    if (Array.isArray(response.data)) {
+      setFollowedAuctionIds(new Set(response.data));
+      console.log(`User follows ${response.data.length} auctions.`);
+    } else {
+       console.warn("Received non-array response for followed IDs:", response.data);
+       setFollowedAuctionIds(new Set());
+    }
+  } catch (err) {
+    console.error("Failed to fetch followed auction IDs:", err);
+    setFollowedAuctionIds(new Set()); // Reset on error
+  }
+}, [initialized, keycloak.authenticated]);
+
   // Function to connect WebSocket/STOMP
   const connectNotifications = useCallback(() => {
     // Prevent connection if not authenticated, not initialized, or already connected/connecting
@@ -132,6 +153,7 @@ export const NotificationProvider = ({ children }) => {
 
       // Fetch initial unread count AFTER connecting/subscribing
       fetchUnreadCount();
+      fetchFollowedIds();
     };
 
     client.onStompError = (frame) => {
@@ -248,6 +270,55 @@ export const NotificationProvider = ({ children }) => {
    }
  }, [fetchUnreadCount]);
 
+ const followAuction = useCallback(async (auctionId, auctionType) => {
+  const userId = currentUserId.current;
+  if (!userId || !auctionId || !auctionType) return;
+  console.log(`Requesting follow: User ${userId}, Auction ${auctionId}, Type ${auctionType}`);
+
+  // Optimistic UI Update
+  setFollowedAuctionIds(prev => new Set(prev).add(auctionId));
+
+  try {
+      // Ensure type is uppercase for consistency if needed by backend path param matching
+      await apiClient.post(`/notifications/follow/${auctionType.toUpperCase()}/${auctionId}`);
+      console.log("Follow request successful");
+  } catch(err) {
+       console.error(`Failed to follow auction ${auctionId}:`, err);
+       // Revert optimistic update on failure
+       setFollowedAuctionIds(prev => {
+           const newSet = new Set(prev);
+           newSet.delete(auctionId);
+           return newSet;
+       });
+       // TODO: Show error message to user?
+  }
+
+}, []); 
+
+ const unfollowAuction = useCallback(async (auctionId) => {
+  const userId = currentUserId.current;
+  if (!userId || !auctionId) return;
+  console.log(`Requesting unfollow: User ${userId}, Auction ${auctionId}`);
+
+   // Optimistic UI Update
+   setFollowedAuctionIds(prev => {
+       const newSet = new Set(prev);
+       newSet.delete(auctionId);
+       return newSet;
+   });
+
+  try {
+      // DELETE request, only needs auctionId
+      await apiClient.delete(`/notifications/follow/${auctionId}`);
+      console.log("Unfollow request successful");
+  } catch(err) {
+       console.error(`Failed to unfollow auction ${auctionId}:`, err);
+        // Revert optimistic update on failure
+        setFollowedAuctionIds(prev => new Set(prev).add(auctionId)); // Add it back
+        // TODO: Show error message to user?
+  }
+}, []); 
+
   // --- Provide state and functions through context ---
   const value = {
     notifications,
@@ -255,6 +326,10 @@ export const NotificationProvider = ({ children }) => {
     isConnected,
     markAsRead,
     markAllAsRead,
+    followedAuctionIds,
+    markAsRead,
+    followAuction,
+    unfollowAuction,
   };
 
   return (

@@ -16,6 +16,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDateTime;
+import java.util.Collections;
 import java.util.List;
 import java.util.Set;
 import java.util.UUID;
@@ -144,5 +145,17 @@ public class TimedAuctionController {
         log.info("Fetching comments for auction {}", auctionId);
         List<CommentDto> comments = timedAuctionService.getComments(auctionId);
         return ResponseEntity.ok(comments);
+    }
+
+    @GetMapping("/batch-summary")
+    public ResponseEntity<List<TimedAuctionSummaryDto>> getAuctionSummariesByIds(
+            @RequestParam("ids") Set<UUID> auctionIds
+    ) {
+        log.info("Request received for timed auction summaries by IDs: {}", auctionIds);
+        if (auctionIds == null || auctionIds.isEmpty()) {
+            return ResponseEntity.ok(Collections.emptyList());
+        }
+        List<TimedAuctionSummaryDto> summaries = timedAuctionService.getAuctionSummariesByIds(auctionIds);
+        return ResponseEntity.ok(summaries);
     }
 }

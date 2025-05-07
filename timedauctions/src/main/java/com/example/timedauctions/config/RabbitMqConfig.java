@@ -22,6 +22,7 @@ public class RabbitMqConfig {
     public static final String NOTIFICATIONS_EXCHANGE = "notifications_exchange";
 
     public static final String TD_AUCTION_START_QUEUE = "td_auction_start_queue";
+    // dk exec rabbitmq rabbitmqctl purge_queue td_auction_start_queue
     public static final String TD_AUCTION_END_QUEUE = "td_auction_end_queue";
     public static final String TD_AUCTION_CANCEL_QUEUE  = "td_auction_cancel_queue";
     public static final String TD_AUCTION_HAMMER_QUEUE = "td_auction_hammer_queue";
@@ -38,6 +39,9 @@ public class RabbitMqConfig {
     public static final String AUCTION_ENDED_ROUTING_KEY = "auction.timed.ended";
     public static final String AUCTION_OUTBID_ROUTING_KEY = "auction.timed.outbid";
     public static final String COMMENT_REPLIED_ROUTING_KEY = "comment.timed.replied";
+
+    public static final String AUCTION_ENDED_ROUTING_KEY_PREFIX = "auction.";
+    public static final String AUCTION_STARTED_ROUTING_KEY_PREFIX = "auction.";
 
 
     // --- Exchanges ---

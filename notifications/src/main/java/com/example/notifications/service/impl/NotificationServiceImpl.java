@@ -1,18 +1,27 @@
 package com.example.notifications.service.impl;
 
+import com.example.notifications.client.LiveAuctionServiceClient;
+import com.example.notifications.client.TimedAuctionServiceClient;
 import com.example.notifications.client.UserServiceClient;
+import com.example.notifications.client.dto.LiveAuctionSummaryDto;
+import com.example.notifications.client.dto.TimedAuctionSummaryDto;
 import com.example.notifications.client.dto.UserBasicInfoDto; // Assuming this DTO is available
+import com.example.notifications.dto.FollowingAuctionSummaryDto;
 import com.example.notifications.dto.NotificationDto; // DTO for WebSocket payload
+import com.example.notifications.entity.AuctionFollower;
 import com.example.notifications.entity.Notification; // DB Entity
 import com.example.notifications.entity.AuctionStatus; // Enum for status check
 import com.example.notifications.event.NotificationEvents.*; // Event types
 import com.example.notifications.mapper.NotificationMapper;
+import com.example.notifications.repository.AuctionFollowerRepository;
 import com.example.notifications.repository.NotificationRepository; // DB Repo
 import com.example.notifications.service.NotificationService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.messaging.simp.SimpMessagingTemplate; // For WebSocket messages
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional; // Import if needed
@@ -20,6 +29,8 @@ import org.springframework.util.CollectionUtils;
 
 import java.time.LocalDateTime;
 import java.util.*;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 @Service
 @RequiredArgsConstructor
@@ -27,11 +38,12 @@ import java.util.*;
 public class NotificationServiceImpl implements NotificationService {
 
     private final NotificationRepository notificationRepository;
-    private final SimpMessagingTemplate messagingTemplate; // For sending WebSocket messages
-    private final UserServiceClient userServiceClient; // To get user info (like email for future use)
+    private final SimpMessagingTemplate messagingTemplate;
+    private final UserServiceClient userServiceClient;
     private final NotificationMapper notificationMapper;
-    // Optional: Inject Mail Sender if implementing email
-    // private final JavaMailSender mailSender;
+    private final AuctionFollowerRepository auctionFollowerRepository;
+    private final TimedAuctionServiceClient timedAuctionServiceClient;
+    private final LiveAuctionServiceClient liveAuctionServiceClient;
 
     // Define constants for notification types (match event names or use custom)
     private static final String TYPE_AUCTION_ENDED = "AUCTION_ENDED";
@@ -50,6 +62,7 @@ public class NotificationServiceImpl implements NotificationService {
         String baseMessage = String.format("Auction for '%s' has ended with status: %s.",
                 truncate(event.getProductTitleSnapshot(), 50), event.getFinalStatus());
         String message;
+        List<String> followerIds = getFollowersForAuction(event.getAuctionId());
 
         // 1. Notify Seller
         if (event.getSellerId() != null) {
@@ -74,21 +87,20 @@ public class NotificationServiceImpl implements NotificationService {
 
         // 3. TODO: Notify other Bidders/Followers?
         // --- NEW: Notify Other Bidders ---
-        if (event.getAllBidderIds() != null) {
-            for (String bidderId : event.getAllBidderIds()) {
-                // Send only if not already notified (i.e., not the seller or the winner)
-                if (notifiedUserIds.add(bidderId)) {
-                    // Format a generic message for losing bidders / participants
-                    if (event.getFinalStatus() == AuctionStatus.SOLD) {
-                        message = String.format("Auction for '%s' has ended. It was sold to %s for %s VNĐ.",
-                                productTitle, event.getWinnerUsernameSnapshot(), event.getWinningBid().toPlainString());
-                    } else if (event.getFinalStatus() == AuctionStatus.RESERVE_NOT_MET) {
-                        message = String.format("Auction for '%s' has ended. The reserve price was not met.", productTitle);
-                    } else { // CANCELLED
-                        message = String.format("Auction for '%s' was cancelled.", productTitle);
-                    }
-                    saveAndSendNotification(bidderId, TYPE_AUCTION_ENDED, message, event.getAuctionId(), null);
-                }
+        String generalEndMessage;
+        if (event.getFinalStatus() == AuctionStatus.SOLD) {
+            generalEndMessage = String.format("Auction for '%s' has ended. Sold to %s for %s VNĐ.",
+                    productTitle, event.getWinnerUsernameSnapshot(), event.getWinningBid().toPlainString());
+        } else if (event.getFinalStatus() == AuctionStatus.RESERVE_NOT_MET) {
+            generalEndMessage = String.format("Auction for '%s' has ended. Reserve price not met.", productTitle);
+        } else { // CANCELLED
+            generalEndMessage = String.format("Auction for '%s' was cancelled.", productTitle);
+        }
+
+        for (String followerId : followerIds) {
+            log.info("Notifying follower {} of auction {} end.", followerId, event.getAuctionId());
+            if (notifiedUserIds.add(followerId)) { // Ensure only notified once
+                saveAndSendNotification(followerId, TYPE_AUCTION_ENDED, generalEndMessage, event.getAuctionId(), null);
             }
         }
         // --- End Notify Other Bidders ---
@@ -203,6 +215,249 @@ public class NotificationServiceImpl implements NotificationService {
          sendUnreadCountUpdate(userId);
         return updatedCount;
     }
+
+    /**
+     * Adds a follow relationship
+     *
+     * @param userId
+     * @param auctionId
+     * @param auctionType
+     */
+    @Override
+    @Transactional
+    public void followAuction(String userId, UUID auctionId, String auctionType) {
+        log.info("User {} attempting to follow auction {} (type: {})", userId, auctionId, auctionType);
+        // Use exists check for idempotency (don't create duplicates)
+        if (!auctionFollowerRepository.existsByUserIdAndAuctionId(userId, auctionId)) {
+            AuctionFollower follower = AuctionFollower.builder()
+                    .userId(userId)
+                    .auctionId(auctionId)
+                    .auctionType(auctionType) // Store the type
+                    .build();
+            auctionFollowerRepository.save(follower);
+            log.info("User {} successfully followed auction {}", userId, auctionId);
+        } else {
+            log.debug("User {} already following auction {}", userId, auctionId);
+        }
+    }
+
+
+    /**
+     * Removes a follow relationship
+     *
+     * @param userId
+     * @param auctionId
+     */
+    @Override
+    @Transactional
+    public void unfollowAuction(String userId, UUID auctionId) {
+        log.info("User {} attempting to unfollow auction {}", userId, auctionId);
+        // Deleting by composite key is efficient
+        long deletedCount = auctionFollowerRepository.deleteByUserIdAndAuctionId(userId, auctionId);
+        if (deletedCount > 0) {
+            log.info("User {} successfully unfollowed auction {}", userId, auctionId);
+        } else {
+            log.debug("User {} was not following auction {} or already unfollowed.", userId, auctionId);
+        }
+    }
+
+    /**
+     * Gets the set of auction IDs followed by a user
+     *
+     * @param userId
+     */
+    @Override
+    @Transactional(readOnly = true)
+    public Set<UUID> getFollowedAuctionIds(String userId) {
+        log.debug("Fetching followed auction IDs for user {}", userId);
+        return auctionFollowerRepository.findAuctionIdsByUserId(userId);
+    }
+
+    /**
+     * Gets user IDs following a specific auction (used internally)
+     *
+     * @param auctionId
+     */
+    @Override
+    @Transactional(readOnly = true)
+    public List<String> getFollowersForAuction(UUID auctionId) {
+        log.debug("Fetching followers for auction {}", auctionId);
+        return auctionFollowerRepository.findUserIdsByAuctionId(auctionId);
+    }
+
+    /**
+     * Processes an auction started event
+     *
+     * @param event
+     */
+    @Override
+    @Transactional // Needed for potential saveAndSendNotification call
+    public void processAuctionStarted(AuctionStartedEvent event) {
+        log.debug("Processing AuctionStartedEvent for auction {}", event.getAuctionId());
+        String productTitle = truncate(event.getProductTitleSnapshot(), 50);
+        String message;
+
+        // Fetch followers for this auction
+        List<String> followerIds = getFollowersForAuction(event.getAuctionId()); // Use helper/repo method
+        Set<String> notifiedUserIds = new HashSet<>(followerIds); // Keep track
+
+        // Notify Seller (if not already following maybe?)
+        if(event.getSellerId() != null && notifiedUserIds.add(event.getSellerId())) { // Add returns true if not present
+            message = String.format("Your %s auction for '%s' has started.",
+                    event.getAuctionType().toLowerCase(), productTitle);
+            saveAndSendNotification(event.getSellerId(), "AUCTION_STARTED", message, event.getAuctionId(), null);
+        }
+
+        // Notify Followers
+        message = String.format("Auction for '%s' (type: %s) has started!",
+                productTitle, event.getAuctionType());
+        for (String followerId : followerIds) {
+            // Avoid re-notifying seller if they also followed
+            if (!followerId.equals(event.getSellerId())) {
+                saveAndSendNotification(followerId, "AUCTION_STARTED", message, event.getAuctionId(), null);
+            }
+        }
+        log.info("Processed AuctionStartedEvent for auction {}, notified {} unique users.", event.getAuctionId(), notifiedUserIds.size());
+    }
+
+    /**
+     * Retrieves details for auctions followed by a user, supporting filtering and pagination.
+     * This orchestrates calls to auction services.
+     *
+     * @param userId
+     * @param status
+     * @param ended
+     * @param categoryIds
+     * @param from
+     * @param pageable
+     */
+    @Override
+    @Transactional(readOnly = true)
+    public Page<FollowingAuctionSummaryDto> getFollowingAuctions(
+            String userId,
+            AuctionStatus status,
+            Boolean ended,
+            Set<Long> categoryIds,
+            LocalDateTime from,
+            Pageable pageable
+    ) {
+        log.info("Service fetching following auctions for user {}: status={}, ended={}, cats={}, from={}, page={}",
+                userId, status, ended, categoryIds, from, pageable);
+
+        // 1. Get ALL followed auction IDs and Types for the user
+        List<AuctionFollower> followed = auctionFollowerRepository.findByUserId(userId); // Fetch full follower objects
+        if (followed.isEmpty()) {
+            return Page.empty(pageable);
+        }
+
+        // 2. Separate IDs by type
+        Set<UUID> liveAuctionIds = followed.stream()
+                .filter(f -> "LIVE".equalsIgnoreCase(f.getAuctionType()))
+                .map(AuctionFollower::getAuctionId)
+                .collect(Collectors.toSet());
+
+        Set<UUID> timedAuctionIds = followed.stream()
+                .filter(f -> "TIMED".equalsIgnoreCase(f.getAuctionType()))
+                .map(AuctionFollower::getAuctionId)
+                .collect(Collectors.toSet());
+
+        // 3. Fetch Summaries via Feign Clients (in parallel eventually?)
+        List<FollowingAuctionSummaryDto> combinedSummaries = new ArrayList<>();
+
+        // Fetch Live Auction Summaries
+        if (!liveAuctionIds.isEmpty()) {
+            try {
+                List<LiveAuctionSummaryDto> liveSummaries = liveAuctionServiceClient.getAuctionSummariesByIds(liveAuctionIds);
+                liveSummaries.forEach(dto -> combinedSummaries.add(notificationMapper.mapToCommonSummary(dto, "LIVE")));
+                log.debug("Fetched {} live auction summaries", liveSummaries.size());
+            } catch (Exception e) {
+                log.error("Failed to fetch live auction summaries for user {}: {}", userId, e.getMessage());
+                // Decide how to handle partial failure - continue or throw? Continue for now.
+            }
+        }
+
+        // Fetch Timed Auction Summaries
+        if (!timedAuctionIds.isEmpty()) {
+            try {
+                List<TimedAuctionSummaryDto> timedSummaries = timedAuctionServiceClient.getAuctionSummariesByIds(timedAuctionIds);
+                timedSummaries.forEach(dto -> combinedSummaries.add(notificationMapper.mapToCommonSummary(dto, "TIMED")));
+                log.debug("Fetched {} timed auction summaries", timedSummaries.size());
+            } catch (Exception e) {
+                log.error("Failed to fetch timed auction summaries for user {}: {}", userId, e.getMessage());
+            }
+        }
+
+        // 4. Apply Filtering (in memory)
+        Stream<FollowingAuctionSummaryDto> filteredStream = combinedSummaries.stream();
+
+        // Status/Ended Filter
+        final Set<AuctionStatus> endedStatuses = Set.of(AuctionStatus.SOLD, AuctionStatus.RESERVE_NOT_MET, AuctionStatus.CANCELLED);
+        if (Boolean.TRUE.equals(ended)) {
+            filteredStream = filteredStream.filter(a -> endedStatuses.contains(a.getStatus()));
+        } else if (status != null) {
+            filteredStream = filteredStream.filter(a -> a.getStatus() == status);
+        }
+
+        // 'From' Time Filter (based on endTime for relevance?)
+        if (from != null) {
+            // Assuming 'from' means auctions ending *after* this time, or starting after? Let's filter by endTime > from
+            filteredStream = filteredStream.filter(a -> a.getEndTime() != null && a.getEndTime().isAfter(from));
+        }
+
+        // Category Filter - OMITTED for now as Summary DTOs don't contain categories.
+        // Would require fetching categories or adding them to summary DTOs + batch endpoints.
+        if (categoryIds != null && !categoryIds.isEmpty()) {
+            log.debug("Applying category filter with IDs: {} for user {}", categoryIds, userId);
+            filteredStream = filteredStream.filter(summary -> {
+                Set<Long> summaryCategoryIds = summary.getCategoryIds();
+                if (summaryCategoryIds == null || summaryCategoryIds.isEmpty()) {
+                    return false; // Auction has no categories listed, so it can't match the filter
+                }
+                // Check if any of the auction's categories are in the selected categoryIds from the request
+                return summaryCategoryIds.stream().anyMatch(categoryIds::contains);
+            });
+        } else {
+            log.debug("No category filter applied for user {}", userId);
+        }
+
+
+        List<FollowingAuctionSummaryDto> filteredList = filteredStream.collect(Collectors.toList());
+
+        // 5. Apply Sorting (in memory - less efficient than DB sort)
+        if (pageable.getSort().isSorted()) {
+            Comparator<FollowingAuctionSummaryDto> comparator = Comparator.comparing(FollowingAuctionSummaryDto::getEndTime, Comparator.nullsLast(Comparator.naturalOrder())); // Default sort
+            // Basic sort handling - can be expanded
+            Optional<Sort.Order> orderOpt = pageable.getSort().stream().findFirst();
+            if(orderOpt.isPresent()) {
+                Sort.Order order = orderOpt.get();
+                boolean ascending = order.isAscending();
+                // Add more sortable properties if needed
+                if ("endTime".equalsIgnoreCase(order.getProperty())) {
+                    comparator = Comparator.comparing(FollowingAuctionSummaryDto::getEndTime, Comparator.nullsLast(Comparator.naturalOrder()));
+                } else if ("currentBid".equalsIgnoreCase(order.getProperty())) {
+                    comparator = Comparator.comparing(FollowingAuctionSummaryDto::getCurrentBid, Comparator.nullsLast(Comparator.naturalOrder()));
+                } // Add others
+                if (!ascending) {
+                    comparator = comparator.reversed();
+                }
+                filteredList.sort(comparator);
+            }
+        } else {
+            // Default sort if none provided by Pageable (e.g., endTime descending)
+            filteredList.sort(Comparator.comparing(FollowingAuctionSummaryDto::getEndTime, Comparator.nullsLast(Comparator.reverseOrder())));
+        }
+
+
+        // 6. Apply Pagination (in memory)
+        int start = (int) pageable.getOffset();
+        int end = Math.min((start + pageable.getPageSize()), filteredList.size());
+
+        List<FollowingAuctionSummaryDto> pageContent = (start > filteredList.size()) ? Collections.emptyList() : filteredList.subList(start, end);
+
+        // 7. Create and Return Page object
+        return new PageImpl<>(pageContent, pageable, filteredList.size());
+    }
+
 
     // Optional helper to push unread count updates via WebSocket
     private void sendUnreadCountUpdate(String userId) {
