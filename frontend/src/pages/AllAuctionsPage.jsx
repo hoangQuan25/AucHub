@@ -1,5 +1,8 @@
 // src/pages/AllAuctionsPage.jsx (Renamed from LiveAuctionsPage)
 import React, { useState, useCallback, useEffect } from "react";
+import { FaHeart, FaRegHeart } from 'react-icons/fa';
+import { useNotifications } from '../context/NotificationContext';
+import { useKeycloak } from '@react-keycloak/web';
 import { useNavigate } from "react-router-dom";
 import CountdownTimer from "../components/CountdownTimer";
 import apiClient from "../api/apiClient";
@@ -7,20 +10,38 @@ import apiClient from "../api/apiClient";
 // Reusable component for rendering an auction card
 function AuctionCard({ auction, type }) {
   const navigate = useNavigate();
+  const { keycloak } = useKeycloak();
+  const { followedAuctionIds, followAuction, unfollowAuction } = useNotifications();
+  const isFollowed = followedAuctionIds?.has(auction.id);
+
   const handleViewAuction = (auctionId) => {
     // Navigate to the correct detail page based on type
     const detailPath = type === 'LIVE' ? `/live-auctions/${auctionId}` : `/timed-auctions/${auctionId}`;
     navigate(detailPath);
   };
 
+  // --- Handler for clicking the heart icon ---
+  const handleFollowToggle = (event) => {
+    event.stopPropagation(); // VERY IMPORTANT: Stop click from propagating to the card's handler
+    if (!keycloak.authenticated) return; // Should not happen if button not rendered, but safe check
+
+    if (isFollowed) {
+      console.log(`Requesting unfollow for auction ${auction.id}`);
+      unfollowAuction(auction.id); // Call context function (type might not be needed for unfollow)
+    } else {
+      console.log(`Requesting follow for auction ${auction.id} type ${type}`);
+      followAuction(auction.id, type); // Call context function
+    }
+  };
+
   return (
     <div
       key={auction.id}
-      className="border rounded-lg bg-white shadow hover:shadow-lg transition-shadow cursor-pointer overflow-hidden flex flex-col"
+      className="border rounded-lg bg-white shadow hover:shadow-lg transition-shadow cursor-pointer overflow-hidden flex flex-col relative"
       onClick={() => handleViewAuction(auction.id)}
     >
       {/* Image */}
-      <div className="w-full h-48 bg-gray-200 flex-shrink-0">
+      <div className="w-full h-48 bg-gray-200 flex-shrink-0 relative">
         <img
           src={auction.productImageUrlSnapshot || "/placeholder.png"}
           alt={auction.productTitleSnapshot}
@@ -28,6 +49,22 @@ function AuctionCard({ auction, type }) {
           loading="lazy"
         />
       </div>
+
+      {keycloak.authenticated && ( 
+             <button
+                onClick={handleFollowToggle}
+                className={`absolute top-2 right-2 p-1.5 rounded-full transition-colors duration-150 z-10 ${
+                    isFollowed
+                    ? 'bg-red-500 text-white hover:bg-red-600' // Style for followed
+                    : 'bg-black/30 text-white hover:bg-black/50' // Style for not followed
+                }`}
+                aria-label={isFollowed ? 'Unfollow Auction' : 'Follow Auction'}
+                title={isFollowed ? 'Unfollow Auction' : 'Follow Auction'}
+             >
+                 {isFollowed ? <FaHeart size="1em"/> : <FaRegHeart size="1em"/>}
+             </button>
+        )}
+
       {/* Details */}
       <div className="p-4 flex flex-col flex-grow">
         <h3

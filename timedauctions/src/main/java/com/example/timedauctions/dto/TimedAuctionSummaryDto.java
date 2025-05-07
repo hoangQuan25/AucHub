@@ -6,6 +6,7 @@ import lombok.Value; // Use @Value for immutable DTO
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.util.Set;
 import java.util.UUID;
 
 @Value // Makes class final, fields private final, generates constructor, equals, hashCode, toString
@@ -19,4 +20,5 @@ public class TimedAuctionSummaryDto {
     AuctionStatus status;
     // Add other fields like reserveMet if needed on summary card
     // boolean reserveMet;
+    Set<Long> categoryIds;
 }

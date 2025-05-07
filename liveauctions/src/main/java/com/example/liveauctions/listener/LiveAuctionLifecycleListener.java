@@ -4,19 +4,24 @@ import com.example.liveauctions.commands.AuctionLifecycleCommands.*; // Import c
 import com.example.liveauctions.config.RabbitMqConfig;
 import com.example.liveauctions.entity.AuctionStatus;
 import com.example.liveauctions.entity.LiveAuction;
+import com.example.liveauctions.event.NotificationEvents;
 import com.example.liveauctions.exception.AuctionNotFoundException;
+import com.example.liveauctions.repository.BidRepository;
 import com.example.liveauctions.repository.LiveAuctionRepository;
 import com.example.liveauctions.service.LiveAuctionSchedulingService; // Import new service
 import com.example.liveauctions.service.WebSocketEventPublisher; // Import publisher
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.amqp.rabbit.annotation.RabbitListener;
+import org.springframework.amqp.rabbit.core.RabbitTemplate;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.time.temporal.ChronoUnit;
+import java.util.HashSet;
 import java.util.Optional;
+import java.util.Set;
 import java.util.UUID;
 
 @Component
@@ -25,9 +30,11 @@ import java.util.UUID;
 public class LiveAuctionLifecycleListener {
 
     private final LiveAuctionRepository auctionRepository;
-    private final LiveAuctionSchedulingService schedulingService; // Inject new service
-    private final WebSocketEventPublisher webSocketEventPublisher; // Inject publisher
-    // No RabbitTemplate needed here unless publishing NEW messages from listener
+    private final LiveAuctionSchedulingService schedulingService;
+    private final WebSocketEventPublisher webSocketEventPublisher;
+    private final BidRepository bidRepository;
+
+    private final RabbitTemplate rabbitTemplate;
 
     // --- Listener for Start Command ---
     @RabbitListener(queues = RabbitMqConfig.AUCTION_START_QUEUE)
@@ -48,6 +55,25 @@ public class LiveAuctionLifecycleListener {
                 // Use scheduling service to schedule the end
                 schedulingService.scheduleAuctionEnd(updatedAuction);
                 webSocketEventPublisher.publishAuctionStateUpdate(updatedAuction, null);
+
+                try {
+                    NotificationEvents.AuctionStartedEvent event = NotificationEvents.AuctionStartedEvent.builder()
+                            .auctionId(updatedAuction.getId())
+                            .productTitleSnapshot(updatedAuction.getProductTitleSnapshot())
+                            .auctionType("LIVE") // Hardcode or derive type
+                            .sellerId(updatedAuction.getSellerId())
+                            .startTime(updatedAuction.getStartTime())
+                            .endTime(updatedAuction.getEndTime())
+                            .build();
+                    String routingKey = RabbitMqConfig.AUCTION_STARTED_ROUTING_KEY_PREFIX + "live.started";
+                    rabbitTemplate.convertAndSend(RabbitMqConfig.NOTIFICATIONS_EXCHANGE, routingKey, event);
+                    log.info("[Listener - Live] Published AuctionStartedEvent for auction {}", updatedAuction.getId());
+                    log.info("[Listener - Live] Published AuctionStartedEvent to exchange {} with routing key {}",
+                            RabbitMqConfig.NOTIFICATIONS_EXCHANGE, routingKey);
+                    log.info("[Listener - Live] Published AuctionStartedEvent for auction {}", event);
+                } catch (Exception e) {
+                    log.error("[Listener - Live] Failed to publish AuctionStartedEvent for auction {}: {}", updatedAuction.getId(), e.getMessage(), e);
+                }
             } else {
                 log.warn("[Listener - Live] Start command for auction {} received early. Start time: {}. Re-queueing/Ignoring? (Currently ignored)", auctionId, auction.getStartTime());
                 // Basic behavior is ACK and ignore. More robust might re-schedule with shorter delay.
@@ -104,7 +130,7 @@ public class LiveAuctionLifecycleListener {
                 // Allow transaction to commit even if publish fails? Or rethrow? Currently logs and continues.
             }
             // TODO: Publish specific notification event (AuctionEndedEvent) to NOTIFICATIONS_EXCHANGE
-            // publishAuctionEndedNotification(endedAuction);
+             publishAuctionEndedNotification(endedAuction);
 
         } else {
             log.warn("[Listener - Live] Auction {} not ACTIVE when end command received. Status: {}. Ignoring.", auctionId, auction.getStatus());
@@ -132,7 +158,7 @@ public class LiveAuctionLifecycleListener {
                 log.info("[Listener - Live] Published final state for cancelled auction {}", auctionId);
             } catch (Exception e) { log.error("[Listener - Live] Failed to publish cancel state for auction {}: {}", auctionId, e.getMessage(), e); }
             // TODO: Publish specific notification event (AuctionEndedEvent with CANCELLED status)
-            // publishAuctionEndedNotification(saved);
+             publishAuctionEndedNotification(saved);
         } else {
             log.warn("[Listener - Live] Cancel cmd for {} ignored, status was {}.", auctionId, auction.getStatus());
         }
@@ -165,27 +191,35 @@ public class LiveAuctionLifecycleListener {
         } catch (Exception e) { log.error("[Listener - Live] Failed to publish hammered state for auction {}: {}", auctionId, e.getMessage(), e); }
 
         // TODO: Publish specific notification event (AuctionEndedEvent with SOLD status)
-        // publishAuctionEndedNotification(saved);
+         publishAuctionEndedNotification(saved);
 
         // Cancel any pending scheduled end - complicated, rely on listener status check for now.
         log.debug("Scheduled end message for auction {} will be ignored by listener due to status change.", auction.getId());
     }
 
-    // --- TODO: Add helper method for publishing notification event ---
-     /*
-     private void publishAuctionEndedNotification(LiveAuction auction) {
-          Set<String> bidderIds = getUniqueBidderIds(auction.getId()); // Need access to repository/method
-          NotificationEvents.AuctionEndedEvent event = NotificationEvents.AuctionEndedEvent.builder()
-                  // ... build event ...
-                  .allBidderIds(bidderIds)
-                  .build();
-          try {
-              // Inject RabbitTemplate if publishing from here
-              // rabbitTemplate.convertAndSend(RabbitMqConfig.NOTIFICATIONS_EXCHANGE, "auction.live.ended", event);
-              log.info("Published AuctionEndedEvent for live auction {}", auction.getId());
-          } catch (Exception e) {
-               log.error("Failed to publish AuctionEndedEvent for live auction {}: {}", auction.getId(), e.getMessage(), e);
-          }
-     }
-     */
+    private void publishAuctionEndedNotification(LiveAuction auction) {
+        if (auction == null) return; // Safety check
+
+        // Build the event
+        NotificationEvents.AuctionEndedEvent event = NotificationEvents.AuctionEndedEvent.builder()
+                .auctionId(auction.getId())
+                .productTitleSnapshot(auction.getProductTitleSnapshot()) // Ensure this is available
+                .finalStatus(auction.getStatus())
+                .actualEndTime(auction.getActualEndTime())
+                .sellerId(auction.getSellerId())
+                .winnerId(auction.getWinnerId()) // Will be null if not SOLD
+                .winnerUsernameSnapshot(auction.getHighestBidderUsernameSnapshot()) // Use highest if available
+                .winningBid(auction.getWinningBid()) // Will be null if not SOLD
+                .build();
+        try {
+            // Publish to the notifications exchange with a LIVE-specific key
+            String routingKey = RabbitMqConfig.AUCTION_STARTED_ROUTING_KEY_PREFIX + "live.ended";
+            rabbitTemplate.convertAndSend(RabbitMqConfig.NOTIFICATIONS_EXCHANGE, routingKey, event);
+            log.info("[Listener - Live] Published AuctionEndedEvent (Status: {}) for auction {} to exchange {}",
+                    event.getFinalStatus(), event.getAuctionId(), RabbitMqConfig.NOTIFICATIONS_EXCHANGE);
+        } catch (Exception e) {
+            log.error("[Listener - Live] Failed to publish AuctionEndedEvent for live auction {}: {}", auction.getId(), e.getMessage(), e);
+            // Consider retry or dead-lettering for critical notifications
+        }
+    }
 }

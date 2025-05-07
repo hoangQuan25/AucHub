@@ -13,7 +13,16 @@ import java.util.UUID;
 
 public final class NotificationEvents {
 
-    /** Event published when a timed auction reaches a final state. */
+    @Value @Builder
+    public static class AuctionStartedEvent {
+        @NotNull UUID auctionId;
+        @NotNull String productTitleSnapshot;
+        @NotNull String auctionType; // "LIVE" or "TIMED"
+        @NotNull String sellerId;
+        LocalDateTime startTime;
+        LocalDateTime endTime;
+    }
+
     @Value // Immutable DTO
     @Builder
     public static class AuctionEndedEvent {
@@ -26,7 +35,6 @@ public final class NotificationEvents {
         String winnerId;
         String winnerUsernameSnapshot;
         BigDecimal winningBid;
-        Set<String> allBidderIds;
     }
 
     /** Event published when a user's max bid is surpassed by another user. */

@@ -51,6 +51,7 @@ public class TimedAuctionMapper {
                 .currentBid(displayBid)
                 .endTime(auction.getEndTime())
                 .status(auction.getStatus())
+                .categoryIds(auction.getProductCategoryIdsSnapshot() != null ? new HashSet<>(auction.getProductCategoryIdsSnapshot()) : Collections.emptySet())
                 .build();
     }
 

@@ -38,18 +38,6 @@ public interface TimedAuctionService {
      */
     void placeMaxBid(UUID auctionId, String bidderId, PlaceMaxBidDto bidDto);
 
-
-    /**
-     * Retrieves auctions for a specific seller with filtering.
-     */
-    Page<TimedAuctionSummaryDto> getSellerAuctions(String sellerId,
-                                                   AuctionStatus status,
-                                                   Set<Long> categoryIds,
-                                                   LocalDateTime from,
-                                                   Pageable pageable);
-
-    // --- Add to TimedAuctionService interface ---
-
     /**
      * Creates a new comment or reply on a timed auction.
      * @param auctionId The ID of the auction being commented on.
@@ -94,14 +82,11 @@ public interface TimedAuctionService {
             Pageable pageable
     );
 
-// --- Alternative with Pagination for Top-Level ---
-/**
- * Retrieves a paginated list of top-level comments for a specific auction.
- * Replies might need to be fetched separately or included based on strategy.
- * @param auctionId The ID of the auction.
- * @param pageable Pagination for top-level comments.
- * @return Page of top-level CommentDto objects.
- */
-// Page<CommentDto> getCommentsPaginated(UUID auctionId, Pageable pageable);
+    /**
+     * Fetches summary details for a list of auction IDs.
+     * @param auctionIds Set of UUIDs representing the auction IDs.
+     * @return List of TimedAuctionSummaryDto objects for the specified auction IDs.
+     */
+    List<TimedAuctionSummaryDto> getAuctionSummariesByIds(Set<UUID> auctionIds);
 
 }

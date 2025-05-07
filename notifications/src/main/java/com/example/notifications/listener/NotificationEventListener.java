@@ -16,6 +16,16 @@ public class NotificationEventListener {
     // Inject a service to handle the notification logic
     private final NotificationService notificationService;
 
+    @RabbitListener(queues = RabbitMqConfig.AUCTION_STARTED_QUEUE)
+    public void handleAuctionStarted(AuctionStartedEvent event) {
+        log.info("Received AuctionStartedEvent: {}", event);
+        try {
+            notificationService.processAuctionStarted(event); // Call service method
+        } catch (Exception e) {
+            log.error("Error processing AuctionStartedEvent for auction {}: {}", event.getAuctionId(), e.getMessage(), e);
+        }
+    }
+
     @RabbitListener(queues = RabbitMqConfig.AUCTION_ENDED_QUEUE)
     public void handleAuctionEnded(AuctionEndedEvent event) {
         log.info("Received AuctionEndedEvent: {}", event);

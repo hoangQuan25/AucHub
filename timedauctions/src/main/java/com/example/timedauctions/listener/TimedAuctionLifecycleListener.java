@@ -6,12 +6,8 @@ import com.example.timedauctions.entity.AuctionStatus;
 import com.example.timedauctions.entity.TimedAuction;
 import com.example.timedauctions.event.NotificationEvents;
 import com.example.timedauctions.exception.AuctionNotFoundException;
-import com.example.timedauctions.repository.BidRepository;
 import com.example.timedauctions.repository.TimedAuctionRepository;
-// Import service if complex end logic is needed, otherwise repo is enough
-// import com.example.timedauctions.service.TimedAuctionService;
 import com.example.timedauctions.service.AuctionSchedulingService;
-import com.example.timedauctions.service.TimedAuctionService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.amqp.rabbit.annotation.RabbitListener;
@@ -20,20 +16,15 @@ import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
-import java.util.Objects;
-import java.util.Set;
-import java.util.UUID;
 
 @Component
 @RequiredArgsConstructor
 @Slf4j
-public class AuctionLifecycleListener {
+public class TimedAuctionLifecycleListener {
 
     private final TimedAuctionRepository timedAuctionRepository;
     private final AuctionSchedulingService auctionSchedulingService;
     private final RabbitTemplate rabbitTemplate;
-    private final BidRepository bidRepository;
-
 
     @RabbitListener(queues = RabbitMqConfig.TD_AUCTION_START_QUEUE)
     @Transactional
@@ -42,18 +33,17 @@ public class AuctionLifecycleListener {
         TimedAuction auction = timedAuctionRepository.findById(command.auctionId())
                 .orElseThrow(() -> new AuctionNotFoundException("Auction not found for start command: " + command.auctionId()));
 
+        TimedAuction startedAuction = null;
+
         if (auction.getStatus() == AuctionStatus.SCHEDULED) {
             // Check if start time is actually reached (belt-and-suspenders)
             if (!LocalDateTime.now().isBefore(auction.getStartTime())) {
                 auction.setStatus(AuctionStatus.ACTIVE);
-                timedAuctionRepository.save(auction);
+                startedAuction = timedAuctionRepository.save(auction);
                 log.info("Auction {} status set to ACTIVE.", auction.getId());
 
                 // Schedule the end now that it's active (moved from createAuction for SCHEDULED auctions)
                 auctionSchedulingService.scheduleAuctionEnd(auction);; // Requires access to schedule logic (e.g., via service or helper)
-
-                // Optional: Publish internal event
-                // publishInternalEvent(auction, "STARTED");
 
             } else {
                 log.warn("Received start command for auction {} but its start time {} is still in the future. Ignoring.",
@@ -64,6 +54,27 @@ public class AuctionLifecycleListener {
             log.warn("Received start command for auction {} but its status was already {}. Ignoring.",
                     auction.getId(), auction.getStatus());
         }
+
+        // --- Publish AuctionStartedEvent ---
+        if (startedAuction != null) {
+            try {
+                NotificationEvents.AuctionStartedEvent event = NotificationEvents.AuctionStartedEvent.builder()
+                        .auctionId(startedAuction.getId())
+                        .productTitleSnapshot(startedAuction.getProductTitleSnapshot())
+                        .auctionType("TIMED") // Specify type
+                        .sellerId(startedAuction.getSellerId())
+                        .startTime(startedAuction.getStartTime())
+                        .endTime(startedAuction.getEndTime())
+                        .build();
+                // Use specific routing key prefix + type + action
+                String routingKey = RabbitMqConfig.AUCTION_STARTED_ROUTING_KEY_PREFIX + "timed.started";
+                rabbitTemplate.convertAndSend(RabbitMqConfig.NOTIFICATIONS_EXCHANGE, routingKey, event);
+                log.info("[Listener - Timed] Published AuctionStartedEvent for auction {}", startedAuction.getId());
+            } catch (Exception e) {
+                log.error("[Listener - Timed] Failed to publish AuctionStartedEvent for auction {}: {}", startedAuction.getId(), e.getMessage(), e);
+            }
+        }
+        // --- End Publish ---
     }
 
 
@@ -77,6 +88,7 @@ public class AuctionLifecycleListener {
         TimedAuction endedAuction = null; // To hold the saved state
         AuctionStatus originalStatus = auction.getStatus(); // Track original
         // Only process if the auction is currently ACTIVE
+
         if (auction.getStatus() == AuctionStatus.ACTIVE) {
             // Double check end time (allow for small clock skew/delay)
             if (!LocalDateTime.now().isBefore(auction.getEndTime().minusSeconds(5))) { // Allow 5 sec grace?
@@ -120,37 +132,10 @@ public class AuctionLifecycleListener {
                     auction.getId(), auction.getStatus());
         }
 
-        Set<String> bidderIds = getUniqueBidderIds(endedAuction.getId());
-        // --- Publish AuctionEndedEvent ---
-        if (endedAuction != null && (endedAuction.getStatus() == AuctionStatus.SOLD || endedAuction.getStatus() == AuctionStatus.RESERVE_NOT_MET || endedAuction.getStatus() == AuctionStatus.CANCELLED)) {
-            try {
-                NotificationEvents.AuctionEndedEvent event = NotificationEvents.AuctionEndedEvent.builder()
-                        .auctionId(endedAuction.getId())
-                        .productTitleSnapshot(endedAuction.getProductTitleSnapshot()) // Ensure snapshot is loaded/available
-                        .finalStatus(endedAuction.getStatus())
-                        .actualEndTime(endedAuction.getActualEndTime())
-                        .sellerId(endedAuction.getSellerId())
-                        .winnerId(endedAuction.getWinnerId())
-                        .winnerUsernameSnapshot(endedAuction.getHighestBidderUsernameSnapshot()) // Use highest if winner isn't set for non-sold
-                        .winningBid(endedAuction.getWinningBid())
-                        .allBidderIds(bidderIds)
-                        .build();
-
-                rabbitTemplate.convertAndSend(RabbitMqConfig.NOTIFICATIONS_EXCHANGE, RabbitMqConfig.AUCTION_ENDED_ROUTING_KEY, event);
-                log.info("Published AuctionEndedEvent for auction {}", endedAuction.getId());
-            } catch (Exception e) {
-                log.error("Failed to publish AuctionEndedEvent for auction {}: {}", endedAuction.getId(), e.getMessage(), e);
-                // Log error but allow transaction to commit the auction state change
-            }
+        if (endedAuction != null) {
+            publishAuctionEndedNotification(endedAuction);
         }
-        // --- End Publish ---
-    }
 
-    private Set<String> getUniqueBidderIds(UUID auctionId) {
-        // Option A: From Bid history (visible bids)
-        return bidRepository.findDistinctBidderIdsByTimedAuctionId(auctionId); // Add this method to BidRepository
-        // Option B: From Proxy Bids (if you want anyone who ever placed a max bid)
-        // return auctionProxyBidRepository.findDistinctBidderIdsByTimedAuctionId(auctionId); // Add this method to Proxy repo
     }
 
     @RabbitListener(queues = RabbitMqConfig.TD_AUCTION_CANCEL_QUEUE)
@@ -184,26 +169,10 @@ public class AuctionLifecycleListener {
             log.warn("Cancel cmd for auction {} ignored, status was already {}.", command.auctionId(), auction.getStatus());
         }
 
-        Set<String> bidderIds = getUniqueBidderIds(cancelledAuction.getId());
-        // --- Publish AuctionEndedEvent (CANCELLED) ---
         if (cancelledAuction != null) {
-            try {
-                NotificationEvents.AuctionEndedEvent event = NotificationEvents.AuctionEndedEvent.builder()
-                        .auctionId(cancelledAuction.getId())
-                        .productTitleSnapshot(cancelledAuction.getProductTitleSnapshot())
-                        .finalStatus(cancelledAuction.getStatus()) // CANCELLED
-                        .actualEndTime(cancelledAuction.getActualEndTime())
-                        .sellerId(cancelledAuction.getSellerId())
-                        .allBidderIds(bidderIds)
-                        .build();
-
-                rabbitTemplate.convertAndSend(RabbitMqConfig.NOTIFICATIONS_EXCHANGE, RabbitMqConfig.AUCTION_ENDED_ROUTING_KEY, event);
-                log.info("Published AuctionEndedEvent (CANCELLED) for auction {}", cancelledAuction.getId());
-            } catch (Exception e) {
-                log.error("Failed to publish AuctionEndedEvent (CANCELLED) for auction {}: {}", cancelledAuction.getId(), e.getMessage(), e);
-            }
+            publishAuctionEndedNotification(cancelledAuction);
         }
-        // --- End Publish ---
+
     }
 
     @RabbitListener(queues = RabbitMqConfig.TD_AUCTION_HAMMER_QUEUE)
@@ -247,31 +216,34 @@ public class AuctionLifecycleListener {
 
         log.debug("Scheduled end message for auction {} will be ignored by listener due to status change.", auction.getId());
 
-        // --- Publish AuctionEndedEvent (SOLD via Hammer) ---
-        if (hammeredAuction != null) {
-            try {
-                Set<String> bidderIds = getUniqueBidderIds(hammeredAuction.getId());
-                NotificationEvents.AuctionEndedEvent event = NotificationEvents.AuctionEndedEvent.builder()
-                        .auctionId(hammeredAuction.getId())
-                        .productTitleSnapshot(hammeredAuction.getProductTitleSnapshot())
-                        .finalStatus(hammeredAuction.getStatus()) // SOLD
-                        .actualEndTime(hammeredAuction.getActualEndTime())
-                        .sellerId(hammeredAuction.getSellerId())
-                        .winnerId(hammeredAuction.getWinnerId())
-                        .winnerUsernameSnapshot(hammeredAuction.getHighestBidderUsernameSnapshot())
-                        .winningBid(hammeredAuction.getWinningBid())
-                        .allBidderIds(bidderIds)
-                        .build();
-
-                rabbitTemplate.convertAndSend(RabbitMqConfig.NOTIFICATIONS_EXCHANGE, RabbitMqConfig.AUCTION_ENDED_ROUTING_KEY, event);
-                log.info("Published AuctionEndedEvent (Hammered) for auction {}", hammeredAuction.getId());
-            } catch (Exception e) {
-                log.error("Failed to publish AuctionEndedEvent (Hammered) for auction {}: {}", hammeredAuction.getId(), e.getMessage(), e);
-            }
-        }
-        // --- End Publish ---
+        publishAuctionEndedNotification(hammeredAuction);
     }
 
+    private void publishAuctionEndedNotification(TimedAuction auction) {
+        if (auction == null) return;
 
+        // --- REMOVED bidder ID fetching ---
 
+        NotificationEvents.AuctionEndedEvent event = NotificationEvents.AuctionEndedEvent.builder()
+                .auctionId(auction.getId())
+                .productTitleSnapshot(auction.getProductTitleSnapshot()) // Ensure snapshot is loaded/available
+                .finalStatus(auction.getStatus())
+                .actualEndTime(auction.getActualEndTime())
+                .sellerId(auction.getSellerId())
+                .winnerId(auction.getWinnerId()) // Null if not SOLD/CANCELLED
+                .winnerUsernameSnapshot(auction.getHighestBidderUsernameSnapshot()) // Null if not SOLD/CANCELLED with bids
+                .winningBid(auction.getWinningBid()) // Null if not SOLD
+                // No allBidderIds field anymore
+                .build();
+        try {
+            // Use specific routing key for timed auctions
+            String routingKey = RabbitMqConfig.AUCTION_ENDED_ROUTING_KEY_PREFIX + "timed.ended";
+            rabbitTemplate.convertAndSend(RabbitMqConfig.NOTIFICATIONS_EXCHANGE, routingKey, event);
+            log.info("[Listener - Timed] Published AuctionEndedEvent (Status: {}) for auction {} to exchange {}",
+                    event.getFinalStatus(), event.getAuctionId(), RabbitMqConfig.NOTIFICATIONS_EXCHANGE);
+        } catch (Exception e) {
+            log.error("[Listener - Timed] Failed to publish AuctionEndedEvent for timed auction {}: {}", auction.getId(), e.getMessage(), e);
+            // Consider retry or dead-lettering for critical notifications
+        }
+    }
 }

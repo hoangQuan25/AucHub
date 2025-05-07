@@ -11,6 +11,7 @@ import org.springframework.stereotype.Component;
 
 import java.math.BigDecimal;
 import java.util.Collections; // For empty list
+import java.util.HashSet;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -54,7 +55,7 @@ public class AuctionMapper {
                 .currentBid(displayBid) // Show current bid if available, else start price
                 .endTime(auction.getEndTime())
                 .status(auction.getStatus())
-                // .sellerUsernameSnapshot(auction.getSellerUsernameSnapshot()) // Uncomment if needed
+                .categoryIds(auction.getProductCategoryIdsSnapshot() != null ? new HashSet<>(auction.getProductCategoryIdsSnapshot()) : Collections.emptySet())
                 .build();
     }
 

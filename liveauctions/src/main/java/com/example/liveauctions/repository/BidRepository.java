@@ -4,8 +4,11 @@ import com.example.liveauctions.entity.Bid;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
+import java.util.Set;
 import java.util.UUID;
 import java.util.List; // If needed
 
@@ -24,24 +27,12 @@ public interface BidRepository extends JpaRepository<Bid, Long> { // Entity is B
     Page<Bid> findByLiveAuctionId(UUID liveAuctionId, Pageable pageable);
 
 
-    // --- Optional convenience methods ---
-
     /**
-     * Finds the single most recent bid for an auction.
-     * Useful if you only need the very last bid details quickly.
-     *
-     * @param liveAuctionId The UUID of the auction.
-     * @return Optional containing the most recent Bid if one exists.
+     * Finds all unique bidder IDs who have placed a bid on a specific live auction.
+     * @param liveAuctionId The ID of the live auction.
+     * @return A Set of unique bidder ID strings.
      */
-    // Optional<Bid> findTopByLiveAuctionIdOrderByBidTimeDesc(UUID liveAuctionId);
-
-
-    /**
-     * Counts the number of bids for an auction.
-     *
-     * @param liveAuctionId The UUID of the auction.
-     * @return The total count of bids.
-     */
-    // long countByLiveAuctionId(UUID liveAuctionId);
+    @Query("SELECT DISTINCT b.bidderId FROM Bid b WHERE b.liveAuctionId = :liveAuctionId")
+    Set<String> findDistinctBidderIdsByLiveAuctionId(@Param("liveAuctionId") UUID liveAuctionId);
 
 }

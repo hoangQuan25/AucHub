@@ -13,6 +13,7 @@ import MyAuctionsPage from "./pages/MyAuctionsPage";
 import TimedAuctionDetailPage from "./pages/TimedAuctionDetailPage";
 import AllAuctionsPage from "./pages/AllAuctionsPage";
 import { NotificationProvider } from "./context/NotificationContext";
+import FollowingAuctionsPage from "./pages/FollowingAuctionsPage";
 
 // PrivateRoute now just checks auth, Layout handles UI structure
 const PrivateRoute = ({ children }) => {
@@ -76,6 +77,7 @@ function App() {
             element={<TimedAuctionDetailPage />}
           />
           <Route path="/profile" element={<UserInfoPage />} />
+          <Route path="/following" element={<FollowingAuctionsPage />} />
           {/* Seller-specific Route */}
           <Route
             path="/my-products"

@@ -1,11 +1,16 @@
 package com.example.notifications.service;
 
+import com.example.notifications.dto.FollowingAuctionSummaryDto;
 import com.example.notifications.dto.NotificationDto;
+import com.example.notifications.entity.AuctionStatus;
 import com.example.notifications.event.NotificationEvents.*; // Import event types
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 
+import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Set;
+import java.util.UUID;
 
 public interface NotificationService {
 
@@ -59,5 +64,33 @@ public interface NotificationService {
      * @return The number of notifications successfully marked as read.
      */
     int markAllNotificationsAsRead(String userId);
+
+    /** Adds a follow relationship */
+    void followAuction(String userId, UUID auctionId, String auctionType);
+
+    /** Removes a follow relationship */
+    void unfollowAuction(String userId, UUID auctionId);
+
+    /** Gets the set of auction IDs followed by a user */
+    Set<UUID> getFollowedAuctionIds(String userId);
+
+    /** Gets user IDs following a specific auction (used internally) */
+    List<String> getFollowersForAuction(UUID auctionId);
+
+    /** Processes an auction started event */
+    void processAuctionStarted(AuctionStartedEvent event);
+
+    /**
+     * Retrieves details for auctions followed by a user, supporting filtering and pagination.
+     * This orchestrates calls to auction services.
+     */
+    Page<FollowingAuctionSummaryDto> getFollowingAuctions(
+            String userId,
+            AuctionStatus status, // Can be null
+            Boolean ended,      // Can be null
+            Set<Long> categoryIds, // Can be null or empty
+            LocalDateTime from, // Can be null
+            Pageable pageable
+    );
 
 }

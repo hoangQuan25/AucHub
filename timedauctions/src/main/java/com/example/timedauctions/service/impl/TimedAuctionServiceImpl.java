@@ -648,13 +648,6 @@ public class TimedAuctionServiceImpl implements TimedAuctionService {
         return text.substring(0, maxLength) + "...";
     }
 
-
-    @Override
-    public Page<TimedAuctionSummaryDto> getSellerAuctions(String sellerId, AuctionStatus status, Set<Long> categoryIds, LocalDateTime from, Pageable pageable) {
-        log.warn("getSellerAuctions not implemented yet");
-        return Page.empty(); // Placeholder
-    }
-
     /**
      * Creates a new comment or reply on a timed auction.
      *
@@ -823,5 +816,24 @@ public class TimedAuctionServiceImpl implements TimedAuctionService {
         Page<TimedAuction> auctionPage = timedAuctionRepository.findAll(spec, pageable);
 
         return auctionPage.map(auctionMapper::mapToTimedAuctionSummaryDto);
+    }
+
+    /**
+     * Fetches summary details for a list of auction IDs.
+     *
+     * @param auctionIds Set of UUIDs representing the auction IDs.
+     * @return List of TimedAuctionSummaryDto objects for the specified auction IDs.
+     */
+    @Override
+    @Transactional(readOnly = true)
+    public List<TimedAuctionSummaryDto> getAuctionSummariesByIds(Set<UUID> auctionIds) {
+        if (auctionIds == null || auctionIds.isEmpty()) {
+            return Collections.emptyList();
+        }
+        log.debug("Fetching timed auction summaries for IDs: {}", auctionIds);
+        List<TimedAuction> auctions = timedAuctionRepository.findAllById(auctionIds);
+        return auctions.stream()
+                .map(auctionMapper::mapToTimedAuctionSummaryDto) // Ensure mapper exists
+                .collect(Collectors.toList());
     }
 }
