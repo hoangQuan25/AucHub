@@ -2,7 +2,7 @@
 import React, { useState, useEffect, useRef } from "react"; // Added useState, useEffect, useRef
 import { Link, useNavigate } from "react-router-dom";
 import { useKeycloak } from "@react-keycloak/web";
-import { FaBell } from "react-icons/fa"; // Import bell icon
+import { FaBell, FaHeart } from "react-icons/fa"; // Import bell icon
 import NotificationPanel from "./NotificationPanel"; // Import the panel
 import AllNotificationsModal from "./AllNotificationsModal";
 import { useNotifications } from "../context/NotificationContext"; // Import the context
@@ -100,6 +100,14 @@ function Header() {
               />
             </div>
             {/* --- End Notification Bell --- */}
+
+            {/* --- Following (heart) link --- */}
+            <Link
+              to="/following"
+              className="p-2 rounded-full hover:bg-gray-700 text-gray-300 hover:text-white"
+            >
+              <FaHeart size="1.25em" />
+            </Link>
 
             {/* User Menu/Avatar Section */}
             <div

@@ -9,7 +9,7 @@ import ConfirmationModal from "../components/ConfirmationModal";
 import CollapsibleSection from "../components/CollapsibleSection";
 import AuctionRules from "../components/AuctionRules";
 import AuctionChatPanel from "../components/AuctionChatPanel";
-import { FaChevronLeft, FaChevronRight } from "react-icons/fa"; // Icons for arrows
+import { FaChevronLeft, FaChevronRight, FaEye } from "react-icons/fa"; // Icons for arrows
 import SockJS from "sockjs-client/dist/sockjs"; // Use specific path for wider compatibility
 import { Client } from "@stomp/stompjs";
 
@@ -27,8 +27,14 @@ function LiveAuctionDetailPage() {
   const [isBidding, setIsBidding] = useState(false);
   const [customBidAmount, setCustomBidAmount] = useState("");
   const [bidError, setBidError] = useState("");
+  const [pendingBidAmount, setPendingBidAmount] = useState(null);
+  const [isBidConfirmOpen, setIsBidConfirmOpen] = useState(false);
+  const [bidConfirmError, setBidConfirmError] = useState("");
+
   const [wsStatus, setWsStatus] = useState("Connecting...");
   const ws = useRef(null);
+  const [viewerCount, setViewerCount] = useState(0);
+  const [viewerError, setViewerError] = useState(false);
   const loggedInUserId = initialized ? keycloak.subject : null;
 
   const [isCancelConfirmOpen, setIsCancelConfirmOpen] = useState(false);
@@ -42,6 +48,7 @@ function LiveAuctionDetailPage() {
   const stompClientRef = useRef(null);
   // Ref to hold the subscription object to allow unsubscribing
   const subscriptionRef = useRef(null);
+  const viewersSubRef = useRef(null);
 
   // --- State for Image Carousel ---
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
@@ -149,7 +156,7 @@ function LiveAuctionDetailPage() {
         console.log(`Creating SockJS connection to: ${sockjsUrl}`);
         return new SockJS(sockjsUrl);
       },
-      
+
       debug: (str) => {
         // Optional: Enable STOMP protocol debugging
         console.log("STOMP DEBUG:", str);
@@ -163,6 +170,7 @@ function LiveAuctionDetailPage() {
     client.onConnect = (frame) => {
       console.log(`STOMP Connected: ${frame}`);
       setWsStatus("Connected");
+      setViewerError(false);
 
       // Define the destination topic to subscribe to
       const destination = `/topic/auctions/${auctionId}`;
@@ -204,6 +212,18 @@ function LiveAuctionDetailPage() {
         }
       });
 
+      viewersSubRef.current = client.subscribe(
+        `/topic/auctions/${auctionId}/viewers`,
+        (msg) => {
+          try {
+            const { count } = JSON.parse(msg.body);
+            setViewerCount(count);
+          } catch {
+            /* ignore bad payload */
+          }
+        }
+      );
+
       console.log("STOMP subscription active.");
     };
 
@@ -217,7 +237,7 @@ function LiveAuctionDetailPage() {
     client.onWebSocketError = (error) => {
       console.error("WebSocket Error: ", error);
       setWsStatus("Error (WebSocket)");
-      // Underlying transport error
+      setViewerError(true);
     };
 
     client.onWebSocketClose = (event) => {
@@ -225,9 +245,11 @@ function LiveAuctionDetailPage() {
         `WebSocket Closed: Code=${event?.code}, Reason=${event?.reason}, Clean=${event?.wasClean}`
       );
       setWsStatus(`Closed (${event?.code || "Unknown"})`);
+      setViewerError(true);
       // Client will attempt to reconnect automatically based on reconnectDelay
       // Clear subscription ref if connection is closed
       subscriptionRef.current = null;
+      viewersSubRef.current = null;
       stompClientRef.current = null; // Clear client ref on close? Or let reconnect handle? Let's clear.
     };
 
@@ -251,6 +273,12 @@ function LiveAuctionDetailPage() {
         }
         subscriptionRef.current = null;
       }
+
+      if (viewersSubRef.current) {
+        viewersSubRef.current.unsubscribe(); // ← NEW
+        viewersSubRef.current = null;
+      }
+
       if (stompClientRef.current?.active) {
         console.log("Deactivating STOMP client...");
         try {
@@ -268,49 +296,36 @@ function LiveAuctionDetailPage() {
   }, [auctionId, initialized, keycloak.authenticated]);
 
   // --- Place Bid Handler (handlePlaceBid) ---
-  const handlePlaceBid = async () => {
-    if (!auctionDetails || isBidding || !keycloak.authenticated) {
-      console.warn(
-        "Bid attempt prevented: Missing details, already bidding, or not authenticated."
-      );
-      return;
-    }
-    if (auctionDetails.status !== "ACTIVE") {
-      setBidError("Auction is not currently active.");
-      setTimeout(() => setBidError(""), 3000);
-      return;
-    }
-    const currentUsername = keycloak.tokenParsed?.preferred_username;
-    if (auctionDetails.highestBidderUsername === currentUsername) {
-      setBidError("You are already the highest bidder.");
-      setTimeout(() => setBidError(""), 3000);
-      return;
-    }
-    if (!auctionDetails.nextBidAmount) {
-      setBidError("Next bid amount is not available.");
-      setTimeout(() => setBidError(""), 3000);
-      return;
-    }
+  // ─── Handlers to open/close the bid-confirmation modal ────────────
+  const promptBid = (amount) => {
+    setBidConfirmError("");
+    setPendingBidAmount(amount);
+    setIsBidConfirmOpen(true);
+  };
+  const handleCloseBidConfirm = () => {
+    setIsBidConfirmOpen(false);
+    setPendingBidAmount(null);
+  };
 
+  // ─── When the user confirms, actually place the bid ─────────────
+  const handleConfirmBid = async () => {
+    if (pendingBidAmount == null) return;
+    setIsBidConfirmOpen(false);
     setIsBidding(true);
     setBidError("");
-    const bidAmount = auctionDetails.nextBidAmount;
-    const payload = { amount: bidAmount };
-    console.log(
-      `Attempting to place bid: ${bidAmount} for auction ${auctionId}`
-    );
+    const payload = { amount: pendingBidAmount };
+
     try {
       await apiClient.post(`/liveauctions/${auctionId}/bids`, payload);
-      console.log(`Bid placement request for ${bidAmount} sent successfully.`);
-      followAuction(auctionId, 'LIVE');
-      // UI update comes via WebSocket
+      followAuction(auctionId, "LIVE");
     } catch (err) {
       console.error("Failed to place bid:", err);
-      const message =
-        err.response?.data?.message || err.message || "Failed to place bid.";
-      setBidError(message);
+      setBidConfirmError(
+        err.response?.data?.message || err.message || "Failed to place bid."
+      );
     } finally {
       setIsBidding(false);
+      setPendingBidAmount(null); // Clear pending bid amount
     }
   };
 
@@ -331,34 +346,6 @@ function LiveAuctionDetailPage() {
           (prevIndex - 1 + auctionDetails.productImageUrls.length) %
           auctionDetails.productImageUrls.length
       );
-    }
-  };
-
-  const handleCustomBid = async () => {
-    const bidNum = parseInt(customBidAmount);
-    const minBid = auctionDetails.nextBidAmount;
-
-    if (isNaN(bidNum) || bidNum < minBid) {
-      setBidError(
-        `Bid must be at least ${minBid.toLocaleString("vi-VN")} VNĐ.`
-      );
-      setTimeout(() => setBidError(""), 3000);
-      return;
-    }
-
-    setIsBidding(true);
-    setBidError("");
-    const payload = { amount: bidNum };
-    try {
-      await apiClient.post(`/liveauctions/${auctionId}/bids`, payload);
-      setCustomBidAmount("");
-      followAuction(auctionId, 'LIVE');
-    } catch (err) {
-      const message =
-        err.response?.data?.message || err.message || "Failed to place bid.";
-      setBidError(message);
-    } finally {
-      setIsBidding(false);
     }
   };
 
@@ -464,12 +451,14 @@ function LiveAuctionDetailPage() {
   // Use the correct field for images from the DTO
   const isSeller = loggedInUserId && auctionDetails.sellerId === loggedInUserId;
   // Simplified canBid for button state - specific amount check happens in handler
-  const canPlaceBid = initialized && keycloak.authenticated && auctionDetails.status === "ACTIVE" && !isSeller;
+  const canPlaceBid =
+    initialized &&
+    keycloak.authenticated &&
+    auctionDetails.status === "ACTIVE" &&
+    !isSeller;
   const images = auctionDetails.productImageUrls || [];
   const isAuctionActive = auctionDetails.status === "ACTIVE";
   const isAuctionScheduled = auctionDetails.status === "SCHEDULED";
-  const isAuctionEnded = !isAuctionActive && !isAuctionScheduled;
-  const isHighest = auctionDetails.highestBidderId === keycloak.subject;
 
   const chatDisabled = ["SOLD", "CANCELLED", "RESERVE_NOT_MET"].includes(
     auctionDetails.status
@@ -564,6 +553,15 @@ function LiveAuctionDetailPage() {
         <div className="text-xs text-right text-gray-500">
           WebSocket: {wsStatus}
         </div>
+        <div className="flex items-center justify-end text-xs text-gray-500 space-x-1">
+          <FaEye />
+          <span>{viewerCount}</span>
+          {viewerError && (
+            <span className="text-red-600 ml-2">
+              (disconnected—please reload)
+            </span>
+          )}
+        </div>
 
         <div className="bg-white p-4 rounded shadow border flex-shrink-0">
           <div className="flex justify-between items-start border-b pb-2">
@@ -579,89 +577,189 @@ function LiveAuctionDetailPage() {
                 : "No Reserve"}
             </span>
             <div className="text-right">
-            <div className="text-xs text-gray-500">
-                    {isAuctionActive ? "Time Remaining" : isAuctionScheduled ? "Auction Status" : "Auction Ended"}
-                 </div>
-                 {isAuctionActive ? ( // Only show end timer if ACTIVE
-                      <CountdownTimer endTimeMillis={new Date(auctionDetails.endTime).getTime()} />
-                 ) : isAuctionScheduled ? ( // Show "Not Started" if SCHEDULED
-                     <span className="font-bold text-xl text-gray-500">Not Yet Started</span>
-                 ): ( // Show final status if ended
-                     <span className="font-bold text-xl text-gray-500">
-                          {auctionDetails.status === "SOLD" ? "SOLD"
-                          : auctionDetails.status === "RESERVE_NOT_MET" ? "NOT SOLD"
-                          : auctionDetails.status === "CANCELLED" ? "CANCELLED"
-                          : "--:--"}
-                     </span>
-                 )}
+              <div className="text-xs text-gray-500">
+                {isAuctionActive
+                  ? "Time Remaining"
+                  : isAuctionScheduled
+                  ? "Auction Status"
+                  : "Auction Ended"}
+              </div>
+              {isAuctionActive ? ( // Only show end timer if ACTIVE
+                <CountdownTimer
+                  endTimeMillis={new Date(auctionDetails.endTime).getTime()}
+                />
+              ) : isAuctionScheduled ? ( // Show "Not Started" if SCHEDULED
+                <span className="font-bold text-xl text-gray-500">
+                  Not Yet Started
+                </span>
+              ) : (
+                // Show final status if ended
+                <span className="font-bold text-xl text-gray-500">
+                  {auctionDetails.status === "SOLD"
+                    ? "SOLD"
+                    : auctionDetails.status === "RESERVE_NOT_MET"
+                    ? "NOT SOLD"
+                    : auctionDetails.status === "CANCELLED"
+                    ? "CANCELLED"
+                    : "--:--"}
+                </span>
+              )}
             </div>
           </div>
-          
-              {/* Current Bid Info */}
-              <div className="text-center my-4">
-                <p className="text-sm text-gray-600 mb-1">Current Bid</p>
-                <p className="text-4xl font-bold text-indigo-700">
-                  {(auctionDetails.currentBid ?? auctionDetails.startPrice ?? 0).toLocaleString("vi-VN")} VNĐ
-                </p>
-                <p className="text-xs text-gray-500">
-                  Leading: {auctionDetails.highestBidderUsernameSnapshot ? (isUserHighestBidder ? <span className="text-green-600 font-semibold">You</span> : auctionDetails.highestBidderUsernameSnapshot) : "No bids yet"}
-                </p>
+
+          {/* Current Bid Info */}
+          <div className="text-center my-4">
+            <p className="text-sm text-gray-600 mb-1">Current Bid</p>
+            <p className="text-4xl font-bold text-indigo-700">
+              {(
+                auctionDetails.currentBid ??
+                auctionDetails.startPrice ??
+                0
+              ).toLocaleString("vi-VN")}{" "}
+              VNĐ
+            </p>
+            <p className="text-xs text-gray-500">
+              Leading:{" "}
+              {auctionDetails.highestBidderUsernameSnapshot ? (
+                isUserHighestBidder ? (
+                  <span className="text-green-600 font-semibold">You</span>
+                ) : (
+                  auctionDetails.highestBidderUsernameSnapshot
+                )
+              ) : (
+                "No bids yet"
+              )}
+            </p>
+          </div>
+
+          {/* Bidding Actions (for non-sellers) */}
+          {!isSeller && keycloak.authenticated && (
+            <>
+              <button
+                onClick={() => promptBid(auctionDetails.nextBidAmount)}
+                disabled={!canPlaceBid || isBidding}
+                className="w-full py-3 px-4 bg-green-600 hover:bg-green-700 text-white font-bold rounded text-lg disabled:opacity-60"
+              >
+                {isBidding
+                  ? "Placing Bid..."
+                  : `Bid ${
+                      auctionDetails.nextBidAmount?.toLocaleString("vi-VN") ||
+                      "N/A"
+                    } VNĐ`}
+              </button>
+              {/* Custom Bid Input */}
+              <div className="mt-3 flex items-center gap-2">
+                <input
+                  type="number"
+                  value={customBidAmount}
+                  onChange={(e) => setCustomBidAmount(e.target.value)}
+                  min={auctionDetails.nextBidAmount || 0}
+                  placeholder={`Or input bid, min ${
+                    auctionDetails.nextBidAmount?.toLocaleString("vi-VN") ||
+                    "..."
+                  } VNĐ`}
+                  className="flex-1 px-3 py-2 border rounded text-sm focus:outline-none focus:ring-2 focus:ring-green-500"
+                />
+                <button
+                  onClick={() => {
+                    const bidNum = parseInt(customBidAmount);
+                    const minBid = auctionDetails.nextBidAmount;
+                    if (isNaN(bidNum) || bidNum < minBid) {
+                      setBidError(
+                        `Bid must be ≥ ${minBid.toLocaleString("vi-VN")} VNĐ.`
+                      );
+                      setTimeout(() => setBidError(""), 3000);
+                    } else {
+                      promptBid(bidNum);
+                    }
+                  }}
+                  disabled={isBidding || !customBidAmount}
+                  className="px-4 py-2 bg-green-500 hover:bg-green-600 text-white rounded text-sm disabled:opacity-60"
+                >
+                  Bid
+                </button>
               </div>
-
-              {/* Bidding Actions (for non-sellers) */}
-              {!isSeller && keycloak.authenticated && (
-                <>
-                  <button
-                    onClick={handlePlaceBid}
-                    disabled={!canPlaceBid || isBidding || auctionDetails.highestBidderId === loggedInUserId} // Disable if user is highest
-                    className="w-full py-3 px-4 bg-green-600 hover:bg-green-700 text-white font-bold rounded text-lg disabled:opacity-60"
-                  >
-                    {isBidding ? "Placing Bid..." : `Bid ${auctionDetails.nextBidAmount?.toLocaleString("vi-VN") || "N/A"} VNĐ`}
-                  </button>
-                  {/* Custom Bid Input */}
-                  <div className="mt-3 flex items-center gap-2">
-                    <input type="number" value={customBidAmount} onChange={(e) => setCustomBidAmount(e.target.value)} min={auctionDetails.nextBidAmount || 0} placeholder={`Or input bid, min ${auctionDetails.nextBidAmount?.toLocaleString("vi-VN") || "..."} VNĐ`} className="flex-1 px-3 py-2 border rounded text-sm focus:outline-none focus:ring-2 focus:ring-green-500"/>
-                    <button onClick={handleCustomBid} disabled={isBidding || !customBidAmount} className="px-4 py-2 bg-green-500 hover:bg-green-600 text-white rounded text-sm disabled:opacity-60">Bid</button>
-                  </div>
-                  {bidError && <p className="text-center text-xs text-red-500 mt-2">{bidError}</p>}
-                  <p className="text-center text-xs text-gray-500 mt-2">
-                     (Next required bid: {auctionDetails?.nextBidAmount?.toLocaleString("vi-VN") || "N/A"} VNĐ)
-                  </p>
-                </>
+              {bidError && (
+                <p className="text-center text-xs text-red-500 mt-2">
+                  {bidError}
+                </p>
               )}
-               {isSeller && <p className="text-center text-sm text-gray-600 py-4">You cannot bid on your own auction.</p>}
-               {!keycloak.authenticated && <p className="text-center text-sm text-orange-600 py-4">Please log in to place a bid.</p>}
+              <p className="text-center text-xs text-gray-500 mt-2">
+                (Next required bid:{" "}
+                {auctionDetails?.nextBidAmount?.toLocaleString("vi-VN") ||
+                  "N/A"}{" "}
+                VNĐ)
+              </p>
+            </>
+          )}
+          {isSeller && (
+            <p className="text-center text-sm text-gray-600 py-4">
+              You cannot bid on your own auction.
+            </p>
+          )}
+          {!keycloak.authenticated && (
+            <p className="text-center text-sm text-orange-600 py-4">
+              Please log in to place a bid.
+            </p>
+          )}
 
-              {/* Seller Actions (Hammer/Cancel) */}
-              {isSeller && (
-                  <div className="flex justify-between items-center gap-4 mt-4 pt-4 border-t">
-                      <button onClick={promptCancelAuction} disabled={!isAuctionActive || isCancelling || isHammering} className="flex-1 px-4 py-2 bg-red-600 hover:bg-red-700 text-white font-semibold rounded text-sm disabled:opacity-60"> {isCancelling ? "Cancelling..." : "Cancel Auction"} </button>
-                      <button onClick={promptHammerDown} disabled={!isAuctionActive || isCancelling || isHammering || !auctionDetails.highestBidderId || (auctionDetails.reservePrice && !auctionDetails.reserveMet)} className="flex-1 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded text-sm disabled:opacity-60"> {isHammering ? "Ending..." : "Hammer Down"} </button>
-                  </div>
-              )}
+          {/* Seller Actions (Hammer/Cancel) */}
+          {isSeller && (
+            <div className="flex justify-between items-center gap-4 mt-4 pt-4 border-t">
+              <button
+                onClick={promptCancelAuction}
+                disabled={!isAuctionActive || isCancelling || isHammering}
+                className="flex-1 px-4 py-2 bg-red-600 hover:bg-red-700 text-white font-semibold rounded text-sm disabled:opacity-60"
+              >
+                {" "}
+                {isCancelling ? "Cancelling..." : "Cancel Auction"}{" "}
+              </button>
+              <button
+                onClick={promptHammerDown}
+                disabled={
+                  !isAuctionActive ||
+                  isCancelling ||
+                  isHammering ||
+                  !auctionDetails.highestBidderId ||
+                  (auctionDetails.reservePrice && !auctionDetails.reserveMet)
+                }
+                className="flex-1 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded text-sm disabled:opacity-60"
+              >
+                {" "}
+                {isHammering ? "Ending..." : "Hammer Down"}{" "}
+              </button>
+            </div>
+          )}
 
           {/* == SCHEDULED State == */}
           {isAuctionScheduled && (
-              <div className="text-center my-8 py-4">
-                   <p className="text-lg font-semibold text-gray-700 mb-2">Auction Starts In:</p>
-                   {/* Countdown to START time */}
-                   <CountdownTimer endTimeMillis={new Date(auctionDetails.startTime).getTime()} />
-                   <p className="text-sm text-gray-500 mt-2">
-                       Starting Price: {auctionDetails.startPrice.toLocaleString('vi-VN')} VNĐ
-                   </p>
-                   {/* Seller Cancel Button */}
-                    {isSeller && (
-                        <div className="mt-6 pt-4 border-t">
-                            <button
-                                onClick={promptCancelAuction}
-                                disabled={isCancelling}
-                                className="w-full sm:w-auto px-6 py-2 bg-red-600 hover:bg-red-700 text-white font-semibold rounded text-sm disabled:opacity-60"
-                            >
-                                {isCancelling ? "Cancelling..." : "Cancel Scheduled Auction"}
-                            </button>
-                        </div>
-                    )}
-              </div>
+            <div className="text-center my-8 py-4">
+              <p className="text-lg font-semibold text-gray-700 mb-2">
+                Auction Starts In:
+              </p>
+              {/* Countdown to START time */}
+              <CountdownTimer
+                endTimeMillis={new Date(auctionDetails.startTime).getTime()}
+              />
+              <p className="text-sm text-gray-500 mt-2">
+                Starting Price:{" "}
+                {auctionDetails.startPrice.toLocaleString("vi-VN")} VNĐ
+              </p>
+              {/* Seller Cancel Button */}
+              {isSeller && (
+                <div className="mt-6 pt-4 border-t">
+                  <button
+                    onClick={promptCancelAuction}
+                    disabled={isCancelling}
+                    className="w-full sm:w-auto px-6 py-2 bg-red-600 hover:bg-red-700 text-white font-semibold rounded text-sm disabled:opacity-60"
+                  >
+                    {isCancelling
+                      ? "Cancelling..."
+                      : "Cancel Scheduled Auction"}
+                  </button>
+                </div>
+              )}
+            </div>
           )}
 
           {auctionDetails.status === "SOLD" && (
@@ -749,6 +847,32 @@ function LiveAuctionDetailPage() {
           </div>
         </div>
       </div>
+
+      {/* ─── Bid Confirmation Modal ──────────────────────────────────── */}
+      <ConfirmationModal
+        isOpen={isBidConfirmOpen}
+        onClose={handleCloseBidConfirm}
+        onConfirm={handleConfirmBid}
+        title={
+          auctionDetails.highestBidderId === keycloak.subject
+            ? "You’re already the highest bidder"
+            : "Confirm Your Bid"
+        }
+        message={
+          auctionDetails.highestBidderId === keycloak.subject
+            ? `You are currently leading at ${auctionDetails.currentBid?.toLocaleString(
+                "vi-VN"
+              )} VNĐ. Do you still want to place another bid at ${pendingBidAmount?.toLocaleString(
+                "vi-VN"
+              )} VNĐ?`
+            : `Place a bid of ${pendingBidAmount?.toLocaleString("vi-VN")} VNĐ?`
+        }
+        confirmText="Yes, Place Bid"
+        cancelText="No, Cancel"
+        confirmButtonClass="bg-green-600 hover:bg-green-700"
+        isLoading={isBidding}
+        error={bidConfirmError}
+      />
 
       {/* Cancel Confirmation */}
       <ConfirmationModal

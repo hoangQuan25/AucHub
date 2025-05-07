@@ -14,15 +14,16 @@ import { FaChevronLeft, FaChevronRight } from "react-icons/fa";
 const getBidIncrement = (currentBidValue) => {
   const currentBid = Number(currentBidValue) || 0; // Ensure it's a number
 
-  if (currentBid >= 10000000) return 2000000;
-  if (currentBid >= 5000000) return 1000000;
-  if (currentBid >= 2000000) return 500000;
-  if (currentBid >= 1000000) return 200000;
-  if (currentBid >= 500000) return 100000;
-  if (currentBid >= 200000) return 50000;
-  if (currentBid >= 100000) return 20000;
-  if (currentBid >= 50000) return 10000;
-  return 5000; // Default lowest increment
+  if (currentBid >= 50000000) return 2000000;
+  if (currentBid >= 20000000) return 1000000;
+  if (currentBid >= 10000000) return 500000;
+  if (currentBid >= 5000000) return 200000;
+  if (currentBid >= 3000000) return 100000;
+  if (currentBid >= 1000000) return 50000;
+  if (currentBid >= 300000) return 10000;
+  if (currentBid >= 100000) return 5000;
+  if (currentBid >= 50000) return 1000;
+  return 500; // Default lowest increment
 };
 
 // Helper to generate dropdown options

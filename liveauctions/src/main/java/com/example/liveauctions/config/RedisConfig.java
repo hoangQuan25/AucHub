@@ -37,4 +37,21 @@ public class RedisConfig {
         tpl.afterPropertiesSet();
         return tpl;
     }
+
+
+    @Bean("viewerCountRedisTemplate")
+    public RedisTemplate<String, String> stringRedisTemplate(RedisConnectionFactory cf) {
+        RedisTemplate<String, String> tpl = new RedisTemplate<>();
+        tpl.setConnectionFactory(cf);
+        // For keys
+        tpl.setKeySerializer(new StringRedisSerializer());
+        // For simple string values and set members
+        tpl.setValueSerializer(new StringRedisSerializer());
+        // For hash keys
+        tpl.setHashKeySerializer(new StringRedisSerializer());
+        // For hash values
+        tpl.setHashValueSerializer(new StringRedisSerializer());
+        tpl.afterPropertiesSet();
+        return tpl;
+    }
 }

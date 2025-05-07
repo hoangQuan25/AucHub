@@ -1,10 +1,12 @@
 // src/pages/MyAuctionsPage.jsx – revised to avoid enum conversion error
-import React, { useState, useEffect, useCallback, useMemo } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { useKeycloak } from "@react-keycloak/web";
 import { useNavigate } from "react-router-dom";
+import { FaTrash } from "react-icons/fa";
 import apiClient from "../api/apiClient";
 import AuctionCard from "../components/AuctionCard";
 import CategorySelector from "../components/CategorySelector";
+import ConfirmationModal from "../components/ConfirmationModal";
 import PaginationControls from "../components/PaginationControls";
 
 /* -------------------------------------------------------------------------
@@ -64,6 +66,11 @@ function MyAuctionsPage() {
   const [catLoading, setCatLoading] = useState(false);
   const [catError, setCatError] = useState("");
   const [selectedCatIds, setSelectedCatIds] = useState(new Set());
+
+  const [isUnfollowConfirmOpen, setIsUnfollowConfirmOpen] = useState(false);
+  const [auctionToUnfollow, setAuctionToUnfollow] = useState(null);
+  const [unfollowLoading, setUnfollowLoading] = useState(false);
+  const [unfollowError, setUnfollowError] = useState("");
 
   /* ---------------------------- fetch helpers ----------------------------*/
   const fetchCategories = useCallback(async () => {
@@ -185,6 +192,37 @@ function MyAuctionsPage() {
     [navigate]
   );
 
+  // ─── Unfollow handlers ──────────────────────────────────────────────
+  const promptUnfollow = useCallback((auction) => {
+    setAuctionToUnfollow(auction);
+    setUnfollowError("");
+    setIsUnfollowConfirmOpen(true);
+  }, []);
+
+  const handleCloseUnfollowConfirm = useCallback(() => {
+    setIsUnfollowConfirmOpen(false);
+    setAuctionToUnfollow(null);
+  }, []);
+
+  const handleConfirmUnfollow = useCallback(async () => {
+    if (!auctionToUnfollow) return;
+    setUnfollowLoading(true);
+    try {
+      await apiClient.delete(`/notifications/follow/${auctionToUnfollow.id}`);
+      // remove from list instantly
+      setFollowingAuctions((prev) =>
+        prev.filter((a) => a.id !== auctionToUnfollow.id)
+      );
+      handleCloseUnfollowConfirm();
+    } catch (err) {
+      setUnfollowError(
+        err.response?.data?.message || "Failed to unfollow auction."
+      );
+    } finally {
+      setUnfollowLoading(false);
+    }
+  }, [auctionToUnfollow, handleCloseUnfollowConfirm]);
+
   // --- Pagination Handlers ---
   const handlePageChange = useCallback(
     (newPage) => {
@@ -289,15 +327,23 @@ function MyAuctionsPage() {
           {!isLoading && !error && followingAuctions.length > 0 && (
             <>
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-                {/* Map over the single combined list */}
                 {followingAuctions.map((a) => (
-                  // Pass auction data AND type to the card
-                  <AuctionCard
-                    key={`${a.auctionType}-${a.id}`} // Use combined key
-                    auction={a}
-                    type={a.auctionType} // Pass type from data
-                    onClick={handleCardClick}
-                  />
+                  <div key={`${a.auctionType}-${a.id}`} className="relative">
+                    {/* trash-can button */}
+                    <button
+                      onClick={() => promptUnfollow(a)}
+                      className="absolute top-2 right-2 p-2 bg-white/80 hover:bg-white text-red-600 hover:text-red-700 rounded-full shadow transition"
+                      title="Unfollow auction"
+                    >
+                      <FaTrash size="1em" />
+                    </button>
+
+                    <AuctionCard
+                      auction={a}
+                      type={a.auctionType}
+                      onClick={handleCardClick}
+                    />
+                  </div>
                 ))}
               </div>
               {/* Single Pagination Control */}
@@ -310,6 +356,18 @@ function MyAuctionsPage() {
           )}
         </div>
       </div>
+      <ConfirmationModal
+        isOpen={isUnfollowConfirmOpen}
+        onClose={handleCloseUnfollowConfirm}
+        onConfirm={handleConfirmUnfollow}
+        title="Confirm Unfollow Auction"
+        message="Are you sure you want to unfollow this auction?"
+        confirmText="Yes, Unfollow"
+        cancelText="No, Keep Following"
+        confirmButtonClass="bg-red-600 hover:bg-red-700"
+        isLoading={unfollowLoading}
+        error={unfollowError}
+      />
     </div>
   );
 }
