@@ -43,8 +43,7 @@ eureka:
       defaultZone: http://localhost:8070/eureka/
 
 # === Stripe Configuration ===
-# nothing here, lol.
-# === Management & Actuator ===
+# nothing here# === Management & Actuator ===
 management:
   endpoints:
     web:

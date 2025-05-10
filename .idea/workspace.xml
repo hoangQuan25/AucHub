@@ -4,60 +4,7 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="6c40838e-6221-4c81-ab31-df2a3dd2a03a" name="Changes" comment="">
-      <change afterPath="$PROJECT_DIR$/orders/src/main/java/com/example/orders/commands/OrderWorkflowCommands.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/orders/src/main/java/com/example/orders/config/OrderPaymentProperties.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/orders/src/main/java/com/example/orders/config/RabbitMqConfig.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/orders/src/main/java/com/example/orders/controller/OrdersController.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/orders/src/main/java/com/example/orders/dto/event/AuctionReopenRequestedEventDto.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/orders/src/main/java/com/example/orders/dto/event/AuctionSoldEventDto.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/orders/src/main/java/com/example/orders/dto/event/OrderCancelledEventDto.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/orders/src/main/java/com/example/orders/dto/event/OrderCreatedEventDto.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/orders/src/main/java/com/example/orders/dto/event/OrderReadyForShippingEventDto.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/orders/src/main/java/com/example/orders/dto/event/PaymentFailedEventDto.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/orders/src/main/java/com/example/orders/dto/event/PaymentSucceededEventDto.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/orders/src/main/java/com/example/orders/dto/event/SellerDecisionRequiredEventDto.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/orders/src/main/java/com/example/orders/dto/event/UserPaymentDefaultedEventDto.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/orders/src/main/java/com/example/orders/dto/request/SellerDecisionDto.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/orders/src/main/java/com/example/orders/dto/response/OrderDetailDto.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/orders/src/main/java/com/example/orders/dto/response/OrderSummaryDto.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/orders/src/main/java/com/example/orders/entity/AuctionStatus.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/orders/src/main/java/com/example/orders/entity/Order.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/orders/src/main/java/com/example/orders/entity/OrderStatus.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/orders/src/main/java/com/example/orders/entity/SellerDecisionType.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/orders/src/main/java/com/example/orders/listener/AuctionSoldEventsListener.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/orders/src/main/java/com/example/orders/listener/OrderPaymentTimeoutListener.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/orders/src/main/java/com/example/orders/listener/PaymentEventsListener.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/orders/src/main/java/com/example/orders/mapper/OrderMapper.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/orders/src/main/java/com/example/orders/repository/OrderRepository.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/orders/src/main/java/com/example/orders/service/OrderService.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/orders/src/main/java/com/example/orders/service/impl/OrderServiceImpl.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/payments/src/main/java/com/example/payments/config/RabbitMqConfig.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/payments/src/main/java/com/example/payments/config/StripeConfig.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/payments/src/main/java/com/example/payments/controller/PaymentController.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/payments/src/main/java/com/example/payments/controller/StripeWebhookController.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/payments/src/main/java/com/example/payments/dto/event/PaymentFailedEventDto.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/payments/src/main/java/com/example/payments/dto/event/PaymentSucceededEventDto.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/payments/src/main/java/com/example/payments/dto/request/CreatePaymentIntentRequestDto.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/payments/src/main/java/com/example/payments/dto/response/CreatePaymentIntentResponseDto.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/payments/src/main/java/com/example/payments/service/PaymentService.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/payments/src/main/java/com/example/payments/service/impl/StripePaymentServiceImpl.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/compiler.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/compiler.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/encodings.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/encodings.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/misc.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/misc.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/frontend/package-lock.json" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/package-lock.json" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/frontend/package.json" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/package.json" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/frontend/src/App.jsx" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/App.jsx" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/frontend/src/context/NotificationContext.jsx" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/context/NotificationContext.jsx" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/frontend/src/pages/LiveAuctionDetailPage.jsx" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/pages/LiveAuctionDetailPage.jsx" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/gatewayserver/src/main/java/com/example/gatewayserver/GatewayserverApplication.java" beforeDir="false" afterPath="$PROJECT_DIR$/gatewayserver/src/main/java/com/example/gatewayserver/GatewayserverApplication.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/liveauctions/src/main/java/com/example/liveauctions/config/RabbitMqConfig.java" beforeDir="false" afterPath="$PROJECT_DIR$/liveauctions/src/main/java/com/example/liveauctions/config/RabbitMqConfig.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/liveauctions/src/main/java/com/example/liveauctions/event/NotificationEvents.java" beforeDir="false" afterPath="$PROJECT_DIR$/liveauctions/src/main/java/com/example/liveauctions/event/NotificationEvents.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/liveauctions/src/main/java/com/example/liveauctions/listener/LiveAuctionLifecycleListener.java" beforeDir="false" afterPath="$PROJECT_DIR$/liveauctions/src/main/java/com/example/liveauctions/listener/LiveAuctionLifecycleListener.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/timedauctions/src/main/java/com/example/timedauctions/event/NotificationEvents.java" beforeDir="false" afterPath="$PROJECT_DIR$/timedauctions/src/main/java/com/example/timedauctions/event/NotificationEvents.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/timedauctions/src/main/java/com/example/timedauctions/listener/TimedAuctionLifecycleListener.java" beforeDir="false" afterPath="$PROJECT_DIR$/timedauctions/src/main/java/com/example/timedauctions/listener/TimedAuctionLifecycleListener.java" afterDir="false" />
-    </list>
+    <list default="true" id="6c40838e-6221-4c81-ab31-df2a3dd2a03a" name="Changes" comment="" />
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
     <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
@@ -236,7 +183,7 @@
       <updated>1746805620562</updated>
       <workItem from="1746805622829" duration="2317000" />
       <workItem from="1746856700880" duration="9517000" />
-      <workItem from="1746895016480" duration="1414000" />
+      <workItem from="1746895016480" duration="1785000" />
     </task>
     <servers />
   </component>
