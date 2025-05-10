@@ -9,7 +9,7 @@ import ConfirmationModal from "../components/ConfirmationModal";
 import CollapsibleSection from "../components/CollapsibleSection";
 import AuctionRules from "../components/AuctionRules";
 import AuctionChatPanel from "../components/AuctionChatPanel";
-import { FaChevronLeft, FaChevronRight, FaEye } from "react-icons/fa"; // Icons for arrows
+import { FaChevronLeft, FaChevronRight, FaEye, FaCreditCard } from "react-icons/fa"; // Icons for arrows
 import SockJS from "sockjs-client/dist/sockjs"; // Use specific path for wider compatibility
 import { Client } from "@stomp/stompjs";
 
@@ -43,6 +43,9 @@ function LiveAuctionDetailPage() {
   const [cancelError, setCancelError] = useState("");
   const [isHammering, setIsHammering] = useState(false);
   const [hammerError, setHammerError] = useState("");
+
+  const [isNavigatingToPayment, setIsNavigatingToPayment] = useState(false); // State for loading indicator on button
+  const [navigationError, setNavigationError] = useState("");
 
   // --- Ref to hold the STOMP client instance ---
   const stompClientRef = useRef(null);
@@ -442,15 +445,10 @@ function LiveAuctionDetailPage() {
     keycloak.authenticated &&
     auctionDetails.highestBidderUsername ===
       keycloak.tokenParsed?.preferred_username;
-  const canBid =
-    initialized &&
-    keycloak.authenticated &&
-    auctionDetails.status === "ACTIVE" &&
-    !isUserHighestBidder &&
-    auctionDetails.nextBidAmount != null;
   // Use the correct field for images from the DTO
   const isSeller = loggedInUserId && auctionDetails.sellerId === loggedInUserId;
-  // Simplified canBid for button state - specific amount check happens in handler
+  const isWinner = loggedInUserId && auctionDetails.winnerId === loggedInUserId;
+  const isAuctionSold = auctionDetails.status === "SOLD";
   const canPlaceBid =
     initialized &&
     keycloak.authenticated &&
@@ -472,7 +470,14 @@ function LiveAuctionDetailPage() {
       ? "Auction ended without meeting reserve price."
       : null;
 
-  // --- ** THIS IS THE UPDATED RENDER LOGIC ** ---
+  const handleGoToPayment = async () => {
+    setIsNavigatingToPayment(true);
+    setNavigationError("");
+    console.log(`Attempting to find order for auction ID: ${auctionId}`);
+    console.log("Navigating to My Orders page...");
+    navigate("/my-orders"); // Navigate directly
+  };
+
   return (
     <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 p-4 max-w-7xl mx-auto">
       {/* LEFT */}
@@ -762,26 +767,50 @@ function LiveAuctionDetailPage() {
             </div>
           )}
 
-          {auctionDetails.status === "SOLD" && (
-            <div className="flex items-center gap-3 p-4 bg-green-50 border border-green-300 rounded-lg shadow-sm">
-              <div className="text-xl">🏆</div>
-              <div>
-                <p className="font-semibold text-green-800">
-                  {auctionDetails.winnerId === keycloak.subject
-                    ? "Congratulations, you won!"
-                    : "Auction Complete"}
-                </p>
-                <p className="text-green-700 text-sm">
-                  Winner:{" "}
-                  <strong>
-                    {auctionDetails.highestBidderUsernameSnapshot}
-                  </strong>{" "}
-                  with{" "}
-                  <strong>
-                    {auctionDetails.winningBid.toLocaleString("vi-VN")} VNĐ
-                  </strong>
-                </p>
+          {isAuctionSold && (
+            <div className="mt-4 space-y-3">
+              <div className="flex items-center gap-3 p-4 bg-green-50 border border-green-300 rounded-lg shadow-sm">
+                <div className="text-xl">🏆</div>
+                <div>
+                  <p className="font-semibold text-green-800">
+                    {isWinner // Check if the logged-in user is the winner
+                      ? "Congratulations, you won!"
+                      : "Auction Complete"}
+                  </p>
+                  <p className="text-green-700 text-sm">
+                    Winner:{" "}
+                    <strong>
+                      {auctionDetails.highestBidderUsernameSnapshot}
+                    </strong>{" "}
+                    with{" "}
+                    <strong>
+                      {auctionDetails.winningBid.toLocaleString("vi-VN")} VNĐ
+                    </strong>
+                  </p>
+                </div>
               </div>
+
+              {/* --- NEW: Go to Payment Button for Winner --- */}
+              {isWinner && ( // Only show this button if the current user is the winner
+                <div className="mt-4 text-center border-t pt-4">
+                  <button
+                    onClick={handleGoToPayment}
+                    disabled={isNavigatingToPayment}
+                    className="w-full inline-flex justify-center items-center gap-2 py-3 px-4 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded text-lg disabled:opacity-60"
+                  >
+                    <FaCreditCard />
+                    {isNavigatingToPayment
+                      ? "Loading Payment..."
+                      : "Go to Payment Page"}
+                  </button>
+                  {navigationError && (
+                    <p className="text-red-600 text-sm mt-2">
+                      {navigationError}
+                    </p>
+                  )}
+                </div>
+              )}
+              {/* --- End Go to Payment Button --- */}
             </div>
           )}
 

@@ -35,15 +35,6 @@
         <module name="eurekaserver" />
         <module name="configserver" />
       </profile>
-      <profile name="Annotation profile for notifications" enabled="true">
-        <sourceOutputDir name="target/generated-sources/annotations" />
-        <sourceTestOutputDir name="target/generated-test-sources/test-annotations" />
-        <outputRelativeToContentRoot value="true" />
-        <processorPath useClasspath="false">
-          <entry name="$MAVEN_REPOSITORY$/org/projectlombok/lombok/1.18.38/lombok-1.18.38.jar" />
-        </processorPath>
-        <module name="notifications" />
-      </profile>
       <profile name="Annotation profile for timedauctions" enabled="true">
         <sourceOutputDir name="target/generated-sources/annotations" />
         <sourceTestOutputDir name="target/generated-test-sources/test-annotations" />
@@ -55,6 +46,17 @@
         <module name="gatewayserver" />
         <module name="liveauctions" />
       </profile>
+      <profile name="Annotation profile for payments" enabled="true">
+        <sourceOutputDir name="target/generated-sources/annotations" />
+        <sourceTestOutputDir name="target/generated-test-sources/test-annotations" />
+        <outputRelativeToContentRoot value="true" />
+        <processorPath useClasspath="false">
+          <entry name="$MAVEN_REPOSITORY$/org/projectlombok/lombok/1.18.38/lombok-1.18.38.jar" />
+        </processorPath>
+        <module name="notifications" />
+        <module name="orders" />
+        <module name="payments" />
+      </profile>
     </annotationProcessing>
   </component>
   <component name="JavacSettings">
@@ -64,6 +66,8 @@
       <module name="gatewayserver" options="-parameters" />
       <module name="liveauctions" options="-parameters" />
       <module name="notifications" options="-parameters" />
+      <module name="orders" options="-parameters" />
+      <module name="payments" options="-parameters" />
       <module name="products" options="-parameters" />
       <module name="timedauctions" options="-parameters" />
       <module name="users" options="-parameters" />

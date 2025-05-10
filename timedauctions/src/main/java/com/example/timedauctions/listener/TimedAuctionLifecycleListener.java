@@ -1,21 +1,31 @@
 package com.example.timedauctions.listener;
 
+import com.example.timedauctions.client.UserServiceClient;
+import com.example.timedauctions.client.dto.UserBasicInfoDto;
 import com.example.timedauctions.commands.AuctionLifecycleCommands; // Ensure these command records exist
 import com.example.timedauctions.config.RabbitMqConfig;
 import com.example.timedauctions.entity.AuctionStatus;
+import com.example.timedauctions.entity.Bid;
 import com.example.timedauctions.entity.TimedAuction;
 import com.example.timedauctions.event.NotificationEvents;
 import com.example.timedauctions.exception.AuctionNotFoundException;
+import com.example.timedauctions.repository.BidRepository;
 import com.example.timedauctions.repository.TimedAuctionRepository;
 import com.example.timedauctions.service.AuctionSchedulingService;
+import lombok.AllArgsConstructor;
+import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.amqp.rabbit.annotation.RabbitListener;
 import org.springframework.amqp.rabbit.core.RabbitTemplate;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.util.*;
+import java.util.stream.Collectors;
 
 @Component
 @RequiredArgsConstructor
@@ -24,6 +34,8 @@ public class TimedAuctionLifecycleListener {
 
     private final TimedAuctionRepository timedAuctionRepository;
     private final AuctionSchedulingService auctionSchedulingService;
+    private final UserServiceClient userServiceClient; // Assuming this is a client to fetch user details
+    private final BidRepository bidRepository;
     private final RabbitTemplate rabbitTemplate;
 
     @RabbitListener(queues = RabbitMqConfig.TD_AUCTION_START_QUEUE)
@@ -219,31 +231,106 @@ public class TimedAuctionLifecycleListener {
         publishAuctionEndedNotification(hammeredAuction);
     }
 
+    /* ------------------------------------------------------------------
+     *  Helper record – now includes username snapshot
+     * ------------------------------------------------------------------*/
+    @Getter
+    @AllArgsConstructor
+    private static class EligibleBidderInfo {
+        private final String bidderId;
+        private final String usernameSnapshot;
+        private final BigDecimal maxBidAmount;
+    }
+
+    /* ------------------------------------------------------------------
+     *  ENRICHED “auction ended” publisher – TIMED edition
+     * ------------------------------------------------------------------*/
     private void publishAuctionEndedNotification(TimedAuction auction) {
         if (auction == null) return;
 
-        // --- REMOVED bidder ID fetching ---
+        final String auctionType = "TIMED";
 
-        NotificationEvents.AuctionEndedEvent event = NotificationEvents.AuctionEndedEvent.builder()
-                .auctionId(auction.getId())
-                .productTitleSnapshot(auction.getProductTitleSnapshot()) // Ensure snapshot is loaded/available
-                .finalStatus(auction.getStatus())
-                .actualEndTime(auction.getActualEndTime())
-                .sellerId(auction.getSellerId())
-                .winnerId(auction.getWinnerId()) // Null if not SOLD/CANCELLED
-                .winnerUsernameSnapshot(auction.getHighestBidderUsernameSnapshot()) // Null if not SOLD/CANCELLED with bids
-                .winningBid(auction.getWinningBid()) // Null if not SOLD
-                // No allBidderIds field anymore
-                .build();
+        // ---------- Base fields ----------
+        NotificationEvents.AuctionEndedEvent.AuctionEndedEventBuilder builder =
+                NotificationEvents.AuctionEndedEvent.builder()
+                        .eventId(UUID.randomUUID())
+                        .eventTimestamp(LocalDateTime.now())
+                        .auctionId(auction.getId())
+                        .productId(auction.getProductId())
+                        .productTitleSnapshot(auction.getProductTitleSnapshot())
+                        .productImageUrlSnapshot(auction.getProductImageUrlSnapshot())
+                        .auctionType(auctionType)
+                        .sellerId(auction.getSellerId())
+                        .sellerUsernameSnapshot(auction.getSellerUsernameSnapshot())
+                        .finalStatus(auction.getStatus())
+                        .actualEndTime(auction.getActualEndTime());
+
+        // ---------- SOLD-only enrichment ----------
+        if (auction.getStatus() == AuctionStatus.SOLD) {
+            builder.winnerId(auction.getWinnerId())
+                    .winnerUsernameSnapshot(auction.getHighestBidderUsernameSnapshot())
+                    .winningBid(auction.getWinningBid())
+                    .reservePrice(auction.getReservePrice());
+
+            List<EligibleBidderInfo> next = findEligibleNextRawBidders(auction);
+            if (!next.isEmpty()) {
+                EligibleBidderInfo second = next.get(0);
+                builder.secondHighestBidderId(second.getBidderId())
+                        .secondHighestBidderUsernameSnapshot(second.getUsernameSnapshot())
+                        .secondHighestBidAmount(second.getMaxBidAmount());
+
+                if (next.size() > 1) {
+                    EligibleBidderInfo third = next.get(1);
+                    builder.thirdHighestBidderId(third.getBidderId())
+                            .thirdHighestBidderUsernameSnapshot(third.getUsernameSnapshot())
+                            .thirdHighestBidAmount(third.getMaxBidAmount());
+                }
+            }
+        }
+
+        // ---------- Publish ----------
         try {
-            // Use specific routing key for timed auctions
+            NotificationEvents.AuctionEndedEvent event = builder.build();
             String routingKey = RabbitMqConfig.AUCTION_ENDED_ROUTING_KEY_PREFIX + "timed.ended";
             rabbitTemplate.convertAndSend(RabbitMqConfig.NOTIFICATIONS_EXCHANGE, routingKey, event);
-            log.info("[Listener - Timed] Published AuctionEndedEvent (Status: {}) for auction {} to exchange {}",
-                    event.getFinalStatus(), event.getAuctionId(), RabbitMqConfig.NOTIFICATIONS_EXCHANGE);
+            log.info("[Listener - Timed] Published ENRICHED AuctionEndedEvent (Status: {}) for auction {}",
+                    event.getFinalStatus(), event.getAuctionId());
         } catch (Exception e) {
-            log.error("[Listener - Timed] Failed to publish AuctionEndedEvent for timed auction {}: {}", auction.getId(), e.getMessage(), e);
-            // Consider retry or dead-lettering for critical notifications
+            log.error("[Listener - Timed] Failed to publish ENRICHED AuctionEndedEvent for auction {}: {}",
+                    auction.getId(), e.getMessage(), e);
         }
     }
+
+
+    private List<EligibleBidderInfo> findEligibleNextRawBidders(TimedAuction auction) {
+        if (auction.getWinnerId() == null || auction.getStatus() != AuctionStatus.SOLD) {
+            return Collections.emptyList();
+        }
+
+        List<Bid> allBids = bidRepository
+                .findByTimedAuctionId(auction.getId(), Pageable.unpaged())
+                .getContent();
+        if (allBids.isEmpty()) return Collections.emptyList();
+
+        // Map <bidderId, EligibleBidderInfo(max bid & username)>
+        Map<String, EligibleBidderInfo> maxByBidder = new HashMap<>();
+        for (Bid b : allBids) {
+            maxByBidder.compute(b.getBidderId(), (id, current) -> {
+                if (current == null || b.getAmount().compareTo(current.getMaxBidAmount()) > 0) {
+                    return new EligibleBidderInfo(id, b.getBidderUsernameSnapshot(), b.getAmount());
+                }
+                return current;
+            });
+        }
+        maxByBidder.remove(auction.getWinnerId());
+
+        // Filter by reserve (if any) and grab the top 2
+        return maxByBidder.values().stream()
+                .filter(info -> auction.getReservePrice() == null ||
+                        info.getMaxBidAmount().compareTo(auction.getReservePrice()) >= 0)
+                .sorted((a, b) -> b.getMaxBidAmount().compareTo(a.getMaxBidAmount()))
+                .limit(2)
+                .collect(Collectors.toList());
+    }
+
 }

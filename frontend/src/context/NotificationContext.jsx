@@ -327,7 +327,6 @@ const fetchFollowedIds = useCallback(async () => {
     markAsRead,
     markAllAsRead,
     followedAuctionIds,
-    markAsRead,
     followAuction,
     unfollowAuction,
   };

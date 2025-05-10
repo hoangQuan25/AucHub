@@ -1,0 +1,103 @@
+# application.yml for 'orders-service'
+
+server:
+  port: 8006 # New port for the Orders Service
+
+spring:
+  application:
+    name: orders
+  profiles:
+    active: "dev"
+  # === Database Configuration ===
+  datasource:
+    url: jdbc:mysql://localhost:3306/order_service_schema # New schema for Orders Service
+    username: orders_svc_user # Consider a dedicated user for this service
+    password: quan12345656915691
+    driverClassName: com.mysql.cj.jdbc.Driver
+  jpa:
+    database-platform: org.hibernate.dialect.MySQLDialect
+    hibernate:
+      ddl-auto: update # 'update' for dev, 'validate' or 'none' for prod
+    show-sql: true
+  rabbitmq:
+    host: localhost
+    port: 5672
+    username: guest
+    password: guest
+
+  # === Redis Configuration (if needed by Orders Service) ===
+  data:
+    redis:
+      host: localhost
+      port: 6379
+      redisson:
+        single-server-config:
+          address: "redis://127.0.0.1:6379"
+      # password: ${REDIS_PASSWORD:}
+
+  # === Configuration Server ===
+  config:
+    import: "optional:configserver:http://localhost:8071/"
+
+# === Eureka Client Configuration ===
+eureka:
+  instance:
+    preferIpAddress: true
+  client:
+    fetchRegistry: true
+    registerWithEureka: true
+    serviceUrl:
+      defaultZone: http://localhost:8070/eureka/
+
+# === Management & Actuator ===
+management:
+  endpoints:
+    web:
+      exposure:
+        include: "*"
+  health:
+    readiness-state:
+      enabled: true
+    liveness-state:
+      enabled: true
+  endpoint:
+    health:
+      probes:
+        enabled: true
+  info:
+    env:
+      enabled: true
+  metrics:
+    tags:
+      application: ${spring.application.name}
+
+# === Logging ===
+logging:
+  level:
+    root: INFO
+    org.springframework.web: INFO # Standard Spring MVC/Web
+    org.springframework.security: INFO # Security related logs
+    # Update to your Orders Service base package
+    com.example.ordersservice: DEBUG # Your application's specific code
+  pattern:
+    level: "%5p [${spring.application.name},%X{trace_id},%X{span_id}] %m%n"
+
+# === Custom Orders Service Properties ===
+orders-config:
+  payment:
+    timeout:
+      # Duration for the winner of a live auction to make payment
+      live-auction-winner-duration: "PT2H" # ISO-8601 duration format (2 hours)
+      # Duration for the winner of a timed auction to make payment
+      timed-auction-winner-duration: "PT24H" # (24 hours)
+      # Duration for subsequent bidders (2nd, 3rd) to make payment
+      next-bidder-duration: "PT24H" # (24 hours)
+  # You might add other configurations, e.g., max number of bidders to offer to
+  # max-offer-attempts: 3
+
+# === Custom App Info ===
+info:
+  app:
+    name: "Orders Service"
+    description: "Manages post-auction order fulfillment, payment orchestration, and delivery handoff."
+    version: "1.0.0"

@@ -5,6 +5,8 @@
     <option name="originalFiles">
       <list>
         <option value="$PROJECT_DIR$/users/pom.xml" />
+        <option value="$PROJECT_DIR$/orders/pom.xml" />
+        <option value="$PROJECT_DIR$/payments/pom.xml" />
         <option value="$PROJECT_DIR$/products/pom.xml" />
         <option value="$PROJECT_DIR$/configserver/pom.xml" />
         <option value="$PROJECT_DIR$/eurekaserver/pom.xml" />
