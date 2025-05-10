@@ -1,0 +1,93 @@
+# application.yml for 'payments-service'
+
+server:
+  port: 8007
+
+spring:
+  application:
+    name: payments
+  profiles:
+    active: "dev" # Default profile for local development
+
+  # === Database Configuration (for storing PaymentIntentRecord, if implemented) ===
+  datasource:
+    url: jdbc:mysql://localhost:3306/payment_service_schema # New schema
+    username: payments_svc_user # Consider a dedicated user
+    password: quan12345656915691
+    driverClassName: com.mysql.cj.jdbc.Driver
+  jpa:
+    database-platform: org.hibernate.dialect.MySQLDialect
+    hibernate:
+      ddl-auto: update # 'update' for dev, 'validate' or 'none' for prod
+    show-sql: true
+
+  # === RabbitMQ Configuration (for publishing payment events) ===
+  rabbitmq:
+    host: localhost
+    port: 5672
+    username: guest # Use environment variables in production
+    password: guest # Use environment variables in production
+
+  # === Configuration Server (if used) ===
+  config:
+    import: "optional:configserver:http://localhost:8071/"
+
+# === Eureka Client Configuration ===
+eureka:
+  instance:
+    preferIpAddress: true
+  client:
+    fetchRegistry: true
+    registerWithEureka: true
+    serviceUrl:
+      defaultZone: http://localhost:8070/eureka/
+
+# === Stripe Configuration ===
+stripe:
+  api:
+    # IMPORTANT: Load these from environment variables or a secure config server.
+    # DO NOT hardcode your actual secret keys here in a committed file.
+    secret-key: ${STRIPE_SECRET_KEY_TEST:placeholder} # Example placeholder
+  webhook:
+    # IMPORTANT: This is the signing secret for your webhook endpoint.
+    signing-secret: ${STRIPE_WEBHOOK_SIGNING_SECRET_TEST:placeholder} # Example placeholder
+
+# === Management & Actuator ===
+management:
+  endpoints:
+    web:
+      exposure:
+        include: "*"
+  health:
+    readiness-state:
+      enabled: true
+    liveness-state:
+      enabled: true
+  endpoint:
+    health:
+      probes:
+        enabled: true
+  info:
+    env:
+      enabled: true
+  metrics:
+    tags:
+      application: ${spring.application.name}
+
+# === Logging ===
+logging:
+  level:
+    root: INFO
+    org.springframework.web: INFO
+    org.springframework.security: INFO
+    com.example.payments: DEBUG # Your Payment Service base package
+    com.stripe: INFO # Stripe SDK logging
+  pattern:
+    level: "%5p [${spring.application.name},%X{trace_id},%X{span_id}] %m%n"
+
+# === Custom App Info ===
+info:
+  app:
+    name: "Payment Service"
+    description: "Handles payment processing via Stripe and publishes payment outcomes."
+    version: "1.0.0"

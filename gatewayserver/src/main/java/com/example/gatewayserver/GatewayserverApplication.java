@@ -60,6 +60,21 @@ public class GatewayserverApplication {
 								.addResponseHeader("X-Response-Time", responseTime.toString())
 						)
 						.uri("lb://NOTIFICATIONS"))
+				.route("orders_api_route", p -> p // Specific ID for the API route
+						.path("/api/orders/**")
+						.filters(f -> f
+								.rewritePath("/api/orders/(?<segment>.*)", "/${segment}")
+								.addResponseHeader("X-Response-Time", responseTime.toString())
+						)
+						.uri("lb://ORDERS"))
+				.route("payments_api_route", p -> p // Specific ID for the API route
+						.path("/api/payments/**")
+						.filters(f -> f
+								.rewritePath("/api/payments/(?<segment>.*)", "/${segment}")
+								.addResponseHeader("X-Response-Time", responseTime.toString())
+						)
+						.uri("lb://PAYMENTS"))
+
 				.route("notifications_ws_route", p -> p
 						.path("/ws/notifications/**") // Match the STOMP endpoint path in Notification service's WebSocketStompConfig
 						// NO rewritePath needed for WebSockets typically

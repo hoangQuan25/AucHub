@@ -23,14 +23,37 @@ public final class NotificationEvents {
 
     @Value @Builder
     public static class AuctionEndedEvent {
+        @NotNull UUID eventId;
+        @NotNull LocalDateTime eventTimestamp;
+
         @NotNull UUID auctionId;
+        @NotNull Long productId;
         @NotNull String productTitleSnapshot;
+        String productImageUrlSnapshot;
+
+        @NotNull String auctionType; // "LIVE" or "TIMED"
+
+        @NotNull String sellerId;
+        String sellerUsernameSnapshot;
+
         @NotNull AuctionStatus finalStatus;
         LocalDateTime actualEndTime;
-        @NotNull String sellerId;
+
+        // --- Winner & Bid Info (populated if status is SOLD) ---
         String winnerId;
-        String winnerUsernameSnapshot;
+        String winnerUsernameSnapshot; // RE-ADDED
         BigDecimal winningBid;
+
+        // --- Reserve Price & Next Bidder Info (populated if status is SOLD and applicable) ---
+        BigDecimal reservePrice;
+
+        String secondHighestBidderId;
+        String secondHighestBidderUsernameSnapshot; // RE-ADDED
+        BigDecimal secondHighestBidAmount;
+
+        String thirdHighestBidderId;
+        String thirdHighestBidderUsernameSnapshot; // RE-ADDED
+        BigDecimal thirdHighestBidAmount;
     }
 
 

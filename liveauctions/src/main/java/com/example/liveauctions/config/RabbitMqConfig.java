@@ -32,7 +32,7 @@ public class RabbitMqConfig {
 
 
     public static final String UPDATE_ROUTING_KEY_PREFIX = "auction.update."; // e.g., auction.update.uuid
-    public static final String AUCTION_STARTED_ROUTING_KEY_PREFIX = "auction.";
+    public static final String AUCTION_ROUTING_KEY_PREFIX = "auction.";
 
     @Bean
     TopicExchange auctionEventsExchange() {

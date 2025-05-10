@@ -3,6 +3,7 @@ package com.example.liveauctions.listener;
 import com.example.liveauctions.commands.AuctionLifecycleCommands.*; // Import commands
 import com.example.liveauctions.config.RabbitMqConfig;
 import com.example.liveauctions.entity.AuctionStatus;
+import com.example.liveauctions.entity.Bid;
 import com.example.liveauctions.entity.LiveAuction;
 import com.example.liveauctions.event.NotificationEvents;
 import com.example.liveauctions.exception.AuctionNotFoundException;
@@ -10,19 +11,21 @@ import com.example.liveauctions.repository.BidRepository;
 import com.example.liveauctions.repository.LiveAuctionRepository;
 import com.example.liveauctions.service.LiveAuctionSchedulingService; // Import new service
 import com.example.liveauctions.service.WebSocketEventPublisher; // Import publisher
+import lombok.AllArgsConstructor;
+import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.amqp.rabbit.annotation.RabbitListener;
 import org.springframework.amqp.rabbit.core.RabbitTemplate;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.time.temporal.ChronoUnit;
-import java.util.HashSet;
-import java.util.Optional;
-import java.util.Set;
-import java.util.UUID;
+import java.util.*;
+import java.util.stream.Collectors;
 
 @Component
 @RequiredArgsConstructor
@@ -65,7 +68,7 @@ public class LiveAuctionLifecycleListener {
                             .startTime(updatedAuction.getStartTime())
                             .endTime(updatedAuction.getEndTime())
                             .build();
-                    String routingKey = RabbitMqConfig.AUCTION_STARTED_ROUTING_KEY_PREFIX + "live.started";
+                    String routingKey = RabbitMqConfig.AUCTION_ROUTING_KEY_PREFIX + "live.started";
                     rabbitTemplate.convertAndSend(RabbitMqConfig.NOTIFICATIONS_EXCHANGE, routingKey, event);
                     log.info("[Listener - Live] Published AuctionStartedEvent for auction {}", updatedAuction.getId());
                     log.info("[Listener - Live] Published AuctionStartedEvent to exchange {} with routing key {}",
@@ -197,29 +200,108 @@ public class LiveAuctionLifecycleListener {
         log.debug("Scheduled end message for auction {} will be ignored by listener due to status change.", auction.getId());
     }
 
+    /* ------------------------------------------------------------------
+     *  ENRICHED “auction ended” publisher – LIVE edition
+     * ------------------------------------------------------------------*/
     private void publishAuctionEndedNotification(LiveAuction auction) {
-        if (auction == null) return; // Safety check
+        if (auction == null) return;
 
-        // Build the event
-        NotificationEvents.AuctionEndedEvent event = NotificationEvents.AuctionEndedEvent.builder()
-                .auctionId(auction.getId())
-                .productTitleSnapshot(auction.getProductTitleSnapshot()) // Ensure this is available
-                .finalStatus(auction.getStatus())
-                .actualEndTime(auction.getActualEndTime())
-                .sellerId(auction.getSellerId())
-                .winnerId(auction.getWinnerId()) // Will be null if not SOLD
-                .winnerUsernameSnapshot(auction.getHighestBidderUsernameSnapshot()) // Use highest if available
-                .winningBid(auction.getWinningBid()) // Will be null if not SOLD
-                .build();
+        final String auctionType = "LIVE";
+
+        // ---------- Base fields ----------
+        NotificationEvents.AuctionEndedEvent.AuctionEndedEventBuilder eventBuilder =
+                NotificationEvents.AuctionEndedEvent.builder()
+                        .eventId(UUID.randomUUID())
+                        .eventTimestamp(LocalDateTime.now())
+                        .auctionId(auction.getId())
+                        .productId(auction.getProductId())
+                        .productTitleSnapshot(auction.getProductTitleSnapshot())
+                        .productImageUrlSnapshot(auction.getProductImageUrlSnapshot())
+                        .auctionType(auctionType)
+                        .sellerId(auction.getSellerId())
+                        .sellerUsernameSnapshot(auction.getSellerUsernameSnapshot())
+                        .finalStatus(auction.getStatus())
+                        .actualEndTime(auction.getActualEndTime());
+
+        // ---------- SOLD-only enrichment ----------
+        if (auction.getStatus() == AuctionStatus.SOLD) {
+            eventBuilder
+                    .winnerId(auction.getWinnerId())
+                    .winnerUsernameSnapshot(auction.getHighestBidderUsernameSnapshot())
+                    .winningBid(auction.getWinningBid())
+                    .reservePrice(auction.getReservePrice());
+
+            // Second / third eligible bidders
+            List<EligibleBidderInfo> nextBidders = findEligibleNextRawBidders(auction);
+            if (!nextBidders.isEmpty()) {
+                EligibleBidderInfo second = nextBidders.get(0);
+                eventBuilder
+                        .secondHighestBidderId(second.getBidderId())
+                        .secondHighestBidAmount(second.getMaxBidAmount())
+                        .secondHighestBidderUsernameSnapshot(second.getUsernameSnapshot());
+
+                if (nextBidders.size() > 1) {
+                    EligibleBidderInfo third = nextBidders.get(1);
+                    eventBuilder
+                            .thirdHighestBidderId(third.getBidderId())
+                            .thirdHighestBidAmount(third.getMaxBidAmount())
+                            .thirdHighestBidderUsernameSnapshot(third.getUsernameSnapshot());
+                }
+            }
+        }
+
+        // ---------- Publish ----------
         try {
-            // Publish to the notifications exchange with a LIVE-specific key
-            String routingKey = RabbitMqConfig.AUCTION_STARTED_ROUTING_KEY_PREFIX + "live.ended";
+            NotificationEvents.AuctionEndedEvent event = eventBuilder.build();
+            String routingKey = RabbitMqConfig.AUCTION_ROUTING_KEY_PREFIX + "live.ended"; // unchanged
             rabbitTemplate.convertAndSend(RabbitMqConfig.NOTIFICATIONS_EXCHANGE, routingKey, event);
-            log.info("[Listener - Live] Published AuctionEndedEvent (Status: {}) for auction {} to exchange {}",
-                    event.getFinalStatus(), event.getAuctionId(), RabbitMqConfig.NOTIFICATIONS_EXCHANGE);
+            log.info("[Listener - Live] Published ENRICHED AuctionEndedEvent (Status: {}) for auction {}",
+                    event.getFinalStatus(), event.getAuctionId());
         } catch (Exception e) {
-            log.error("[Listener - Live] Failed to publish AuctionEndedEvent for live auction {}: {}", auction.getId(), e.getMessage(), e);
-            // Consider retry or dead-lettering for critical notifications
+            log.error("[Listener - Live] Failed to publish ENRICHED AuctionEndedEvent for live auction {}: {}",
+                    auction.getId(), e.getMessage(), e);
         }
     }
+
+    /* ================================================================
+     *  Helpers – same idea as the timed-auction version
+     * ================================================================*/
+    @Getter
+    @AllArgsConstructor
+    private static class EligibleBidderInfo {
+        private final String bidderId;
+        private final String usernameSnapshot;
+        private final BigDecimal maxBidAmount;
+    }
+
+    private List<EligibleBidderInfo> findEligibleNextRawBidders(LiveAuction auction) {
+        if (auction.getWinnerId() == null || auction.getStatus() != AuctionStatus.SOLD) {
+            return Collections.emptyList();
+        }
+
+        List<Bid> allBids = bidRepository.findByLiveAuctionId(auction.getId(), Pageable.unpaged()).getContent();
+        if (allBids.isEmpty()) return Collections.emptyList();
+
+        // Map <bidderId, maxAmount & username>
+        Map<String, EligibleBidderInfo> maxByBidder = new HashMap<>();
+        for (Bid b : allBids) {
+            maxByBidder.compute(b.getBidderId(), (id, current) -> {
+                if (current == null || b.getAmount().compareTo(current.getMaxBidAmount()) > 0) {
+                    return new EligibleBidderInfo(id, b.getBidderUsernameSnapshot(), b.getAmount());
+                }
+                return current;
+            });
+        }
+        // Drop the winner
+        maxByBidder.remove(auction.getWinnerId());
+
+        // Filter by reserve (if present) and take top 2
+        return maxByBidder.values().stream()
+                .filter(info -> auction.getReservePrice() == null
+                        || info.getMaxBidAmount().compareTo(auction.getReservePrice()) >= 0)
+                .sorted((a, b) -> b.getMaxBidAmount().compareTo(a.getMaxBidAmount()))
+                .limit(2)
+                .collect(Collectors.toList());
+    }
+
 }
