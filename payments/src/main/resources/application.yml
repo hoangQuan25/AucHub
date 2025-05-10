@@ -43,7 +43,16 @@ eureka:
       defaultZone: http://localhost:8070/eureka/
 
 # === Stripe Configuration ===
-# nothing here# === Management & Actuator ===
+stripe:
+  api:
+    # IMPORTANT: Load these from environment variables or a secure config server.
+    # DO NOT hardcode your actual secret keys here in a committed file.
+    secret-key: ${STRIPE_SECRET_KEY_TEST:placeholder} # Example placeholder
+  webhook:
+    # IMPORTANT: This is the signing secret for your webhook endpoint.
+    signing-secret: ${STRIPE_WEBHOOK_SIGNING_SECRET_TEST:placeholder} # Example placeholder
+
+# === Management & Actuator ===
 management:
   endpoints:
     web:
