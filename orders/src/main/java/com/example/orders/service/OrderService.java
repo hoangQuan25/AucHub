@@ -70,4 +70,13 @@ public interface OrderService {
      * @param buyerId The ID of the authenticated buyer.
      */
     void processBuyerCancelPaymentAttempt(UUID orderId, String buyerId);
+
+    /**
+     * Retrieves a paginated list of orders for a seller.
+     * @param sellerId The ID of the authenticated seller.
+     * @param statusFilter Optional status to filter by (e.g., "PENDING_PAYMENT").
+     * @param pageable Pagination information.
+     * @return A page of OrderSummaryDto.
+     */
+    Page<OrderSummaryDto> getMySales(String sellerId, String statusFilter, Pageable pageable);
 }

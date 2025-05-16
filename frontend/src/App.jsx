@@ -14,6 +14,7 @@ import AllAuctionsPage from "./pages/AllAuctionsPage";
 import { NotificationProvider } from "./context/NotificationContext";
 import FollowingAuctionsPage from "./pages/FollowingAuctionsPage";
 import MyOrdersPage from "./pages/MyOrdersPage";
+import MySalesPage from "./pages/MySalesPage";
 import OrderDetailPage from "./pages/OrderDetailPage";
 import MockStripePage from "./pages/MockStripePage";
 
@@ -97,6 +98,14 @@ function App() {
             element={
               <SellerRoute>
                 <MyAuctionsPage />
+              </SellerRoute>
+            }
+          />
+          <Route
+            path="/my-sales"
+            element={
+              <SellerRoute>
+                <MySalesPage />
               </SellerRoute>
             }
           />

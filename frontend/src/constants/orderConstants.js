@@ -1,18 +1,40 @@
+// src/constants/orderConstants.js
+
 export const orderStatusMap = {
-  ALL: 'Tất cả', // For filtering only
-  PENDING_PAYMENT: 'Chờ thanh toán',
-  PENDING_CONFIRMATION: 'Chờ xác nhận', // Added status for seller confirmation after payment
-  DELIVERING: 'Vận chuyển', // Maybe combine with Chờ giao hàng? Or keep separate
-  COMPLETED: 'Hoàn thành',
-  CANCELLED: 'Đã hủy',
-  // Add other backend statuses your OrderStatus enum might have
+  ALL: 'Tất Cả',
+  AWAITING_WINNER_PAYMENT: 'Chờ Thanh Toán (Winner)',
+  PAYMENT_WINDOW_EXPIRED_WINNER: 'Winner Quá Hạn TT',
   AWAITING_SELLER_DECISION: 'Chờ Quyết Định Bán',
-  PAYMENT_WINDOW_EXPIRED_WINNER: 'Hết Hạn Thanh Toán',
-  PAYMENT_WINDOW_EXPIRED_NEXT_BIDDER: 'Hết Hạn Thanh Toán',
-  AWAITING_NEXT_BIDDER_PAYMENT: 'Chờ Người Kế Tiếp TT',
-  ORDER_CANCELLED_NO_PAYMENT_FINAL: 'Đã Hủy (Không TT)',
-  ORDER_CANCELLED_BY_SELLER: 'Đã Hủy (Người Bán)',
-  ORDER_CANCELLED_SYSTEM: 'Đã Hủy (Hệ Thống)',
-  AUCTION_REOPEN_INITIATED: 'Yêu Cầu Mở Lại',
-  AWAITING_SHIPMENT: 'Chờ Giao Hàng', // Often used after payment confirmation
+  AWAITING_NEXT_BIDDER_PAYMENT: 'Chờ Thanh Toán (Next Bidder)',
+  PAYMENT_WINDOW_EXPIRED_NEXT_BIDDER: 'Next Bidder Quá Hạn TT',
+  PAYMENT_SUCCESSFUL: 'Thanh Toán Thành Công',
+  AWAITING_SHIPMENT: 'Chờ Giao Hàng',
+  // ORDER_SHIPPED: 'Đã Giao Hàng', -> From Delivery Service
+  // ORDER_DELIVERED: 'Đã Nhận Hàng', -> From Delivery Service
+  ORDER_CANCELLED_NO_PAYMENT_FINAL: 'Huỷ (Không Thanh Toán)',
+  ORDER_CANCELLED_BY_SELLER: 'Huỷ (Người Bán)',
+  ORDER_CANCELLED_SYSTEM: 'Huỷ (Hệ Thống)',
+  AUCTION_REOPEN_INITIATED: 'Y/C Mở Lại Đấu Giá',
+  // Add other statuses your system uses and wants to display
+  // PENDING_PAYMENT is a common alias used in frontend for multiple awaitng payment states
+  PENDING_PAYMENT: 'Chờ Thanh Toán',
+  COMPLETED: 'Hoàn Thành',
+  CANCELLED: 'Đã Huỷ',
+  DELIVERING: 'Đang Giao',
+};
+
+
+// For SellerDecisionModal
+export const SELLER_DECISION_TYPES = {
+  OFFER_TO_NEXT_BIDDER: 'Offer to Next Eligible Bidder',
+  REOPEN_AUCTION: 'Re-open Auction',
+  CANCEL_SALE: 'Cancel Sale (No Winner This Round)',
+};
+
+// This maps the display selection to the actual enum/string value your backend expects
+// Make sure these values (OFFER_TO_NEXT_BIDDER, etc.) match your backend SellerDecisionType enum values.
+export const SELLER_DECISION_API_VALUES = {
+  OFFER_TO_NEXT_BIDDER: 'OFFER_TO_NEXT_BIDDER',
+  REOPEN_AUCTION: 'REOPEN_AUCTION',
+  CANCEL_SALE: 'CANCEL_SALE',
 };

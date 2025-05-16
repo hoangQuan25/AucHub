@@ -9,6 +9,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.data.web.PageableDefault;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -42,6 +43,16 @@ public class OrdersController {
         log.info("User {} fetching their orders. Filter: {}, Page: {}", userId, statusFilter, pageable);
         Page<OrderSummaryDto> myOrders = orderService.getMyOrders(userId, statusFilter, pageable);
         return ResponseEntity.ok(myOrders);
+    }
+
+    @GetMapping("/my-sales")
+    public ResponseEntity<Page<OrderSummaryDto>> getMySales(
+            @RequestHeader(USER_ID_HEADER) String sellerId, // This header now represents the sellerId
+            @RequestParam(name = "status", required = false) String statusFilter,
+            @PageableDefault(size = 10, sort = "createdAt", direction = Sort.Direction.DESC) Pageable pageable) {
+        log.info("Seller {} fetching their sales. Filter: {}, Page: {}", sellerId, statusFilter, pageable);
+        Page<OrderSummaryDto> mySales = orderService.getMySales(sellerId, statusFilter, pageable);
+        return ResponseEntity.ok(mySales);
     }
 
     @GetMapping("/{orderId}")

@@ -385,7 +385,7 @@ function ProductsPage() {
           onClose={handleCloseDetailModal}
           product={selectedProductForDetail}
           onEdit={handleEditProduct}
-          onDelete={handleDeleteProduct}
+          onDelete={promptDeleteProduct}
           onStartAuction={promptStartAuction}
         />
       )}
