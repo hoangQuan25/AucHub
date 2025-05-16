@@ -70,10 +70,10 @@ function ProductDetailModal({ isOpen, onClose, product, onEdit, onDelete, onStar
            <button onClick={(e) => {onClose(); onEdit(e, product)}} title="Edit Product" className="flex items-center text-sm px-4 py-2 bg-blue-100 text-blue-700 rounded hover:bg-blue-200">
                <FaEdit className="mr-1"/> Edit
            </button>
-           <button onClick={(e) => {onClose(); onDelete(e, product.id)}} title="Delete Product" className="flex items-center text-sm px-4 py-2 bg-red-100 text-red-700 rounded hover:bg-red-200">
+           <button onClick={(e) => {onClose(); onDelete(e, product)}} title="Delete Product" className="flex items-center text-sm px-4 py-2 bg-red-100 text-red-700 rounded hover:bg-red-200">
                 <FaTrashAlt className="mr-1"/> Delete
            </button>
-           <button onClick={(e) => {onClose(); onStartAuction(e, product.id)}} className="flex items-center text-sm bg-purple-600 hover:bg-purple-700 text-white font-semibold py-2 px-4 rounded">
+           <button onClick={(e) => {onClose(); onStartAuction(e, product)}} className="flex items-center text-sm bg-purple-600 hover:bg-purple-700 text-white font-semibold py-2 px-4 rounded">
                <FaRocket className="mr-2"/> Start Auction
            </button>
         </div>

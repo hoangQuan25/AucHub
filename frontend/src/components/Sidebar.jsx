@@ -51,6 +51,14 @@ function Sidebar() {
                   Your Products
                 </NavLink>
               </li>
+              <li>
+                <NavLink
+                  to="/my-sales"
+                  className={({ isActive }) => `${linkStyle} ${isActive ? activeLinkStyle : ''}`}
+                >
+                  Your Sales
+                </NavLink>
+              </li>
             </>
           )}
 

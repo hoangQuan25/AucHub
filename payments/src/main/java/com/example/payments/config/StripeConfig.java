@@ -9,16 +9,18 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.stereotype.Component;
 
+@Getter
 @Configuration
 // Option 1: Using @Value directly (simpler for just one key)
 public class StripeConfig {
 
+    // Getter if needed by services directly
     @Value("${stripe.api.secret-key}")
     private String secretKey;
 
     // The webhook signing secret will be needed later in the WebhookController/Service
     @Value("${stripe.webhook.signing-secret}")
-    @Getter // Make it accessible for webhook handler
+    // Make it accessible for webhook handler
     private String webhookSigningSecret;
 
 
@@ -30,7 +32,4 @@ public class StripeConfig {
         // log.info("Stripe API Key Initialized."); // Add logging if desired
     }
 
-    public String getSecretKey() { // Getter if needed by services directly
-        return secretKey;
-    }
 }

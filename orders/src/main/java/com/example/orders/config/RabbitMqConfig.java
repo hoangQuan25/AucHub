@@ -72,6 +72,16 @@ public class RabbitMqConfig {
     }
 
     @Bean
+    TopicExchange userEventsExchange() {
+        // Declare the exchange for user-related events
+        return new TopicExchange(
+                USER_EVENTS_EXCHANGE,
+                true,  // durable
+                false  // autoDelete
+        );
+    }
+
+    @Bean
     TopicExchange notificationsExchange() {
         // Declaring it here ensures it exists if Orders service starts first,
         // or simply allows us to refer to it for binding.

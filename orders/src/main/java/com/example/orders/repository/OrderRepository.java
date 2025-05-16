@@ -21,6 +21,8 @@ public interface OrderRepository extends JpaRepository<Order, UUID>, JpaSpecific
     // Find orders by seller ID and status
     Page<Order> findBySellerIdAndOrderStatus(String sellerId, OrderStatus orderStatus, Pageable pageable);
 
+    Page<Order> findBySellerId(String sellerId, Pageable pageable);
+
     // Find orders by current bidder ID and status
     Page<Order> findByCurrentBidderIdAndOrderStatus(String currentBidderId, OrderStatus orderStatus, Pageable pageable);
 

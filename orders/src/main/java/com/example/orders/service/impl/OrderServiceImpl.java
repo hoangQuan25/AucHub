@@ -382,13 +382,16 @@ public class OrderServiceImpl implements OrderService {
             try {
                 OrderStatus status = OrderStatus.valueOf(statusFilter.toUpperCase());
                 ordersPage = orderRepository.findByCurrentBidderIdAndOrderStatus(userId, status, pageable);
-                // Or: orderRepository.findByInitialWinnerIdOrCurrentBidderIdAndOrderStatus(userId, userId, status, pageable);
+                // log all orders fetched
+                log.info("Fetching orders for user {} with status {}. Total orders: {}", userId, status, ordersPage.getTotalElements());
             } catch (IllegalArgumentException e) {
                 log.warn("Invalid status filter provided: {}. Fetching all for user.", statusFilter);
                 ordersPage = orderRepository.findByCurrentBidderId(userId, pageable); // Needs this method in repo
             }
         } else {
             ordersPage = orderRepository.findByCurrentBidderId(userId, pageable); // Needs this method in repo
+            // log all orders fetched for me
+            log.info("Fetching all orders for user {}. Total orders: {}", userId, ordersPage.getTotalElements());
         }
         return ordersPage.map(orderMapper::toOrderSummaryDto); // Use your mapper
     }
@@ -495,6 +498,33 @@ public class OrderServiceImpl implements OrderService {
                 savedOrder.getOrderStatus() == OrderStatus.ORDER_CANCELLED_SYSTEM) {
             publishOrderCancelledEvent(savedOrder, "Buyer cancelled payment and no further options.");
         }
+    }
+
+    /**
+     * Retrieves a paginated list of orders for a seller.
+     *
+     * @param sellerId     The ID of the authenticated seller.
+     * @param statusFilter Optional status to filter by (e.g., "PENDING_PAYMENT").
+     * @param pageable     Pagination information.
+     * @return A page of OrderSummaryDto.
+     */
+    @Override
+    @Transactional(readOnly = true)
+    public Page<OrderSummaryDto> getMySales(String sellerId, String statusFilter, Pageable pageable) {
+        log.debug("Fetching sales for seller: {} with status filter: {}", sellerId, statusFilter);
+        Page<Order> salesPage;
+        if (statusFilter != null && !statusFilter.equalsIgnoreCase("ALL") && !statusFilter.isEmpty()) {
+            try {
+                OrderStatus status = OrderStatus.valueOf(statusFilter.toUpperCase());
+                salesPage = orderRepository.findBySellerIdAndOrderStatus(sellerId, status, pageable);
+            } catch (IllegalArgumentException e) {
+                log.warn("Invalid status filter provided for getMySales: {}. Fetching all for seller.", statusFilter);
+                salesPage = orderRepository.findBySellerId(sellerId, pageable);
+            }
+        } else {
+            salesPage = orderRepository.findBySellerId(sellerId, pageable);
+        }
+        return salesPage.map(orderMapper::toOrderSummaryDto);
     }
 
 

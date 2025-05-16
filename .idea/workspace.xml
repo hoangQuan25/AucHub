@@ -4,7 +4,23 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="6c40838e-6221-4c81-ab31-df2a3dd2a03a" name="Changes" comment="" />
+    <list default="true" id="6c40838e-6221-4c81-ab31-df2a3dd2a03a" name="Changes" comment="">
+      <change afterPath="$PROJECT_DIR$/frontend/src/components/SellerDecisionModal.jsx" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/frontend/src/pages/MySalesPage.jsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/frontend/src/App.jsx" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/App.jsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/frontend/src/components/ProductDetailModal.jsx" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/components/ProductDetailModal.jsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/frontend/src/components/Sidebar.jsx" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/components/Sidebar.jsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/frontend/src/constants/orderConstants.js" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/constants/orderConstants.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/frontend/src/pages/ProductsPage.jsx" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/pages/ProductsPage.jsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/orders/src/main/java/com/example/orders/config/RabbitMqConfig.java" beforeDir="false" afterPath="$PROJECT_DIR$/orders/src/main/java/com/example/orders/config/RabbitMqConfig.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/orders/src/main/java/com/example/orders/controller/OrdersController.java" beforeDir="false" afterPath="$PROJECT_DIR$/orders/src/main/java/com/example/orders/controller/OrdersController.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/orders/src/main/java/com/example/orders/repository/OrderRepository.java" beforeDir="false" afterPath="$PROJECT_DIR$/orders/src/main/java/com/example/orders/repository/OrderRepository.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/orders/src/main/java/com/example/orders/service/OrderService.java" beforeDir="false" afterPath="$PROJECT_DIR$/orders/src/main/java/com/example/orders/service/OrderService.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/orders/src/main/java/com/example/orders/service/impl/OrderServiceImpl.java" beforeDir="false" afterPath="$PROJECT_DIR$/orders/src/main/java/com/example/orders/service/impl/OrderServiceImpl.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/payments/src/main/java/com/example/payments/config/StripeConfig.java" beforeDir="false" afterPath="$PROJECT_DIR$/payments/src/main/java/com/example/payments/config/StripeConfig.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/payments/src/main/resources/application.yml" beforeDir="false" afterPath="$PROJECT_DIR$/payments/src/main/resources/application.yml" afterDir="false" />
+    </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
     <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
@@ -37,37 +53,38 @@
     <option name="hideEmptyMiddlePackages" value="true" />
     <option name="showLibraryContents" value="true" />
   </component>
-  <component name="PropertiesComponent">{
-  &quot;keyToString&quot;: {
-    &quot;RequestMappingsPanelOrder0&quot;: &quot;0&quot;,
-    &quot;RequestMappingsPanelOrder1&quot;: &quot;1&quot;,
-    &quot;RequestMappingsPanelWidth0&quot;: &quot;75&quot;,
-    &quot;RequestMappingsPanelWidth1&quot;: &quot;75&quot;,
-    &quot;RunOnceActivity.ShowReadmeOnStart&quot;: &quot;true&quot;,
-    &quot;RunOnceActivity.git.unshallow&quot;: &quot;true&quot;,
-    &quot;Spring Boot.ConfigserverApplication.executor&quot;: &quot;Run&quot;,
-    &quot;Spring Boot.EurekaserverApplication.executor&quot;: &quot;Run&quot;,
-    &quot;Spring Boot.GatewayserverApplication.executor&quot;: &quot;Run&quot;,
-    &quot;Spring Boot.LiveAuctionsApplication.executor&quot;: &quot;Run&quot;,
-    &quot;Spring Boot.NotificationsApplication.executor&quot;: &quot;Run&quot;,
-    &quot;Spring Boot.OrdersApplication.executor&quot;: &quot;Run&quot;,
-    &quot;Spring Boot.PaymentsApplication.executor&quot;: &quot;Run&quot;,
-    &quot;Spring Boot.ProductsApplication.executor&quot;: &quot;Run&quot;,
-    &quot;Spring Boot.TimedAuctionsApplication.executor&quot;: &quot;Run&quot;,
-    &quot;Spring Boot.UsersApplication.executor&quot;: &quot;Run&quot;,
-    &quot;git-widget-placeholder&quot;: &quot;feat/payment&quot;,
-    &quot;node.js.detected.package.eslint&quot;: &quot;true&quot;,
-    &quot;node.js.detected.package.tslint&quot;: &quot;true&quot;,
-    &quot;node.js.selected.package.eslint&quot;: &quot;(autodetect)&quot;,
-    &quot;node.js.selected.package.tslint&quot;: &quot;(autodetect)&quot;,
-    &quot;nodejs_package_manager_path&quot;: &quot;npm&quot;,
-    &quot;project.structure.last.edited&quot;: &quot;Modules&quot;,
-    &quot;project.structure.proportion&quot;: &quot;0.0&quot;,
-    &quot;project.structure.side.proportion&quot;: &quot;0.0&quot;,
-    &quot;run.configurations.included.in.services&quot;: &quot;true&quot;,
-    &quot;vue.rearranger.settings.migration&quot;: &quot;true&quot;
+  <component name="PropertiesComponent"><![CDATA[{
+  "keyToString": {
+    "RequestMappingsPanelOrder0": "0",
+    "RequestMappingsPanelOrder1": "1",
+    "RequestMappingsPanelWidth0": "75",
+    "RequestMappingsPanelWidth1": "75",
+    "RunOnceActivity.ShowReadmeOnStart": "true",
+    "RunOnceActivity.git.unshallow": "true",
+    "Spring Boot.ConfigserverApplication.executor": "Run",
+    "Spring Boot.EurekaserverApplication.executor": "Run",
+    "Spring Boot.GatewayserverApplication.executor": "Run",
+    "Spring Boot.LiveAuctionsApplication.executor": "Run",
+    "Spring Boot.NotificationsApplication.executor": "Run",
+    "Spring Boot.OrdersApplication.executor": "Run",
+    "Spring Boot.PaymentsApplication.executor": "Run",
+    "Spring Boot.ProductsApplication.executor": "Run",
+    "Spring Boot.TimedAuctionsApplication.executor": "Run",
+    "Spring Boot.UsersApplication.executor": "Run",
+    "git-widget-placeholder": "payment2",
+    "node.js.detected.package.eslint": "true",
+    "node.js.detected.package.tslint": "true",
+    "node.js.selected.package.eslint": "(autodetect)",
+    "node.js.selected.package.tslint": "(autodetect)",
+    "nodejs_package_manager_path": "npm",
+    "project.structure.last.edited": "Modules",
+    "project.structure.proportion": "0.0",
+    "project.structure.side.proportion": "0.0",
+    "run.configurations.included.in.services": "true",
+    "settings.editor.selected.configurable": "reference.settingsdialog.IDE.editor.colors",
+    "vue.rearranger.settings.migration": "true"
   }
-}</component>
+}]]></component>
   <component name="RunDashboard">
     <option name="configurationTypes">
       <set>
@@ -77,7 +94,7 @@
       </set>
     </option>
   </component>
-  <component name="RunManager" selected="Spring Boot.GatewayserverApplication">
+  <component name="RunManager" selected="Spring Boot.EurekaserverApplication">
     <configuration name="ConfigserverApplication" type="SpringBootApplicationConfigurationType" factoryName="Spring Boot" nameIsGenerated="true">
       <module name="configserver" />
       <option name="SPRING_BOOT_MAIN_CLASS" value="com.example.configserver.ConfigserverApplication" />
@@ -184,6 +201,9 @@
       <workItem from="1746805622829" duration="2317000" />
       <workItem from="1746856700880" duration="9517000" />
       <workItem from="1746895016480" duration="2024000" />
+      <workItem from="1747237216439" duration="7226000" />
+      <workItem from="1747269383464" duration="1288000" />
+      <workItem from="1747377873024" duration="1366000" />
     </task>
     <servers />
   </component>
