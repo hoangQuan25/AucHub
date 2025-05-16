@@ -5,21 +5,22 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="6c40838e-6221-4c81-ab31-df2a3dd2a03a" name="Changes" comment="">
-      <change afterPath="$PROJECT_DIR$/frontend/src/components/SellerDecisionModal.jsx" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/frontend/src/pages/MySalesPage.jsx" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/frontend/src/App.jsx" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/App.jsx" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/frontend/src/components/ProductDetailModal.jsx" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/components/ProductDetailModal.jsx" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/frontend/src/components/Sidebar.jsx" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/components/Sidebar.jsx" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/frontend/src/constants/orderConstants.js" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/constants/orderConstants.js" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/frontend/src/pages/ProductsPage.jsx" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/pages/ProductsPage.jsx" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/orders/src/main/java/com/example/orders/config/RabbitMqConfig.java" beforeDir="false" afterPath="$PROJECT_DIR$/orders/src/main/java/com/example/orders/config/RabbitMqConfig.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/frontend/src/components/ConfirmationModal.jsx" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/components/ConfirmationModal.jsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/frontend/src/context/NotificationContext.jsx" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/context/NotificationContext.jsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/frontend/src/pages/OrderDetailPage.jsx" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/pages/OrderDetailPage.jsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/frontend/src/pages/TimedAuctionDetailPage.jsx" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/pages/TimedAuctionDetailPage.jsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/notifications/src/main/java/com/example/notifications/config/RabbitMqConfig.java" beforeDir="false" afterPath="$PROJECT_DIR$/notifications/src/main/java/com/example/notifications/config/RabbitMqConfig.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/notifications/src/main/java/com/example/notifications/event/NotificationEvents.java" beforeDir="false" afterPath="$PROJECT_DIR$/notifications/src/main/java/com/example/notifications/event/NotificationEvents.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/notifications/src/main/java/com/example/notifications/listener/NotificationEventListener.java" beforeDir="false" afterPath="$PROJECT_DIR$/notifications/src/main/java/com/example/notifications/listener/NotificationEventListener.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/notifications/src/main/java/com/example/notifications/service/NotificationService.java" beforeDir="false" afterPath="$PROJECT_DIR$/notifications/src/main/java/com/example/notifications/service/NotificationService.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/notifications/src/main/java/com/example/notifications/service/impl/NotificationServiceImpl.java" beforeDir="false" afterPath="$PROJECT_DIR$/notifications/src/main/java/com/example/notifications/service/impl/NotificationServiceImpl.java" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/orders/src/main/java/com/example/orders/controller/OrdersController.java" beforeDir="false" afterPath="$PROJECT_DIR$/orders/src/main/java/com/example/orders/controller/OrdersController.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/orders/src/main/java/com/example/orders/repository/OrderRepository.java" beforeDir="false" afterPath="$PROJECT_DIR$/orders/src/main/java/com/example/orders/repository/OrderRepository.java" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/orders/src/main/java/com/example/orders/service/OrderService.java" beforeDir="false" afterPath="$PROJECT_DIR$/orders/src/main/java/com/example/orders/service/OrderService.java" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/orders/src/main/java/com/example/orders/service/impl/OrderServiceImpl.java" beforeDir="false" afterPath="$PROJECT_DIR$/orders/src/main/java/com/example/orders/service/impl/OrderServiceImpl.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/payments/src/main/java/com/example/payments/config/StripeConfig.java" beforeDir="false" afterPath="$PROJECT_DIR$/payments/src/main/java/com/example/payments/config/StripeConfig.java" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/payments/src/main/resources/application.yml" beforeDir="false" afterPath="$PROJECT_DIR$/payments/src/main/resources/application.yml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/timedauctions/src/main/java/com/example/timedauctions/service/impl/TimedAuctionServiceImpl.java" beforeDir="false" afterPath="$PROJECT_DIR$/timedauctions/src/main/java/com/example/timedauctions/service/impl/TimedAuctionServiceImpl.java" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -71,7 +72,7 @@
     "Spring Boot.ProductsApplication.executor": "Run",
     "Spring Boot.TimedAuctionsApplication.executor": "Run",
     "Spring Boot.UsersApplication.executor": "Run",
-    "git-widget-placeholder": "payment2",
+    "git-widget-placeholder": "feat/order-handler",
     "node.js.detected.package.eslint": "true",
     "node.js.detected.package.tslint": "true",
     "node.js.selected.package.eslint": "(autodetect)",
@@ -81,7 +82,7 @@
     "project.structure.proportion": "0.0",
     "project.structure.side.proportion": "0.0",
     "run.configurations.included.in.services": "true",
-    "settings.editor.selected.configurable": "reference.settingsdialog.IDE.editor.colors",
+    "settings.editor.selected.configurable": "preferences.pluginManager",
     "vue.rearranger.settings.migration": "true"
   }
 }]]></component>
@@ -94,7 +95,7 @@
       </set>
     </option>
   </component>
-  <component name="RunManager" selected="Spring Boot.EurekaserverApplication">
+  <component name="RunManager" selected="Spring Boot.GatewayserverApplication">
     <configuration name="ConfigserverApplication" type="SpringBootApplicationConfigurationType" factoryName="Spring Boot" nameIsGenerated="true">
       <module name="configserver" />
       <option name="SPRING_BOOT_MAIN_CLASS" value="com.example.configserver.ConfigserverApplication" />
@@ -185,8 +186,8 @@
   <component name="SharedIndexes">
     <attachedChunks>
       <set>
-        <option value="bundled-jdk-9823dce3aa75-a94e463ab2e7-intellij.indexing.shared.core-IU-243.26053.27" />
-        <option value="bundled-js-predefined-d6986cc7102b-1632447f56bf-JavaScript-IU-243.26053.27" />
+        <option value="bundled-jdk-9823dce3aa75-fbdcb00ec9e3-intellij.indexing.shared.core-IU-251.25410.129" />
+        <option value="bundled-js-predefined-d6986cc7102b-6a121458b545-JavaScript-IU-251.25410.129" />
       </set>
     </attachedChunks>
   </component>
@@ -204,6 +205,7 @@
       <workItem from="1747237216439" duration="7226000" />
       <workItem from="1747269383464" duration="1288000" />
       <workItem from="1747377873024" duration="1366000" />
+      <workItem from="1747406585957" duration="10775000" />
     </task>
     <servers />
   </component>

@@ -527,6 +527,42 @@ public class OrderServiceImpl implements OrderService {
         return salesPage.map(orderMapper::toOrderSummaryDto);
     }
 
+    @Override
+    @Transactional
+    public void processSellerInitiatedCancellation(UUID orderId, String sellerId, String reason) {
+        Order order = orderRepository.findById(orderId)
+                .orElseThrow(() -> new NoSuchElementException("Order not found: " + orderId));
+
+        if (!order.getSellerId().equals(sellerId)) {
+            log.warn("User {} is not the seller for order {}. Seller: {}. Cannot cancel.",
+                    sellerId, orderId, order.getSellerId());
+            throw new SecurityException("Not authorized to cancel this order.");
+        }
+
+        // Add business logic: In which states can a seller cancel?
+        // For example, cannot cancel if already shipped or if auction reopen is in progress.
+        if (order.getOrderStatus() == OrderStatus.AUCTION_REOPEN_INITIATED /* || order is shipped, etc. */) {
+            log.warn("Order {} cannot be cancelled by seller in its current state: {}", orderId, order.getOrderStatus());
+            throw new IllegalStateException("Order cannot be cancelled by seller in its current state.");
+        }
+
+        String cancellationReason = (reason != null && !reason.isBlank()) ? reason : "Cancelled by seller.";
+        order.setOrderStatus(OrderStatus.ORDER_CANCELLED_BY_SELLER);
+        order.setSellerDecision(SellerDecisionType.CANCEL_SALE); // Store the decision type if you have the field
+        // order.setCancellationReason(cancellationReason); // If you add such a field
+
+        orderRepository.save(order);
+        log.info("Order {} cancelled by seller {}. Reason: {}", orderId, sellerId, cancellationReason);
+
+        publishOrderCancelledEvent(order, cancellationReason);
+
+        // IMPORTANT: If payment was already made, you'd need to publish an event
+        // to trigger a refund via the Payments service here.
+        // e.g., if (originalStatus == OrderStatus.PAYMENT_SUCCESSFUL || originalStatus == OrderStatus.AWAITING_SHIPMENT) {
+        // publishRefundRequiredEvent(order);
+        // }
+    }
+
 
     // --- Private Helper Methods for Publishing Events and Scheduling ---
 

@@ -55,6 +55,16 @@ public class OrdersController {
         return ResponseEntity.ok(mySales);
     }
 
+    @PostMapping("/my-sales/{orderId}/cancel")
+    public ResponseEntity<Void> sellerCancelOrder(
+            @PathVariable UUID orderId,
+            @RequestHeader(USER_ID_HEADER) String sellerId,
+            @RequestBody(required = false) /* Optional DTO for cancellation reason */ String reason) { // Or a DTO
+        log.info("Seller {} attempting to cancel order {}", sellerId, orderId);
+        orderService.processSellerInitiatedCancellation(orderId, sellerId, reason);
+        return ResponseEntity.ok().build();
+    }
+
     @GetMapping("/{orderId}")
     public ResponseEntity<OrderDetailDto> getOrderDetails(
             @PathVariable UUID orderId,

@@ -35,6 +35,13 @@ public interface NotificationService {
      */
     void processCommentReply(CommentReplyEvent event);
 
+    void processOrderCreated(OrderCreatedEvent event);
+    void processOrderPaymentDue(OrderCreatedEvent event);
+    void processUserPaymentDefaulted(UserPaymentDefaultedEvent event);
+    void processSellerDecisionRequired(SellerDecisionRequiredEvent event);
+    void processOrderReadyForShipping(OrderReadyForShippingEvent event);
+    void processOrderCancelled(OrderCancelledEvent event);
+
     /**
      * Retrieves a paginated list of notifications for a specific user.
      * @param userId The ID of the user whose notifications are being fetched.
