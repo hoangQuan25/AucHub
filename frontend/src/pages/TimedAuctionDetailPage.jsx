@@ -9,7 +9,7 @@ import CollapsibleSection from "../components/CollapsibleSection";
 import AuctionRules from "../components/AuctionRules";
 // Import or create a CommentSection component later
 // import CommentSection from '../components/CommentSection';
-import { FaChevronLeft, FaChevronRight } from "react-icons/fa";
+import { FaChevronLeft, FaChevronRight, FaCreditCard } from "react-icons/fa";
 
 const getBidIncrement = (currentBidValue) => {
   const currentBid = Number(currentBidValue) || 0; // Ensure it's a number
@@ -92,7 +92,15 @@ function CommentDisplay({ comment, onReply }) {
 function TimedAuctionDetailPage() {
   const { auctionId } = useParams();
   const { keycloak, initialized } = useKeycloak();
+  const [isNavigatingToPayment, setIsNavigatingToPayment] = useState(false);
+  const [navigationError, setNavigationError] = useState("");
   const navigate = useNavigate();
+
+  const handleGoToPayment = () => {
+    setIsNavigatingToPayment(true);
+    setNavigationError("");
+    navigate("/my-orders");
+  };
 
   // --- State ---
   const [auctionDetails, setAuctionDetails] = useState(null);
@@ -714,9 +722,26 @@ function TimedAuctionDetailPage() {
                   </strong>
                 </p>
                 {auctionDetails.winnerId === loggedInUserId && (
-                  <p className="mt-2 font-bold text-green-600">
-                    Congratulations, you won!
-                  </p>
+                  <div className="mt-4 border-t pt-4">
+                    <p className="font-bold text-green-600 mb-2">
+                      Congratulations, you won!
+                    </p>
+                    <button
+                      onClick={handleGoToPayment}
+                      disabled={isNavigatingToPayment}
+                      className="inline-flex items-center gap-2 py-2 px-4 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded disabled:opacity-60"
+                    >
+                      <FaCreditCard />
+                      {isNavigatingToPayment
+                        ? "Loading Payment..."
+                        : "Go to Payment"}
+                    </button>
+                    {navigationError && (
+                      <p className="text-red-600 text-sm mt-2">
+                        {navigationError}
+                      </p>
+                    )}
+                  </div>
                 )}
               </div>
             )}
@@ -892,7 +917,11 @@ function TimedAuctionDetailPage() {
         onClose={handleCloseHammerConfirm}
         onConfirm={handleConfirmEndAuctionEarly}
         title="Confirm End Auction Early"
-        message={`Are you sure you want to end this auction now?\n\nThe current leading bid is ${auctionDetails?.currentBid?.toLocaleString('vi-VN') ?? 'N/A'} VNĐ by '${auctionDetails?.highestBidderUsernameSnapshot ?? 'N/A'}'.\n\nThis will sell the item immediately at the current bid.`}
+        message={`Are you sure you want to end this auction now?\n\nThe current leading bid is ${
+          auctionDetails?.currentBid?.toLocaleString("vi-VN") ?? "N/A"
+        } VNĐ by '${
+          auctionDetails?.highestBidderUsernameSnapshot ?? "N/A"
+        }'.\n\nThis will sell the item immediately at the current bid.`}
         confirmText="Yes, End Auction Now"
         cancelText="No, Continue Auction"
         confirmButtonClass="bg-blue-600 hover:bg-blue-700" // Blue for hammer?

@@ -28,6 +28,8 @@ import org.springframework.transaction.annotation.Transactional; // Import if ne
 import org.springframework.util.CollectionUtils;
 
 import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
+import java.time.format.FormatStyle;
 import java.util.*;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
@@ -45,10 +47,20 @@ public class NotificationServiceImpl implements NotificationService {
     private final TimedAuctionServiceClient timedAuctionServiceClient;
     private final LiveAuctionServiceClient liveAuctionServiceClient;
 
-    // Define constants for notification types (match event names or use custom)
+    private static final String TYPE_AUCTION_STARTED = "AUCTION_STARTED"; // Added for consistency
     private static final String TYPE_AUCTION_ENDED = "AUCTION_ENDED";
     private static final String TYPE_OUTBID = "AUCTION_OUTBID";
     private static final String TYPE_COMMENT_REPLY = "COMMENT_REPLY";
+
+    // --- New Notification Types for Order Events ---
+    private static final String TYPE_ORDER_CREATED = "ORDER_CREATED";
+    private static final String TYPE_ORDER_PAYMENT_DUE = "ORDER_PAYMENT_DUE";
+    private static final String TYPE_SELLER_DECISION_REQUIRED = "SELLER_DECISION_REQUIRED";
+    private static final String TYPE_ORDER_READY_FOR_SHIPPING = "ORDER_READY_FOR_SHIPPING";
+    private static final String TYPE_ORDER_CANCELLED = "ORDER_CANCELLED";
+    private static final String TYPE_USER_PAYMENT_DEFAULTED = "USER_PAYMENT_DEFAULTED"; // Optional: if a direct notification is sent
+
+    private static final DateTimeFormatter SHORT_DATE_TIME_FORMATTER = DateTimeFormatter.ofLocalizedDateTime(FormatStyle.SHORT);
 
 
     @Override
@@ -143,6 +155,146 @@ public class NotificationServiceImpl implements NotificationService {
         saveAndSendNotification(event.getOriginalCommenterId(), TYPE_COMMENT_REPLY, message, event.getAuctionId(), event.getReplyCommentId());
         log.info("Processed CommentReplyEvent for auction {}, notified user {}.", event.getAuctionId(), event.getOriginalCommenterId());
     }
+
+    @Override
+    @Transactional
+    public void processOrderCreated(OrderCreatedEvent event) {
+        log.debug("Processing OrderCreatedEvent for order ID: {}", event.getOrderId());
+        String productTitle = truncate(event.getProductTitleSnapshot(), 50);
+        String deadlineStr = event.getPaymentDeadline().format(SHORT_DATE_TIME_FORMATTER);
+
+        // Notify Buyer (Winner)
+        String buyerMessage = String.format("Your order for '%s' is created! Please pay %s %s by %s.",
+                productTitle,
+                event.getAmountDue().toPlainString(),
+                event.getCurrency(),
+                deadlineStr);
+        saveAndSendNotification(event.getCurrentBidderId(), TYPE_ORDER_CREATED, buyerMessage, event.getAuctionId(), null);
+
+        // Notify Seller
+        // Consider fetching buyer's username if desired for seller's message
+        String sellerMessage = String.format("Order created for your item '%s'. Awaiting payment of %s %s from buyer %s (User ID).",
+                productTitle,
+                event.getAmountDue().toPlainString(),
+                event.getCurrency(),
+                event.getCurrentBidderId() // Ideally, fetch username here
+        );
+        saveAndSendNotification(event.getSellerId(), TYPE_ORDER_CREATED, sellerMessage, event.getAuctionId(), null);
+
+        log.info("Processed OrderCreatedEvent for order {}, notified buyer {} and seller {}.",
+                event.getOrderId(), event.getCurrentBidderId(), event.getSellerId());
+    }
+
+    @Override
+    @Transactional
+    public void processOrderPaymentDue(OrderCreatedEvent event) { // Reusing OrderCreatedEvent DTO
+        log.debug("Processing OrderPaymentDueEvent for order ID: {}, new current bidder: {}", event.getOrderId(), event.getCurrentBidderId());
+        String productTitle = truncate(event.getProductTitleSnapshot(), 50);
+        String deadlineStr = event.getPaymentDeadline().format(SHORT_DATE_TIME_FORMATTER);
+
+        // Notify the new current bidder (e.g., 2nd or 3rd place winner)
+        String bidderMessage = String.format("Good news! The item '%s' is now offered to you. Please pay %s %s by %s.",
+                productTitle,
+                event.getAmountDue().toPlainString(),
+                event.getCurrency(),
+                deadlineStr);
+        saveAndSendNotification(event.getCurrentBidderId(), TYPE_ORDER_PAYMENT_DUE, bidderMessage, event.getAuctionId(), null);
+
+        // Optionally, notify the seller that the offer has moved to the next bidder
+        String sellerMessage = String.format("The offer for item '%s' (Order: %s) has been extended to the next bidder %s.",
+                productTitle, event.getOrderId().toString().substring(0,8), event.getCurrentBidderId());
+        saveAndSendNotification(event.getSellerId(), TYPE_ORDER_PAYMENT_DUE, sellerMessage, event.getAuctionId(), null);
+
+
+        log.info("Processed OrderPaymentDueEvent for order {}, notified new bidder {} and seller {}.",
+                event.getOrderId(), event.getCurrentBidderId(), event.getSellerId());
+    }
+
+    @Override
+    @Transactional
+    public void processUserPaymentDefaulted(UserPaymentDefaultedEvent event) {
+        log.debug("Processing UserPaymentDefaultedEvent for order ID: {}, user: {}", event.getOrderId(), event.getDefaultedUserId());
+        // Business decision: Do we send a direct notification to the user who defaulted?
+        // It might be perceived negatively. Often, the consequence (e.g., seller needs to decide)
+        // is notified to other parties.
+        // For now, let's log it. If a direct notification is desired:
+        /*
+        String productTitle = "(Product related to order " + event.getOrderId().toString().substring(0,8) + ")";
+        // Potentially fetch product title if crucial and not in event, but avoid if possible for perf.
+        String userMessage = String.format("Payment for order concerning auction '%s' was not completed by the deadline. Order ID: %s.",
+                                           event.getAuctionId().toString().substring(0,8), event.getOrderId().toString().substring(0,8));
+        saveAndSendNotification(event.getDefaultedUserId(), TYPE_USER_PAYMENT_DEFAULTED, userMessage, event.getAuctionId(), null);
+        log.info("Sent UserPaymentDefaulted notification to user {}", event.getDefaultedUserId());
+        */
+        log.info("UserPaymentDefaultedEvent processed for user {}. No direct user notification sent by default.", event.getDefaultedUserId());
+        // The impact of this default is usually covered by notifications like SELLER_DECISION_REQUIRED or ORDER_PAYMENT_DUE to next bidder.
+    }
+
+    @Override
+    @Transactional
+    public void processSellerDecisionRequired(SellerDecisionRequiredEvent event) {
+        log.debug("Processing SellerDecisionRequiredEvent for order ID: {}", event.getOrderId());
+        String productTitle = truncate(event.getProductTitleSnapshot(), 50);
+
+        String sellerMessage = String.format("Action required for '%s' (Order: %s). Payment wasn't completed by bidder %s. Please decide the next step.",
+                productTitle,
+                event.getOrderId().toString().substring(0,8),
+                event.getDefaultedBidderId()); // Ideally, fetch username
+        saveAndSendNotification(event.getSellerId(), TYPE_SELLER_DECISION_REQUIRED, sellerMessage, event.getAuctionId(), null);
+
+        log.info("Processed SellerDecisionRequiredEvent for order {}, notified seller {}.", event.getOrderId(), event.getSellerId());
+    }
+
+    @Override
+    @Transactional
+    public void processOrderReadyForShipping(OrderReadyForShippingEvent event) {
+        log.debug("Processing OrderReadyForShippingEvent for order ID: {}", event.getOrderId());
+        String productTitle = truncate(event.getProductTitleSnapshot(), 50);
+
+        // Notify Buyer
+        String buyerMessage = String.format("Payment confirmed for '%s'! The seller (%s) is preparing it for shipping. Order: %s",
+                productTitle,
+                event.getSellerId(), // Ideally, fetch seller username
+                event.getOrderId().toString().substring(0,8));
+        saveAndSendNotification(event.getBuyerId(), TYPE_ORDER_READY_FOR_SHIPPING, buyerMessage, event.getAuctionId(), null);
+
+        // Notify Seller
+        String sellerMessage = String.format("Payment received for '%s' (Order: %s) from buyer %s! Please prepare for shipping.",
+                productTitle,
+                event.getOrderId().toString().substring(0,8),
+                event.getBuyerId()); // Ideally, fetch buyer username
+        saveAndSendNotification(event.getSellerId(), TYPE_ORDER_READY_FOR_SHIPPING, sellerMessage, event.getAuctionId(), null);
+
+        log.info("Processed OrderReadyForShippingEvent for order {}, notified buyer {} and seller {}.",
+                event.getOrderId(), event.getBuyerId(), event.getSellerId());
+    }
+
+    @Override
+    @Transactional
+    public void processOrderCancelled(OrderCancelledEvent event) {
+        log.debug("Processing OrderCancelledEvent for order ID: {}", event.getOrderId());
+        // String productTitle = truncate(event.getProductTitleSnapshot(), 50); // Product title is not in OrderCancelledEvent DTO
+        // We might need to adjust OrderCancelledEvent DTO or fetch product title if it's essential for the message.
+        // For now, using auction ID and order ID.
+        String baseMessage = String.format("Order %s (related to auction %s) has been cancelled. Reason: %s.",
+                event.getOrderId().toString().substring(0,8),
+                event.getAuctionId().toString().substring(0,8),
+                truncate(event.getCancellationReason(), 100));
+
+        // Notify Seller
+        saveAndSendNotification(event.getSellerId(), TYPE_ORDER_CANCELLED, baseMessage + " (As Seller)", event.getAuctionId(), null);
+
+        // Notify the bidder involved at cancellation, if they are not the seller (and if a bidder was involved)
+        if (event.getCurrentBidderIdAtCancellation() != null && !event.getCurrentBidderIdAtCancellation().equals(event.getSellerId())) {
+            saveAndSendNotification(event.getCurrentBidderIdAtCancellation(), TYPE_ORDER_CANCELLED, baseMessage + " (As Buyer/Bidder)", event.getAuctionId(), null);
+            log.info("Processed OrderCancelledEvent for order {}, notified seller {} and involved bidder {}.",
+                    event.getOrderId(), event.getSellerId(), event.getCurrentBidderIdAtCancellation());
+        } else {
+            log.info("Processed OrderCancelledEvent for order {}, notified seller {}. No distinct involved bidder to notify or bidder was seller.",
+                    event.getOrderId(), event.getSellerId());
+        }
+    }
+
 
     /**
      * Retrieves a paginated list of notifications for a specific user.
@@ -556,11 +708,4 @@ public class NotificationServiceImpl implements NotificationService {
         }
         return text.substring(0, maxLength) + "...";
     }
-
-    // --- TODO: Implement methods for fetching/managing notifications via API ---
-    // public Page<NotificationDto> getUserNotifications(String userId, Pageable pageable) { ... }
-    // public long getUnreadNotificationCount(String userId) { ... }
-    // public void markNotificationsAsRead(String userId, List<Long> notificationIds) { ... }
-    // public void markAllNotificationsAsRead(String userId) { ... }
-
 }

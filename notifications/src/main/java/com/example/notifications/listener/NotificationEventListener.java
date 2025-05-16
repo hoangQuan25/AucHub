@@ -6,6 +6,7 @@ import com.example.notifications.service.NotificationService; // Create this ser
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.amqp.rabbit.annotation.RabbitListener;
+import org.springframework.messaging.handler.annotation.Payload;
 import org.springframework.stereotype.Component;
 
 @Component
@@ -56,6 +57,73 @@ public class NotificationEventListener {
         } catch (Exception e) {
             log.error("Error processing CommentReplyEvent for comment {}: {}", event.getReplyCommentId(), e.getMessage(), e);
             // Consider error handling / dead-lettering
+        }
+    }
+
+    @RabbitListener(queues = RabbitMqConfig.ORDER_CREATED_QUEUE)
+    public void handleOrderCreated(@Payload OrderCreatedEvent event) {
+        log.info("Received OrderCreatedEvent: orderId={}, bidderId={}", event.getOrderId(), event.getCurrentBidderId());
+        try {
+            // You'll need a corresponding processOrderCreated method in NotificationService
+            notificationService.processOrderCreated(event);
+        } catch (Exception e) {
+            log.error("Error processing OrderCreatedEvent for order {}: {}", event.getOrderId(), e.getMessage(), e);
+            // Consider error handling / dead-lettering
+        }
+    }
+
+    @RabbitListener(queues = RabbitMqConfig.ORDER_PAYMENT_DUE_QUEUE)
+    public void handleOrderPaymentDue(@Payload OrderCreatedEvent event) { // Reusing OrderCreatedEvent as discussed
+        log.info("Received OrderPaymentDueEvent (using OrderCreatedEvent structure): orderId={}, newBidderId={}", event.getOrderId(), event.getCurrentBidderId());
+        try {
+            // You'll need a corresponding processOrderPaymentDue method in NotificationService
+            notificationService.processOrderPaymentDue(event);
+        } catch (Exception e) {
+            log.error("Error processing OrderPaymentDueEvent for order {}: {}", event.getOrderId(), e.getMessage(), e);
+        }
+    }
+
+    @RabbitListener(queues = RabbitMqConfig.USER_PAYMENT_DEFAULTED_QUEUE)
+    public void handleUserPaymentDefaulted(@Payload UserPaymentDefaultedEvent event) {
+        log.info("Received UserPaymentDefaultedEvent: orderId={}, defaultedUserId={}", event.getOrderId(), event.getDefaultedUserId());
+        try {
+            // You'll need a corresponding processUserPaymentDefaulted method in NotificationService
+            notificationService.processUserPaymentDefaulted(event);
+        } catch (Exception e) {
+            log.error("Error processing UserPaymentDefaultedEvent for order {}: {}", event.getOrderId(), e.getMessage(), e);
+        }
+    }
+
+    @RabbitListener(queues = RabbitMqConfig.ORDER_SELLER_DECISION_REQUIRED_QUEUE)
+    public void handleSellerDecisionRequired(@Payload SellerDecisionRequiredEvent event) {
+        log.info("Received SellerDecisionRequiredEvent: orderId={}, sellerId={}", event.getOrderId(), event.getSellerId());
+        try {
+            // You'll need a corresponding processSellerDecisionRequired method in NotificationService
+            notificationService.processSellerDecisionRequired(event);
+        } catch (Exception e) {
+            log.error("Error processing SellerDecisionRequiredEvent for order {}: {}", event.getOrderId(), e.getMessage(), e);
+        }
+    }
+
+    @RabbitListener(queues = RabbitMqConfig.ORDER_READY_FOR_SHIPPING_QUEUE)
+    public void handleOrderReadyForShipping(@Payload OrderReadyForShippingEvent event) {
+        log.info("Received OrderReadyForShippingEvent: orderId={}, buyerId={}", event.getOrderId(), event.getBuyerId());
+        try {
+            // You'll need a corresponding processOrderReadyForShipping method in NotificationService
+            notificationService.processOrderReadyForShipping(event);
+        } catch (Exception e) {
+            log.error("Error processing OrderReadyForShippingEvent for order {}: {}", event.getOrderId(), e.getMessage(), e);
+        }
+    }
+
+    @RabbitListener(queues = RabbitMqConfig.ORDER_CANCELLED_QUEUE)
+    public void handleOrderCancelled(@Payload OrderCancelledEvent event) {
+        log.info("Received OrderCancelledEvent: orderId={}, reason={}", event.getOrderId(), event.getCancellationReason());
+        try {
+            // You'll need a corresponding processOrderCancelled method in NotificationService
+            notificationService.processOrderCancelled(event);
+        } catch (Exception e) {
+            log.error("Error processing OrderCancelledEvent for order {}: {}", event.getOrderId(), e.getMessage(), e);
         }
     }
 }

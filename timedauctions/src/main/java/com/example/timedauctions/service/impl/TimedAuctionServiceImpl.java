@@ -393,6 +393,7 @@ public class TimedAuctionServiceImpl implements TimedAuctionService {
         BigDecimal startPrice = auction.getStartPrice();
         BigDecimal currentVisibleBid = auction.getCurrentBid() == null ? BigDecimal.ZERO : auction.getCurrentBid(); // Use 0 if no bids yet
 
+
         if (runnerUpProxy == null) {
             // Only one bidder (the winner)
             // Visible price is the start price, but cannot exceed winner's max bid.
@@ -410,6 +411,14 @@ public class TimedAuctionServiceImpl implements TimedAuctionService {
             BigDecimal floorPrice = requiredToBeatRunnerUp.max(startPrice);
 
             newVisiblePrice = floorPrice.min(winnerProxy.getMaxBid()); // Final price is the floor, clamped by winner's max
+        }
+
+        BigDecimal reserve = auction.getReservePrice();
+        if (!auction.isReserveMet()
+                && reserve != null
+                && winnerProxy.getMaxBid().compareTo(reserve) >= 0
+                && newVisiblePrice.compareTo(reserve) < 0) {
+            newVisiblePrice = reserve;
         }
 
         // --- 4. Check for Change ---

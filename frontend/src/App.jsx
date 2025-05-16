@@ -1,6 +1,7 @@
 import React, { useEffect } from "react";
 import { useKeycloak } from "@react-keycloak/web";
 import { BrowserRouter, Route, Routes, Navigate } from "react-router-dom";
+import { ToastContainer } from 'react-toastify';
 import HomePage from "./pages/HomePage";
 import LoginPage from "./pages/LoginPage";
 import UserInfoPage from "./pages/UserInfoPage"; // Renamed/New page
@@ -50,6 +51,18 @@ function App() {
 
   return (
     <BrowserRouter>
+    <ToastContainer
+        position="top-right"
+        autoClose={5000}
+        hideProgressBar={false}
+        newestOnTop={true}
+        closeOnClick
+        rtl={false}
+        pauseOnFocusLoss
+        draggable
+        pauseOnHover
+        theme="light" // Or "dark", "colored"
+      />
       <Routes>
         {/* Public Login Route */}
         <Route

@@ -79,4 +79,12 @@ public interface OrderService {
      * @return A page of OrderSummaryDto.
      */
     Page<OrderSummaryDto> getMySales(String sellerId, String statusFilter, Pageable pageable);
+
+    /**
+     * 
+     * @param orderId
+     * @param sellerId
+     * @param reason
+     */
+    void processSellerInitiatedCancellation(UUID orderId, String sellerId, String reason);
 }

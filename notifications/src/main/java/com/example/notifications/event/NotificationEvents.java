@@ -62,4 +62,84 @@ public final class NotificationEvents {
         @NotNull String replierUsernameSnapshot;
         @NotNull String replyCommentTextSample; // Snippet of the reply text
     }
+
+    @Value
+    @Builder
+    public static class OrderCreatedEvent {
+        UUID eventId;
+        LocalDateTime eventTimestamp;
+        UUID orderId;
+        UUID auctionId;
+        Long productId; // Corrected to Long
+        String productTitleSnapshot;
+        String sellerId;
+        String currentBidderId;
+        String currentBidderUsernameSnapshot; // Added field
+        BigDecimal amountDue;
+        String currency;
+        LocalDateTime paymentDeadline;
+        String initialOrderStatus; // As String
+        String auctionType;
+    }
+
+    @Value
+    @Builder
+    public static class UserPaymentDefaultedEvent {
+        UUID eventId;
+        LocalDateTime eventTimestamp;
+        String defaultedUserId;
+        UUID orderId;
+        UUID auctionId;
+        BigDecimal amountDefaulted;
+        String currency;
+        int paymentOfferAttempt;
+    }
+
+    @Value
+    @Builder
+    public static class SellerDecisionRequiredEvent {
+        UUID eventId;
+        LocalDateTime eventTimestamp;
+        UUID orderId;
+        UUID auctionId;
+        Long productId; // Corrected to Long
+        String productTitleSnapshot;
+        String sellerId;
+        String defaultedBidderId;
+        BigDecimal defaultedBidAmount;
+        boolean canOfferToSecondBidder;
+        String eligibleSecondBidderId;
+        BigDecimal eligibleSecondBidAmount;
+        int paymentOfferAttemptOfDefaultingBidder;
+    }
+
+    @Value
+    @Builder
+    public static class OrderReadyForShippingEvent {
+        UUID eventId;
+        LocalDateTime eventTimestamp;
+        UUID orderId;
+        UUID auctionId;
+        Long productId; // Corrected to Long
+        String productTitleSnapshot;
+        String sellerId;
+        String buyerId;
+        Long amountPaid; // Corrected to Long (smallest currency unit)
+        String currency;
+        String paymentTransactionRef;
+    }
+
+    @Value
+    @Builder
+    public static class OrderCancelledEvent {
+        UUID eventId;
+        LocalDateTime eventTimestamp;
+        UUID orderId;
+        UUID auctionId;
+        Long productId; // Corrected to Long
+        String sellerId;
+        String currentBidderIdAtCancellation;
+        String finalOrderStatus; // As String, from OrderStatus.toString() or similar
+        String cancellationReason;
+    }
 }

@@ -47,9 +47,9 @@ function ConfirmationModal({
         <h3 className="text-2xl font-bold text-gray-800 mb-4">{title}</h3>
 
         {/* Message */}
-        <p className="text-gray-600 text-base whitespace-pre-wrap mb-6">
+        <div className="text-gray-600 text-base whitespace-pre-wrap mb-6">
           {message}
-        </p>
+        </div>
 
         {/* Error Box */}
         {error && (

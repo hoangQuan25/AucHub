@@ -4,6 +4,7 @@ import { useKeycloak } from '@react-keycloak/web';
 import SockJS from 'sockjs-client/dist/sockjs'; // Import SockJS
 import { Client } from '@stomp/stompjs'; // Import STOMP client
 import apiClient from '../api/apiClient'; // If needed for mark as read API calls
+import { toast } from 'react-toastify';
 
 // --- Helper: Create Context ---
 const NotificationContext = createContext({
@@ -49,8 +50,37 @@ export const NotificationProvider = ({ children }) => {
       if (!notificationDto.isRead) {
         setUnreadCount(prev => prev + 1);
       }
-      // TODO: Optionally show a browser notification/toast here too
-      // Example: new Notification(notificationDto.type, { body: notificationDto.message });
+      
+      if (notificationDto.message) {
+      let toastType = 'info'; // Default toast type
+      const notificationTypeUpper = notificationDto.type?.toUpperCase();
+
+      // Example logic to determine toast type based on notification type
+      // You can customize these keywords and logic as needed.
+      if (notificationTypeUpper?.includes('ERROR') || 
+          notificationTypeUpper?.includes('CANCELLED') || 
+          notificationTypeUpper?.includes('FAILED') ||
+          notificationTypeUpper?.includes('DEFAULTED')) {
+        toastType = 'error';
+      } else if (notificationTypeUpper?.includes('SUCCESS') || 
+                 notificationTypeUpper?.includes('COMPLETED') || 
+                 notificationTypeUpper?.includes('CONFIRMED') || 
+                 notificationTypeUpper?.includes('READY_FOR_SHIPPING') ||
+                 notificationTypeUpper?.includes('CREATED') ) { // e.g. Order Created
+        toastType = 'success';
+      } else if (notificationTypeUpper?.includes('WARNING') || 
+                 notificationTypeUpper?.includes('OUTBID') || 
+                 notificationTypeUpper?.includes('DECISION_REQUIRED') ||
+                 notificationTypeUpper?.includes('PAYMENT_DUE')) {
+        toastType = 'warning';
+      }
+
+      toast(notificationDto.message, {
+        type: toastType, // Uses the determined type: 'info', 'success', 'warning', 'error'
+        // You can add more options here from react-toastify documentation
+        // e.g., onClick, toastId, etc.
+      });
+    }
 
     } catch (e) {
       console.error("Failed to parse notification message:", message.body, e);
