@@ -1,20 +1,16 @@
-// src/pages/OrderDetailPage.jsx
 import React, { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import CountdownTimer from "../components/CountdownTimer";
 import ConfirmationModal from "../components/ConfirmationModal";
 import { FaCreditCard } from "react-icons/fa";
 import { orderStatusMap } from "../constants/orderConstants";
-import apiClient from "../api/apiClient"; // Your API client
-import { useKeycloak } from "@react-keycloak/web"; // To get current user ID
+import apiClient from "../api/apiClient";
+import { useKeycloak } from "@react-keycloak/web";
 
-// Stripe Imports - will be used later
 import { loadStripe } from "@stripe/stripe-js";
 import { Elements } from "@stripe/react-stripe-js";
-import CheckoutForm from "../components/CheckoutForm"; // We will create this component
+import CheckoutForm from "../components/CheckoutForm";
 
-// Replace with your actual Stripe Test Publishable Key
-// IMPORTANT: Store this in an environment variable (e.g., process.env.REACT_APP_STRIPE_PUBLISHABLE_KEY)
 const STRIPE_PUBLISHABLE_KEY =
   "pk_test_51RN788QoAglQPjjvhupJXkisXj7R7wt7epc8hYTUbDBTCxumwAownPBKNMM8NfNVza13yVVf6SrfAnmAxoiJtfRw00cIVf2LIl";
 const stripePromise = loadStripe(STRIPE_PUBLISHABLE_KEY);
@@ -30,16 +26,17 @@ function OrderDetailPage() {
 
   const [isPaymentConfirmOpen, setIsPaymentConfirmOpen] = useState(false);
   const [isCancelConfirmOpen, setIsCancelConfirmOpen] = useState(false);
+  const [isConfirmFulfillmentOpen, setIsConfirmFulfillmentOpen] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
   const [modalError, setModalError] = useState("");
 
-  // New state for Stripe Payment Intent client secret
   const [clientSecret, setClientSecret] = useState(null);
   const [showCheckoutForm, setShowCheckoutForm] = useState(false);
 
   const [isSellerCancelOpen, setIsSellerCancelOpen] = useState(false);
   const [sellerCancelReason, setSellerCancelReason] = useState("");
 
+  // Fetch order details
   useEffect(() => {
     if (!orderId || !initialized) {
       setIsLoading(false);
@@ -55,14 +52,11 @@ function OrderDetailPage() {
       setIsLoading(true);
       setError(null);
       try {
-        // This endpoint needs to be created in your Orders Service
-        const response = await apiClient.get(`/orders/${orderId}`); // Path via gateway
+        const response = await apiClient.get(`/orders/${orderId}`);
         setOrder(response.data);
       } catch (err) {
         console.error("Failed to fetch order details:", err);
-        setError(
-          err.response?.data?.message || "Could not load order details."
-        );
+        setError(err.response?.data?.message || "Could not load order details.");
       } finally {
         setIsLoading(false);
       }
@@ -71,6 +65,17 @@ function OrderDetailPage() {
     fetchOrderDetails();
   }, [orderId, initialized, keycloak.authenticated]);
 
+  const refreshOrderDetails = async () => {
+    if (!orderId) return;
+    try {
+      const response = await apiClient.get(`/orders/${orderId}`);
+      setOrder(response.data);
+    } catch (err) {
+      console.error("Failed to re-fetch order details:", err);
+    }
+  };
+
+  /* ---------- Action handlers ---------- */
   const handleOpenPaymentAttempt = async () => {
     if (!order || !keycloak.subject) {
       setModalError("Order details or user information is missing.");
@@ -79,46 +84,38 @@ function OrderDetailPage() {
     setIsProcessing(true);
     setModalError("");
     try {
-      // Call your backend Payment Service to create a PaymentIntent
       const response = await apiClient.post("/payments/create-intent", {
-        // Path via gateway
         orderId: order.id,
-        amount: order.currentAmountDue, // Assuming this is in smallest currency unit (e.g., Dong)
-        currency: "vnd", // Your default currency
+        amount: order.currentAmountDue,
+        currency: order.currency || "vnd",
         userId: keycloak.subject,
-        description: `Payment for Order #${order.id.substring(
-          0,
-          8
-        )} - Auction: ${order.items[0]?.title || "item"}`,
+        description: `Payment for Order #${order.id.substring(0, 8)}`,
       });
 
       if (response.data && response.data.clientSecret) {
         setClientSecret(response.data.clientSecret);
-        setShowCheckoutForm(true); // Show the Stripe CheckoutForm
-        setIsPaymentConfirmOpen(false); // Close the confirmation modal
+        setShowCheckoutForm(true);
+        setIsPaymentConfirmOpen(false);
       } else {
         throw new Error("Failed to initialize payment. Missing client secret.");
       }
     } catch (err) {
       console.error("Failed to create payment intent:", err);
       setModalError(
-        err.response?.data?.message ||
-          err.message ||
-          "Could not initiate payment."
+        err.response?.data?.message || err.message || "Could not initiate payment."
       );
-      // Keep modal open or show error differently
-      setIsPaymentConfirmOpen(true); // Keep modal open to show error or close it
+      setIsPaymentConfirmOpen(true);
     } finally {
       setIsProcessing(false);
     }
   };
 
-  // This is triggered by the confirmation modal for "Make Payment"
   const handleConfirmPayment = () => {
-    setIsPaymentConfirmOpen(false); // Close this modal
-    handleOpenPaymentAttempt(); // Proceed to attempt creating payment intent & showing form
+    setIsPaymentConfirmOpen(false);
+    handleOpenPaymentAttempt();
   };
 
+  /* Buyer cancel */
   const handleOpenCancelConfirm = () => {
     setModalError("");
     setIsCancelConfirmOpen(true);
@@ -132,43 +129,48 @@ function OrderDetailPage() {
     }
     setIsProcessing(true);
     setModalError("");
-    console.log("Attempting buyer cancellation for order:", orderId);
     try {
-      // This endpoint needs to be created in your Orders Service
-      // It should verify the user is the currentBidderId for the order.
       await apiClient.post(`/orders/${order.id}/buyer-cancel-attempt`);
-      alert(
-        "Your request to cancel the payment for this order has been submitted."
-      );
+      alert("Your cancellation request has been submitted.");
       setIsCancelConfirmOpen(false);
-      // Re-fetch order details to reflect new status, or navigate away
-      // For now, let's simulate a status change and disable payment
-      setOrder((prev) => ({ ...prev, status: "CANCELLED" })); // Or a specific "buyer_cancelled" status
+      setOrder((prev) => ({ ...prev, status: "CANCELLED" }));
     } catch (err) {
       console.error("Failed to cancel order payment attempt:", err);
-      setModalError(
-        err.response?.data?.message ||
-          "Could not cancel this order payment. Please try again."
-      );
-      // Keep modal open to show error
+      setModalError(err.response?.data?.message || "Could not cancel this order. Try again.");
     } finally {
       setIsProcessing(false);
     }
   };
 
-  // --- Render Logic ---
-  if (isLoading && !order)
-    return <div className="text-center p-10">Loading Order Details...</div>;
-  if (error)
-    return <div className="text-center p-10 text-red-600">{error}</div>;
-  if (!order)
-    return <div className="text-center p-10">Order data not available.</div>;
+  /* Seller fulfillment confirm */
+  const openConfirmFulfillmentModal = () => {
+    setModalError("");
+    setIsConfirmFulfillmentOpen(true);
+  };
+  const closeConfirmFulfillmentModal = () => setIsConfirmFulfillmentOpen(false);
 
-  const isSeller =
-    initialized &&
-    keycloak.authenticated &&
-    keycloak.subject === order.sellerId;
+  const handleConfirmFulfillment = async () => {
+    const isSeller = initialized && keycloak.authenticated && order && keycloak.subject === order.sellerId;
+    if (!order || !keycloak.subject || !isSeller) {
+      setModalError("Order details are missing or you're not authorized.");
+      return;
+    }
+    setIsProcessing(true);
+    setModalError("");
+    try {
+      await apiClient.post(`/orders/my-sales/${order.id}/confirm-fulfillment`);
+      alert("Order fulfillment confirmed. Await shipment.");
+      closeConfirmFulfillmentModal();
+      await refreshOrderDetails();
+    } catch (err) {
+      console.error("Failed to confirm fulfillment:", err);
+      setModalError(err.response?.data?.message || "Could not confirm fulfillment.");
+    } finally {
+      setIsProcessing(false);
+    }
+  };
 
+  /* Seller cancel */
   const openSellerCancel = () => {
     setModalError("");
     setSellerCancelReason("");
@@ -184,41 +186,37 @@ function OrderDetailPage() {
     setIsProcessing(true);
     setModalError("");
     try {
-      await apiClient.post(
-        `/orders/my-sales/${order.id}/cancel`,
-        sellerCancelReason // sends plain text body; adjust if DTO required
-      );
+      await apiClient.post(`/orders/my-sales/${order.id}/cancel`, sellerCancelReason);
       closeSellerCancel();
-      // re-fetch details so UI updates
-      const { data } = await apiClient.get(`/orders/${order.id}`);
-      setOrder(data);
+      await refreshOrderDetails();
     } catch (err) {
       console.error("Seller cancel failed:", err);
-      setModalError(
-        err.response?.data?.message || "Could not cancel the order."
-      );
+      setModalError(err.response?.data?.message || "Could not cancel the order.");
     } finally {
       setIsProcessing(false);
     }
   };
 
-  const item =
-    order.items && order.items.length > 0
-      ? order.items[0]
-      : {
-          title: "N/A",
-          imageUrl: "/placeholder.png",
-          variation: "",
-          quantity: 0,
-          price: 0,
-        };
-  const requiresPayment =
-    order.status === "PENDING_PAYMENT" ||
-    order.status === "AWAITING_WINNER_PAYMENT" ||
-    order.status === "AWAITING_NEXT_BIDDER_PAYMENT";
-  const finalPrice = order.currentAmountDue || order.totalPrice || 0; // Use currentAmountDue from OrderDetailDto
+  /* ---------- Derived helpers ---------- */
+  const isSeller = initialized && keycloak.authenticated && order && keycloak.subject === order.sellerId;
+  const isBuyer = initialized && keycloak.authenticated && order && keycloak.subject === order.currentBidderId;
 
-  // If showing CheckoutForm, render it instead of the main details for payment
+  const finalPrice = order?.currentAmountDue || 0;
+  const items = order?.items || [];
+  const firstItem = items[0] || {};
+
+  const isAwaitingBuyerPayment = order && (
+    order.status === "AWAITING_WINNER_PAYMENT" || order.status === "AWAITING_NEXT_BIDDER_PAYMENT"
+  );
+
+  const isAwaitingSellerFulfillmentConfirmation = order && order.status === "AWAITING_FULFILLMENT_CONFIRMATION";
+
+  /* ---------- Conditional early returns ---------- */
+  if (isLoading && !order) return <div className="text-center p-10">Loading Order Details...</div>;
+  if (error) return <div className="text-center p-10 text-red-600">{error}</div>;
+  if (!order) return <div className="text-center p-10">Order data not available.</div>;
+
+  /* ---------- Stripe Checkout ---------- */
   if (showCheckoutForm && clientSecret) {
     const appearance = { theme: "stripe" };
     const options = { clientSecret, appearance };
@@ -232,189 +230,216 @@ function OrderDetailPage() {
             amount={finalPrice}
             currency={order.currency || "vnd"}
             onSuccess={() => {
-              alert(
-                "Payment submitted! Awaiting final confirmation from server."
-              );
+              alert("Payment submitted! Awaiting confirmation.");
               setShowCheckoutForm(false);
-              // Navigate or refetch order details to update status
-              // For now, navigate back to my orders
-              navigate("/my-orders");
+              refreshOrderDetails();
             }}
             onError={(stripeErrorMsg) => {
-              alert(`Payment Error: ${stripeErrorMsg}`); // Show error from Stripe.js
-              setShowCheckoutForm(false); // Hide form, allow retry
+              alert(`Payment Error: ${stripeErrorMsg}`);
+              setShowCheckoutForm(false);
             }}
           />
         </Elements>
         <button
-          onClick={() => setShowCheckoutForm(false)} // Allow user to cancel out of Stripe form
+          onClick={() => setShowCheckoutForm(false)}
           className="mt-4 w-full px-4 py-2 border border-gray-300 text-gray-700 rounded hover:bg-gray-100"
         >
-          Cancel Payment
+          Cancel Payment Process
         </button>
       </div>
     );
   }
 
+  /* ---------- Main Render ---------- */
   return (
     <div className="max-w-4xl mx-auto p-4 sm:p-6 lg:p-8">
       <h1 className="text-2xl sm:text-3xl font-bold text-gray-800 mb-6">
         Order Details #{(order.id || "N/A").toString().substring(0, 8)}
       </h1>
 
-      <div className="bg-white rounded-lg shadow-md border border-gray-200 overflow-hidden">
-        <div className="px-6 py-4 border-b border-gray-200 bg-gray-50 flex justify-between items-center">
-          <div>
-            <span className="text-sm text-gray-600">
-              Order for auction: {order.auctionId?.substring(0, 8) || "N/A"}
-            </span>
-            <p className="font-semibold text-gray-800">
-              Seller: {order.sellerName || "N/A"}
-            </p>
-          </div>
-          <span
-            className={`text-sm font-medium px-3 py-1 rounded-full ${
-              requiresPayment
-                ? "bg-orange-100 text-orange-800"
-                : order.status === "DELIVERING"
-                ? "bg-blue-100 text-blue-800"
-                : order.status === "COMPLETED"
-                ? "bg-green-100 text-green-800"
-                : order.status === "CANCELLED" ||
-                  order.status === "ORDER_CANCELLED_BY_SELLER" ||
-                  order.status === "ORDER_CANCELLED_NO_PAYMENT_FINAL"
-                ? "bg-red-100 text-red-800"
-                : "bg-gray-100 text-gray-800"
-            }`}
+      {/* Meta information */}
+      <ul className="mb-6 space-y-1 text-sm text-gray-700">
+        <li><strong>Auction ID:</strong> {order.auctionId?.substring(0, 8) || "N/A"}</li>
+        <li><strong>Seller:</strong> {order.sellerUsernameSnapshot} ({order.sellerId})</li>
+        <li><strong>Status:</strong> {orderStatusMap[order.status] || order.status}</li>
+        <li><strong>Auction Type:</strong> {order.auctionType}</li>
+        <li><strong>Created At:</strong> {new Date(order.createdAt).toLocaleString()}</li>
+        <li><strong>Updated At:</strong> {new Date(order.updatedAt).toLocaleString()}</li>
+      </ul>
+
+      {/* Items list */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 mb-6">
+        {items.map((item) => (
+          <div
+            key={item.productId}
+            className="flex gap-4 items-center bg-white p-4 rounded-lg shadow border border-gray-200"
           >
-            {orderStatusMap[order.status] || order.status}
-          </span>
-        </div>
-
-        <div className="p-6 flex flex-col sm:flex-row items-start gap-6">
-          <img
-            src={item.imageUrl}
-            alt={item.title}
-            className="w-full sm:w-32 h-auto sm:h-32 object-cover rounded border border-gray-200 flex-shrink-0"
-            onError={(e) => {
-              e.target.onerror = null;
-              e.target.src = "/placeholder.png";
-            }}
-          />
-          <div className="flex-grow">
-            <h2 className="text-lg font-semibold text-gray-900 mb-2">
-              {item.title}
-            </h2>
-            {item.variation && (
-              <p className="text-sm text-gray-600 mb-1">{item.variation}</p>
-            )}
-            {item.quantity && (
-              <p className="text-sm text-gray-600">Quantity: {item.quantity}</p>
-            )}
-            <p className="text-lg font-bold text-gray-800 mt-3">
-              {item.price.toLocaleString("vi-VN")} VNĐ
-            </p>
-            {(order.buyerPremium || finalPrice - item.price > 0) && ( // Show premium if exists or implied
-              <p className="text-sm text-gray-600">
-                + Buyer Premium:{" "}
-                {(finalPrice - item.price).toLocaleString("vi-VN")} VNĐ
+            <img
+              src={item.imageUrl || "/placeholder.png"}
+              alt={item.title}
+              className="w-24 h-24 object-cover rounded border"
+              onError={(e) => {
+                e.target.onerror = null;
+                e.target.src = "/placeholder.png";
+              }}
+            />
+            <div>
+              <h3 className="font-semibold text-gray-900 mb-1">{item.title}</h3>
+              <p className="text-sm text-gray-700">Qty: {item.quantity}</p>
+              <p className="text-sm font-medium text-gray-800">
+                Unit Price: {item.price.toLocaleString("vi-VN")} {order.currency || "VNĐ"}
               </p>
-            )}
-          </div>
-        </div>
-
-        {requiresPayment && order.paymentDeadline && (
-          <div className="px-6 py-5 border-t border-gray-200 bg-orange-50">
-            <div className="flex flex-col sm:flex-row justify-between items-center gap-4">
-              <div>
-                <p className="text-lg font-semibold text-gray-800">
-                  Total Amount Due: {finalPrice.toLocaleString("vi-VN")} VNĐ
-                </p>
-                <div className="text-sm text-orange-700 font-medium flex items-center gap-1 mt-1">
-                  <span>Payment Deadline:</span>
-                  <CountdownTimer
-                    endTimeMillis={new Date(order.paymentDeadline).getTime()}
-                  />
-                </div>
-              </div>
-              {!isSeller && requiresPayment && order.paymentDeadline && (
-                <div className="flex items-center gap-3 w-full sm:w-auto mt-3 sm:mt-0">
-                  <button
-                    onClick={handleOpenCancelConfirm}
-                    disabled={isProcessing}
-                    className="flex-1 sm:flex-none px-5 py-2.5 border border-gray-400 text-gray-700 rounded hover:bg-gray-100 transition duration-150 ease-in-out text-sm font-medium"
-                  >
-                    Cancel Order
-                  </button>
-                  <button
-                    onClick={() => setIsPaymentConfirmOpen(true)} // Open confirmation modal first
-                    disabled={isProcessing}
-                    className="flex-1 sm:flex-none inline-flex items-center justify-center gap-2 px-5 py-2.5 bg-red-600 text-white rounded hover:bg-red-700 transition duration-150 ease-in-out text-sm font-bold"
-                  >
-                    <FaCreditCard /> Make Payment
-                  </button>
-                </div>
-              )}
-              {isSeller && order.status === "AWAITING_WINNER_PAYMENT" && (
-                <div className="px-6 py-5 border-t border-gray-200 bg-yellow-50 text-center">
-                  <button
-                    onClick={openSellerCancel}
-                    disabled={isProcessing}
-                    className="px-5 py-2 bg-red-600 text-white rounded hover:bg-red-700"
-                  >
-                    Cancel Sale
-                  </button>
-                </div>
-              )}
             </div>
           </div>
-        )}
-        {/* Add sections for shipping info, etc. for other statuses */}
-        {order.status === "DELIVERING" && (
-          <div className="px-6 py-4 border-t border-gray-200">
-            <p className="text-sm text-blue-700">Your order is on its way!</p>
-            {/* Add tracking info here */}
-          </div>
-        )}
-        {order.status === "COMPLETED" && (
-          <div className="px-6 py-4 border-t border-gray-200">
-            <p className="text-sm text-green-700">
-              Order completed. Thank you!
-            </p>
-          </div>
-        )}
-        {order.status === "CANCELLED" && (
-          <div className="px-6 py-4 border-t border-gray-200">
-            <p className="text-sm text-red-700">
-              This order has been cancelled.
-            </p>
-          </div>
-        )}
+        ))}
       </div>
 
+      {/* Payment section */}
+      {isAwaitingBuyerPayment && order.paymentDeadline && (
+        <div className="mb-6 p-4 bg-orange-50 rounded border border-orange-200">
+          <div className="flex flex-col sm:flex-row justify-between items-center gap-4">
+            <div>
+              <p className="text-lg font-semibold text-gray-800">
+                Amount Due: {finalPrice.toLocaleString("vi-VN")}
+                {" "}{order.currency || "VNĐ"}
+              </p>
+              <div className="text-sm text-orange-700 font-medium flex items-center gap-1 mt-1">
+                <span>Payment Deadline:</span>
+                <CountdownTimer endTimeMillis={new Date(order.paymentDeadline).getTime()} />
+              </div>
+            </div>
+            {isBuyer && (
+              <div className="flex items-center gap-3 w-full sm:w-auto mt-3 sm:mt-0">
+                <button
+                  onClick={handleOpenCancelConfirm}
+                  disabled={isProcessing}
+                  className="flex-1 sm:flex-none px-5 py-2.5 border border-gray-400 text-gray-700 rounded hover:bg-gray-100 text-sm font-medium"
+                >
+                  Decline Purchase
+                </button>
+                <button
+                  onClick={() => setIsPaymentConfirmOpen(true)}
+                  disabled={isProcessing}
+                  className="flex-1 sm:flex-none inline-flex items-center justify-center gap-2 px-5 py-2.5 bg-red-600 text-white rounded hover:bg-red-700 text-sm font-bold"
+                >
+                  <FaCreditCard /> Make Payment
+                </button>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* Seller actions */}
+      {isSeller && (
+        <div className="px-6 py-4 border-t border-gray-200 bg-gray-100 mb-6 rounded">
+          <h3 className="text-md font-semibold text-gray-700 mb-3">Seller Actions:</h3>
+          <div className="flex flex-wrap gap-3">
+            {order.status === "AWAITING_WINNER_PAYMENT" && (
+              <button
+                onClick={openSellerCancel}
+                disabled={isProcessing}
+                className="px-4 py-2 bg-red-500 text-white rounded hover:bg-red-600 text-sm font-medium"
+              >
+                Cancel Sale (Before Payment)
+              </button>
+            )}
+
+            {isAwaitingSellerFulfillmentConfirmation && (
+              <>
+                <button
+                  onClick={openConfirmFulfillmentModal}
+                  disabled={isProcessing}
+                  className="px-4 py-2 bg-green-500 text-white rounded hover:bg-green-600 text-sm font-medium"
+                >
+                  Confirm for Shipping
+                </button>
+                <button
+                  onClick={openSellerCancel}
+                  disabled={isProcessing}
+                  className="px-4 py-2 bg-red-500 text-white rounded hover:bg-red-600 text-sm font-medium"
+                >
+                  Cancel Order & Issue Refund
+                </button>
+              </>
+            )}
+
+            {order.status === "AWAITING_SELLER_DECISION" && (
+              <p className="text-sm text-yellow-800 bg-yellow-100 p-3 rounded w-full">
+                This order requires your decision. Manage this from your "My Sales" page.
+              </p>
+            )}
+
+            {order.status === "AWAITING_SHIPMENT" && (
+              <button
+                disabled
+                className="px-4 py-2 bg-blue-500 text-white rounded text-sm font-medium disabled:opacity-50"
+              >
+                Mark as Shipped (Pending Delivery Service)
+              </button>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* Alternate bidders */}
+      {(order.eligibleSecondBidderId || order.eligibleThirdBidderId) && (
+        <div className="mb-6 p-4 bg-gray-50 rounded border border-gray-200">
+          <h4 className="font-semibold mb-2">Alternate Bidders</h4>
+          <ul className="text-sm space-y-1">
+            {order.eligibleSecondBidderId && (
+              <li>
+                2nd Bidder: <strong>{order.eligibleSecondBidderId}</strong> — {order.eligibleSecondBidAmount?.toLocaleString("vi-VN")} {order.currency}
+              </li>
+            )}
+            {order.eligibleThirdBidderId && (
+              <li>
+                3rd Bidder: <strong>{order.eligibleThirdBidderId}</strong> — {order.eligibleThirdBidAmount?.toLocaleString("vi-VN")} {order.currency}
+              </li>
+            )}
+          </ul>
+        </div>
+      )}
+
+      {/* Informational banners */}
+      {order.status === "PAYMENT_SUCCESSFUL" && !isAwaitingSellerFulfillmentConfirmation && (
+        <div className="mb-6 px-6 py-4 border-t border-gray-200">
+          <p className="text-sm text-lime-700 font-semibold">
+            Payment successful! Awaiting seller fulfillment confirmation.
+          </p>
+        </div>
+      )}
+
+      {order.status?.includes("CANCELLED") && (
+        <div className="mb-6 px-6 py-4 border-t border-gray-200">
+          <p className="text-sm text-red-700 font-semibold">
+            This order has been cancelled. (Status: {orderStatusMap[order.status] || order.status})
+          </p>
+        </div>
+      )}
+
+      {/* ---------- Modals ---------- */}
       <ConfirmationModal
         isOpen={isPaymentConfirmOpen}
         onClose={() => {
           if (!isProcessing) setIsPaymentConfirmOpen(false);
         }}
-        onConfirm={handleConfirmPayment} // This now calls handleOpenPaymentAttempt
+        onConfirm={handleConfirmPayment}
         title="Confirm Payment"
-        message={`Proceed to payment for ${finalPrice.toLocaleString(
-          "vi-VN"
-        )} VNĐ?`}
+        message={`Proceed to payment for ${finalPrice.toLocaleString("vi-VN")} ${order.currency || "VNĐ"}?`}
         confirmText="Yes, Proceed"
         cancelText="Cancel"
         confirmButtonClass="bg-green-600 hover:bg-green-700"
         isLoading={isProcessing}
-        error={modalError} // Show error from create-intent call here
+        error={modalError}
       />
       <ConfirmationModal
         isOpen={isCancelConfirmOpen}
         onClose={handleCloseCancelConfirm}
         onConfirm={handleConfirmCancel}
-        title="Confirm Order Cancellation"
-        message="Are you sure you want to cancel your obligation to pay for this order?"
-        confirmText="Yes, Cancel My Payment"
+        title="Confirm Decline Purchase"
+        message="Are you sure you want to decline this purchase? This may pass the offer to the next bidder or require seller action."
+        confirmText="Yes, Decline"
         cancelText="No, Keep Order"
         confirmButtonClass="bg-red-600 hover:bg-red-700"
         isLoading={isProcessing}
@@ -442,6 +467,18 @@ function OrderDetailPage() {
             />
           </>
         }
+      />
+      <ConfirmationModal
+        isOpen={isConfirmFulfillmentOpen}
+        onClose={closeConfirmFulfillmentModal}
+        onConfirm={handleConfirmFulfillment}
+        title="Confirm Order Fulfillment"
+        message="Are you sure you are ready to prepare this item for shipping? This action cannot be undone and will move the order to the next stage."
+        confirmText="Yes, Confirm Fulfillment"
+        cancelText="No, Not Yet"
+        confirmButtonClass="bg-green-600 hover:bg-green-700"
+        isLoading={isProcessing}
+        error={modalError}
       />
     </div>
   );

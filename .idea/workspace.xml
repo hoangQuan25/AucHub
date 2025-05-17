@@ -5,22 +5,31 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="6c40838e-6221-4c81-ab31-df2a3dd2a03a" name="Changes" comment="">
+      <change afterPath="$PROJECT_DIR$/orders/src/main/java/com/example/orders/dto/event/OrderAwaitingFulfillmentConfirmationEventDto.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/orders/src/main/java/com/example/orders/dto/event/OrderConfirmedBySellerEventDto.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/orders/src/main/java/com/example/orders/dto/event/RefundRequestedEventDto.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/payments/src/main/java/com/example/payments/dto/request/RefundRequestedEventDto.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/payments/src/main/java/com/example/payments/dto/response/RefundFailedEventDto.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/payments/src/main/java/com/example/payments/dto/response/RefundSucceededEventDto.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/payments/src/main/java/com/example/payments/listener/RefundEventListener.java" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/frontend/src/App.jsx" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/App.jsx" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/frontend/src/components/ConfirmationModal.jsx" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/components/ConfirmationModal.jsx" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/frontend/src/context/NotificationContext.jsx" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/context/NotificationContext.jsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/frontend/src/constants/orderConstants.js" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/constants/orderConstants.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/frontend/src/pages/MyOrdersPage.jsx" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/pages/MyOrdersPage.jsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/frontend/src/pages/MySalesPage.jsx" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/pages/MySalesPage.jsx" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/frontend/src/pages/OrderDetailPage.jsx" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/pages/OrderDetailPage.jsx" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/frontend/src/pages/TimedAuctionDetailPage.jsx" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/pages/TimedAuctionDetailPage.jsx" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/notifications/src/main/java/com/example/notifications/config/RabbitMqConfig.java" beforeDir="false" afterPath="$PROJECT_DIR$/notifications/src/main/java/com/example/notifications/config/RabbitMqConfig.java" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/notifications/src/main/java/com/example/notifications/event/NotificationEvents.java" beforeDir="false" afterPath="$PROJECT_DIR$/notifications/src/main/java/com/example/notifications/event/NotificationEvents.java" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/notifications/src/main/java/com/example/notifications/listener/NotificationEventListener.java" beforeDir="false" afterPath="$PROJECT_DIR$/notifications/src/main/java/com/example/notifications/listener/NotificationEventListener.java" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/notifications/src/main/java/com/example/notifications/service/NotificationService.java" beforeDir="false" afterPath="$PROJECT_DIR$/notifications/src/main/java/com/example/notifications/service/NotificationService.java" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/notifications/src/main/java/com/example/notifications/service/impl/NotificationServiceImpl.java" beforeDir="false" afterPath="$PROJECT_DIR$/notifications/src/main/java/com/example/notifications/service/impl/NotificationServiceImpl.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/orders/src/main/java/com/example/orders/config/RabbitMqConfig.java" beforeDir="false" afterPath="$PROJECT_DIR$/orders/src/main/java/com/example/orders/config/RabbitMqConfig.java" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/orders/src/main/java/com/example/orders/controller/OrdersController.java" beforeDir="false" afterPath="$PROJECT_DIR$/orders/src/main/java/com/example/orders/controller/OrdersController.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/orders/src/main/java/com/example/orders/entity/OrderStatus.java" beforeDir="false" afterPath="$PROJECT_DIR$/orders/src/main/java/com/example/orders/entity/OrderStatus.java" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/orders/src/main/java/com/example/orders/service/OrderService.java" beforeDir="false" afterPath="$PROJECT_DIR$/orders/src/main/java/com/example/orders/service/OrderService.java" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/orders/src/main/java/com/example/orders/service/impl/OrderServiceImpl.java" beforeDir="false" afterPath="$PROJECT_DIR$/orders/src/main/java/com/example/orders/service/impl/OrderServiceImpl.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/payments/src/main/resources/application.yml" beforeDir="false" afterPath="$PROJECT_DIR$/payments/src/main/resources/application.yml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/timedauctions/src/main/java/com/example/timedauctions/service/impl/TimedAuctionServiceImpl.java" beforeDir="false" afterPath="$PROJECT_DIR$/timedauctions/src/main/java/com/example/timedauctions/service/impl/TimedAuctionServiceImpl.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/payments/src/main/java/com/example/payments/config/RabbitMqConfig.java" beforeDir="false" afterPath="$PROJECT_DIR$/payments/src/main/java/com/example/payments/config/RabbitMqConfig.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/payments/src/main/java/com/example/payments/service/PaymentService.java" beforeDir="false" afterPath="$PROJECT_DIR$/payments/src/main/java/com/example/payments/service/PaymentService.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/payments/src/main/java/com/example/payments/service/impl/StripePaymentServiceImpl.java" beforeDir="false" afterPath="$PROJECT_DIR$/payments/src/main/java/com/example/payments/service/impl/StripePaymentServiceImpl.java" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -54,38 +63,38 @@
     <option name="hideEmptyMiddlePackages" value="true" />
     <option name="showLibraryContents" value="true" />
   </component>
-  <component name="PropertiesComponent"><![CDATA[{
-  "keyToString": {
-    "RequestMappingsPanelOrder0": "0",
-    "RequestMappingsPanelOrder1": "1",
-    "RequestMappingsPanelWidth0": "75",
-    "RequestMappingsPanelWidth1": "75",
-    "RunOnceActivity.ShowReadmeOnStart": "true",
-    "RunOnceActivity.git.unshallow": "true",
-    "Spring Boot.ConfigserverApplication.executor": "Run",
-    "Spring Boot.EurekaserverApplication.executor": "Run",
-    "Spring Boot.GatewayserverApplication.executor": "Run",
-    "Spring Boot.LiveAuctionsApplication.executor": "Run",
-    "Spring Boot.NotificationsApplication.executor": "Run",
-    "Spring Boot.OrdersApplication.executor": "Run",
-    "Spring Boot.PaymentsApplication.executor": "Run",
-    "Spring Boot.ProductsApplication.executor": "Run",
-    "Spring Boot.TimedAuctionsApplication.executor": "Run",
-    "Spring Boot.UsersApplication.executor": "Run",
-    "git-widget-placeholder": "feat/order-handler",
-    "node.js.detected.package.eslint": "true",
-    "node.js.detected.package.tslint": "true",
-    "node.js.selected.package.eslint": "(autodetect)",
-    "node.js.selected.package.tslint": "(autodetect)",
-    "nodejs_package_manager_path": "npm",
-    "project.structure.last.edited": "Modules",
-    "project.structure.proportion": "0.0",
-    "project.structure.side.proportion": "0.0",
-    "run.configurations.included.in.services": "true",
-    "settings.editor.selected.configurable": "preferences.pluginManager",
-    "vue.rearranger.settings.migration": "true"
+  <component name="PropertiesComponent">{
+  &quot;keyToString&quot;: {
+    &quot;RequestMappingsPanelOrder0&quot;: &quot;0&quot;,
+    &quot;RequestMappingsPanelOrder1&quot;: &quot;1&quot;,
+    &quot;RequestMappingsPanelWidth0&quot;: &quot;75&quot;,
+    &quot;RequestMappingsPanelWidth1&quot;: &quot;75&quot;,
+    &quot;RunOnceActivity.ShowReadmeOnStart&quot;: &quot;true&quot;,
+    &quot;RunOnceActivity.git.unshallow&quot;: &quot;true&quot;,
+    &quot;Spring Boot.ConfigserverApplication.executor&quot;: &quot;Run&quot;,
+    &quot;Spring Boot.EurekaserverApplication.executor&quot;: &quot;Run&quot;,
+    &quot;Spring Boot.GatewayserverApplication.executor&quot;: &quot;Run&quot;,
+    &quot;Spring Boot.LiveAuctionsApplication.executor&quot;: &quot;Run&quot;,
+    &quot;Spring Boot.NotificationsApplication.executor&quot;: &quot;Run&quot;,
+    &quot;Spring Boot.OrdersApplication.executor&quot;: &quot;Run&quot;,
+    &quot;Spring Boot.PaymentsApplication.executor&quot;: &quot;Run&quot;,
+    &quot;Spring Boot.ProductsApplication.executor&quot;: &quot;Run&quot;,
+    &quot;Spring Boot.TimedAuctionsApplication.executor&quot;: &quot;Run&quot;,
+    &quot;Spring Boot.UsersApplication.executor&quot;: &quot;Run&quot;,
+    &quot;git-widget-placeholder&quot;: &quot;feat/refund&quot;,
+    &quot;node.js.detected.package.eslint&quot;: &quot;true&quot;,
+    &quot;node.js.detected.package.tslint&quot;: &quot;true&quot;,
+    &quot;node.js.selected.package.eslint&quot;: &quot;(autodetect)&quot;,
+    &quot;node.js.selected.package.tslint&quot;: &quot;(autodetect)&quot;,
+    &quot;nodejs_package_manager_path&quot;: &quot;npm&quot;,
+    &quot;project.structure.last.edited&quot;: &quot;Modules&quot;,
+    &quot;project.structure.proportion&quot;: &quot;0.0&quot;,
+    &quot;project.structure.side.proportion&quot;: &quot;0.0&quot;,
+    &quot;run.configurations.included.in.services&quot;: &quot;true&quot;,
+    &quot;settings.editor.selected.configurable&quot;: &quot;preferences.pluginManager&quot;,
+    &quot;vue.rearranger.settings.migration&quot;: &quot;true&quot;
   }
-}]]></component>
+}</component>
   <component name="RunDashboard">
     <option name="configurationTypes">
       <set>
@@ -206,6 +215,8 @@
       <workItem from="1747269383464" duration="1288000" />
       <workItem from="1747377873024" duration="1366000" />
       <workItem from="1747406585957" duration="10775000" />
+      <workItem from="1747468097236" duration="10506000" />
+      <workItem from="1747496902691" duration="4079000" />
     </task>
     <servers />
   </component>

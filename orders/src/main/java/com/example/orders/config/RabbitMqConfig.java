@@ -41,6 +41,8 @@ public class RabbitMqConfig {
     public static final String ORDER_EVENT_AUCTION_REOPEN_REQUESTED_ROUTING_KEY = "order.event.auction.reopen.requested";
     public static final String ORDER_EVENT_PAYMENT_CONFIRMED_ROUTING_KEY = "order.event.payment.confirmed";
     public static final String ORDER_EVENT_SELLER_DECISION_REQUIRED_ROUTING_KEY = "order.event.seller.decision.required";
+    public static final String ORDER_EVENT_AWAITING_FULFILLMENT_CONFIRMATION_ROUTING_KEY = "order.event.awaiting.fulfillment.confirmation";
+    public static final String PAYMENT_EVENT_REFUND_REQUESTED_ROUTING_KEY = "payment.event.refund.requested";
     public static final String ORDER_EVENT_READY_FOR_SHIPPING_ROUTING_KEY = "order.event.ready-for-shipping";
     public static final String ORDER_EVENT_CANCELLED_ROUTING_KEY = "order.event.cancelled";
     public static final String USER_EVENT_PAYMENT_DEFAULTED_ROUTING_KEY = "user.event.payment.defaulted";

@@ -126,4 +126,35 @@ public class NotificationEventListener {
             log.error("Error processing OrderCancelledEvent for order {}: {}", event.getOrderId(), e.getMessage(), e);
         }
     }
+
+    @RabbitListener(queues = RabbitMqConfig.REFUND_SUCCEEDED_NOTIFICATION_QUEUE)
+    public void handleRefundSucceeded(@Payload RefundSucceededEvent event) {
+        log.info("Received RefundSucceededEvent for orderId: {}, buyerId: {}", event.getOrderId(), event.getBuyerId());
+        try {
+            notificationService.processRefundSucceeded(event);
+        } catch (Exception e) {
+            log.error("Error processing RefundSucceededEvent for order {}: {}", event.getOrderId(), e.getMessage(), e);
+        }
+    }
+
+    @RabbitListener(queues = RabbitMqConfig.REFUND_FAILED_NOTIFICATION_QUEUE)
+    public void handleRefundFailed(@Payload RefundFailedEvent event) {
+        log.info("Received RefundFailedEvent for orderId: {}, buyerId: {}", event.getOrderId(), event.getBuyerId());
+        try {
+            notificationService.processRefundFailed(event);
+        } catch (Exception e) {
+            log.error("Error processing RefundFailedEvent for order {}: {}", event.getOrderId(), e.getMessage(), e);
+        }
+    }
+
+    // In NotificationEventListener.java
+    @RabbitListener(queues = RabbitMqConfig.ORDER_AWAITING_FULFILLMENT_CONFIRMATION_QUEUE)
+    public void handleOrderAwaitingFulfillmentConfirmation(@Payload OrderAwaitingFulfillmentConfirmationEvent event) {
+        log.info("Received OrderAwaitingFulfillmentConfirmationEvent: orderId={}, sellerId={}", event.getOrderId(), event.getSellerId());
+        try {
+            notificationService.processOrderAwaitingFulfillmentConfirmation(event);
+        } catch (Exception e) {
+            log.error("Error processing OrderAwaitingFulfillmentConfirmationEvent for order {}: {}", event.getOrderId(), e.getMessage(), e);
+        }
+    }
 }

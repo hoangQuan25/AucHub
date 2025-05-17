@@ -65,6 +65,15 @@ public class OrdersController {
         return ResponseEntity.ok().build();
     }
 
+    @PostMapping("/my-sales/{orderId}/confirm-fulfillment")
+    public ResponseEntity<Void> sellerConfirmFulfillment(
+            @PathVariable UUID orderId,
+            @RequestHeader(USER_ID_HEADER) String sellerId) {
+        log.info("Seller {} requesting to confirm fulfillment for order {}", sellerId, orderId);
+        orderService.confirmOrderFulfillment(orderId, sellerId);
+        return ResponseEntity.ok().build();
+    }
+
     @GetMapping("/{orderId}")
     public ResponseEntity<OrderDetailDto> getOrderDetails(
             @PathVariable UUID orderId,

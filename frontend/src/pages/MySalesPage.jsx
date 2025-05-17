@@ -3,7 +3,7 @@ import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import apiClient from '../api/apiClient'; // Your configured Axios instance
 import { useKeycloak } from '@react-keycloak/web';
-import { orderStatusMap } from '../constants/orderConstants'; // Assuming this map is still relevant
+import { sellerOrderStatusFilters, orderStatusMap } from '../constants/orderConstants'; // Assuming this map is still relevant
 import SellerDecisionModal from '../components/SellerDecisionModal'; // We'll define this
 
 function MySalesPage() {
@@ -68,7 +68,7 @@ function MySalesPage() {
 
       <div className="mb-6 bg-white shadow-sm rounded-md overflow-hidden">
         <nav className="flex flex-wrap border-b border-gray-200">
-          {Object.entries(orderStatusMap).map(([key, value]) => (
+          {Object.entries(sellerOrderStatusFilters).map(([key, value]) => (
             <button
               key={key}
               onClick={() => setActiveFilter(key)}
@@ -88,7 +88,7 @@ function MySalesPage() {
       {!isLoading && error && <div className="text-center py-10 text-red-600 bg-white rounded-md shadow-sm">{error}</div>}
       {!isLoading && !error && orders.length === 0 && (
          <div className="text-center py-10 bg-white rounded-md shadow-sm">
-            <p className="text-gray-500">Không có đơn bán nào {activeFilter !== 'ALL' ? `cho trạng thái "${orderStatusMap[activeFilter]}"` : ''}.</p>
+            <p className="text-gray-500">Không có đơn bán nào {activeFilter !== 'ALL' ? `cho trạng thái "${sellerOrderStatusFilters[activeFilter]}"` : ''}.</p>
          </div>
       )}
       {!isLoading && !error && orders.length > 0 && (

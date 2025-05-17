@@ -1,6 +1,7 @@
 package com.example.payments.service; // In your Payment Service
 
 import com.example.payments.dto.request.CreatePaymentIntentRequestDto;
+import com.example.payments.dto.request.RefundRequestedEventDto;
 import com.example.payments.dto.response.CreatePaymentIntentResponseDto;
 import com.stripe.exception.StripeException; // For Stripe-specific exceptions
 
@@ -25,7 +26,10 @@ public interface PaymentService {
      */
     CreatePaymentIntentResponseDto createPaymentIntent(CreatePaymentIntentRequestDto requestDto) throws StripeException;
 
-    // We will add methods later for handling webhook events, e.g.:
-    // void handlePaymentIntentSucceeded(PaymentIntent paymentIntent);
-    // void handlePaymentIntentFailed(PaymentIntent paymentIntent);
+    /**
+     * Processes a refund request for a specific order.
+     * @param event The event containing details about the refund request.
+     * @throws StripeException if there's an error communicating with Stripe.
+     */
+    void processRefundRequest(RefundRequestedEventDto event) throws StripeException;
 }

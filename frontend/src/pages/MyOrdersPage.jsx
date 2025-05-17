@@ -2,7 +2,7 @@
 import React, { useState, useEffect } from 'react'; // Added useEffect
 import { Link } from 'react-router-dom';
 import CountdownTimer from '../components/CountdownTimer';
-import { orderStatusMap } from '../constants/orderConstants';
+import { buyerOrderStatusFilters, orderStatusMap } from '../constants/orderConstants';
 import apiClient from '../api/apiClient'; // Your configured Axios instance
 import { useKeycloak } from '@react-keycloak/web'; // To ensure user is authenticated
 
@@ -56,7 +56,7 @@ function MyOrdersPage() {
       {/* Filter Tabs */}
       <div className="mb-6 bg-white shadow-sm rounded-md overflow-hidden">
         <nav className="flex flex-wrap border-b border-gray-200">
-          {Object.entries(orderStatusMap).map(([key, value]) => (
+          {Object.entries(buyerOrderStatusFilters).map(([key, value]) => (
             <button
               key={key}
               onClick={() => setActiveFilter(key)}
@@ -77,7 +77,7 @@ function MyOrdersPage() {
       {!isLoading && error && <div className="text-center py-10 text-red-600 bg-white rounded-md shadow-sm">{error}</div>}
       {!isLoading && !error && orders.length === 0 && (
          <div className="text-center py-10 bg-white rounded-md shadow-sm">
-            <p className="text-gray-500">Không có đơn hàng nào {activeFilter !== 'ALL' ? `cho trạng thái "${orderStatusMap[activeFilter]}"` : ''}.</p>
+            <p className="text-gray-500">Không có đơn hàng nào {activeFilter !== 'ALL' ? `cho trạng thái "${buyerOrderStatusFilters[activeFilter]}"` : ''}.</p>
          </div>
       )}
       {!isLoading && !error && orders.length > 0 && (
@@ -87,10 +87,13 @@ function MyOrdersPage() {
               <div className="px-4 py-3 border-b border-gray-200 bg-gray-50 flex justify-between items-center">
                 <span className="font-semibold text-sm text-gray-700">{order.sellerName || 'N/A'}</span> {/* Use fetched data */}
                 <span className={`text-xs font-medium px-2 py-0.5 rounded ${
-                  order.status === 'PENDING_PAYMENT' ? 'bg-orange-100 text-orange-700' :
-                  // ... other status styles
+                  order.status === 'AWAITING_WINNER_PAYMENT' || order.status === 'AWAITING_NEXT_BIDDER_PAYMENT' || order.orderStatus === 'PENDING_PAYMENT' ? 'bg-orange-100 text-orange-700' :
+                  order.status === 'PAYMENT_SUCCESSFUL' ? 'bg-green-100 text-green-700' :
+                  order.status === 'AWAITING_SHIPMENT' ? 'bg-blue-100 text-blue-700' :
+                  order.status?.includes('CANCELLED') ? 'bg-red-100 text-red-700' :
                   'bg-gray-100 text-gray-700'
                 }`}>
+                  {/* Use the main orderStatusMap for display if it has more detailed statuses */}
                   {orderStatusMap[order.status] || order.status}
                 </span>
               </div>

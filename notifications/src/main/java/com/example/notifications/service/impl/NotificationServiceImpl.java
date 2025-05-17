@@ -27,6 +27,9 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional; // Import if needed
 import org.springframework.util.CollectionUtils;
 
+import java.math.BigDecimal;
+import java.math.RoundingMode;
+import java.text.NumberFormat;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.time.format.FormatStyle;
@@ -59,6 +62,10 @@ public class NotificationServiceImpl implements NotificationService {
     private static final String TYPE_ORDER_READY_FOR_SHIPPING = "ORDER_READY_FOR_SHIPPING";
     private static final String TYPE_ORDER_CANCELLED = "ORDER_CANCELLED";
     private static final String TYPE_USER_PAYMENT_DEFAULTED = "USER_PAYMENT_DEFAULTED"; // Optional: if a direct notification is sent
+    private static final String TYPE_REFUND_SUCCEEDED = "REFUND_SUCCEEDED";
+    private static final String TYPE_REFUND_FAILED = "REFUND_FAILED";
+    private static final String TYPE_ORDER_AWAITING_FULFILLMENT_CONFIRMATION = "ORDER_AWAITING_FULFILLMENT_CONFIRMATION";
+
 
     private static final DateTimeFormatter SHORT_DATE_TIME_FORMATTER = DateTimeFormatter.ofLocalizedDateTime(FormatStyle.SHORT);
 
@@ -292,6 +299,121 @@ public class NotificationServiceImpl implements NotificationService {
         } else {
             log.info("Processed OrderCancelledEvent for order {}, notified seller {}. No distinct involved bidder to notify or bidder was seller.",
                     event.getOrderId(), event.getSellerId());
+        }
+    }
+
+    @Override
+    @Transactional
+    public void processRefundSucceeded(RefundSucceededEvent event) {
+        log.debug("Processing RefundSucceededEvent for order ID: {}", event.getOrderId());
+
+        if (event.getBuyerId() == null) {
+            log.error("Cannot send refund succeeded notification: buyerId is missing in event for order {}", event.getOrderId());
+            return;
+        }
+
+        // Format amount (assuming amountRefunded is in smallest unit, e.g., cents or base unit for VND)
+        // This is a simplified formatting. For production, consider a robust currency formatting library or util.
+        String formattedAmount;
+        try {
+            BigDecimal amountDecimal;
+            if ("vnd".equalsIgnoreCase(event.getCurrency())) {
+                amountDecimal = new BigDecimal(event.getAmountRefunded()); // VND is base unit in Stripe
+            } else {
+                // For currencies like USD, EUR (2 decimal places)
+                amountDecimal = new BigDecimal(event.getAmountRefunded()).divide(new BigDecimal("100"), 2, RoundingMode.HALF_UP);
+            }
+            // Using NumberFormat for basic currency display
+            NumberFormat currencyFormatter = NumberFormat.getCurrencyInstance(new Locale("vi", "VN")); // Example for VND
+            if (!"vnd".equalsIgnoreCase(event.getCurrency())) {
+                // Attempt to use a generic locale or one based on event.getCurrency() if possible
+                // This part might need more sophisticated currency handling if you support many.
+                currencyFormatter = NumberFormat.getCurrencyInstance(Locale.US); // Fallback or determine by currency
+                currencyFormatter.setCurrency(java.util.Currency.getInstance(event.getCurrency().toUpperCase()));
+            }
+            formattedAmount = currencyFormatter.format(amountDecimal);
+
+
+        } catch (Exception e) {
+            log.warn("Could not format refund amount for notification, using raw value. Order ID: {}", event.getOrderId(), e);
+            formattedAmount = event.getAmountRefunded() + " " + event.getCurrency().toUpperCase();
+        }
+
+
+        String message = String.format("Good news! Your refund of %s for order #%s has been processed successfully. Stripe Refund ID: %s.",
+                formattedAmount,
+                event.getOrderId().toString().substring(0, 8),
+                event.getRefundId());
+
+        // Assuming auctionId is not directly relevant for a refund notification,
+        // but if your Order entity (fetched via OrderService if needed) has it, you could pass it.
+        // For now, passing orderId as relatedAuctionId for consistency if needed by saveAndSend or null.
+        saveAndSendNotification(event.getBuyerId(), TYPE_REFUND_SUCCEEDED, message, event.getOrderId(), null);
+
+        log.info("Processed RefundSucceededEvent for order {}, notified buyer {}.", event.getOrderId(), event.getBuyerId());
+    }
+
+    @Override
+    @Transactional
+    public void processRefundFailed(RefundFailedEvent event) {
+        log.debug("Processing RefundFailedEvent for order ID: {}", event.getOrderId());
+
+        if (event.getBuyerId() == null) {
+            log.error("Cannot send refund failed notification: buyerId is missing in event for order {}", event.getOrderId());
+            return;
+        }
+
+        String message = String.format("We encountered an issue processing your refund for order #%s. Reason: %s. Please contact support if this persists. Payment Intent ID: %s",
+                event.getOrderId().toString().substring(0, 8),
+                truncate(event.getFailureReason(), 100),
+                event.getPaymentIntentId());
+
+        saveAndSendNotification(event.getBuyerId(), TYPE_REFUND_FAILED, message, event.getOrderId(), null);
+
+        log.info("Processed RefundFailedEvent for order {}, notified buyer {}. Reason: {}", event.getOrderId(), event.getBuyerId(), event.getFailureReason());
+        // You might also want to notify an admin/support team about refund failures.
+    }
+
+    @Override
+    @Transactional
+    public void processOrderAwaitingFulfillmentConfirmation(OrderAwaitingFulfillmentConfirmationEvent event) {
+        log.debug("Processing OrderAwaitingFulfillmentConfirmationEvent for order ID: {}", event.getOrderId());
+
+        if (event.getSellerId() == null) {
+            log.error("Cannot send order awaiting fulfillment confirmation notification: sellerId is missing. OrderId: {}", event.getOrderId());
+            return;
+        }
+
+        String productTitle = truncate(event.getProductTitleSnapshot(), 50);
+
+        // --- Notification to Seller ---
+        // Consider fetching buyer's username if event.getBuyerId() is just an ID and you want a username.
+        String substring = event.getOrderId().toString().substring(0, 8);
+        String sellerMessage = String.format(
+                "Action Required: Order #%s for '%s' has been paid by the buyer (%s). Please confirm if you can fulfill this order or cancel it.",
+                substring,
+                productTitle,
+                event.getBuyerId() // Or buyerUsername if available in event
+        );
+        // Assuming auctionId is not in this specific event, we pass orderId as the related ID for the notification.
+        // If your saveAndSendNotification can handle a null auctionId or expects orderId here, adjust accordingly.
+        saveAndSendNotification(event.getSellerId(), TYPE_ORDER_AWAITING_FULFILLMENT_CONFIRMATION, sellerMessage, event.getOrderId(), null);
+        log.info("Notified seller {} for order {} awaiting fulfillment confirmation.", event.getSellerId(), event.getOrderId());
+
+        // --- Optional: Notification to Buyer ---
+        // You might also want to inform the buyer that their payment was successful and what the next step is.
+        if (event.getBuyerId() != null) {
+            String buyerMessage = String.format(
+                    "Your payment for order #%s ('%s') was successful! The seller is now confirming fulfillment before shipping.",
+                    substring,
+                    productTitle
+            );
+            // Using a slightly different type or the same type but relying on the message.
+            // Let's use a distinct type if you want to handle its display differently or for clarity.
+            // For now, let's re-use the same TYPE, the message content differentiates.
+            // Alternatively, define TYPE_PAYMENT_CONFIRMED_AWAITING_SELLER = "PAYMENT_CONFIRMED_AWAITING_SELLER";
+            saveAndSendNotification(event.getBuyerId(), TYPE_ORDER_AWAITING_FULFILLMENT_CONFIRMATION, buyerMessage, event.getOrderId(), null);
+            log.info("Notified buyer {} for order {} that payment is confirmed, awaiting seller fulfillment.", event.getBuyerId(), event.getOrderId());
         }
     }
 
