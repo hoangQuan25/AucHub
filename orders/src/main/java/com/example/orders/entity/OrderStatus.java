@@ -15,8 +15,7 @@ public enum OrderStatus {
     // Payment outcomes
     PAYMENT_SUCCESSFUL, // Payment completed, ready for delivery handoff
 
-    // Post-payment states (often updated via events from other services like Delivery)
-    // Or directly if Orders service also manages these high-level states
+    AWAITING_FULFILLMENT_CONFIRMATION,
     AWAITING_SHIPMENT, // If you want this intermediary step before Delivery service takes over
     // ORDER_SHIPPED,
     // ORDER_DELIVERED,

@@ -21,9 +21,11 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.math.BigDecimal;
 import java.time.Duration;
 import java.time.LocalDateTime;
 import java.util.NoSuchElementException;
+import java.util.Set;
 import java.util.UUID;
 
 @Service
@@ -248,12 +250,18 @@ public class OrderServiceImpl implements OrderService {
                 });
 
         // Idempotency: If already marked as successful or further, just log.
-        if (order.getOrderStatus() == OrderStatus.PAYMENT_SUCCESSFUL ||
-                order.getOrderStatus() == OrderStatus.AWAITING_SHIPMENT /* Add other post-payment states */) {
-            log.warn("Order {} already processed for successful payment. Current status: {}. Ignoring event.",
+        if (order.getOrderStatus() == OrderStatus.AWAITING_FULFILLMENT_CONFIRMATION ||
+                order.getOrderStatus() == OrderStatus.AWAITING_SHIPMENT ||
+                order.getOrderStatus() == OrderStatus.PAYMENT_SUCCESSFUL /* If PAYMENT_SUCCESSFUL can be re-processed to AWAITING_FULFILLMENT_CONFIRMATION */) {
+            log.warn("Order {} already processed for successful payment or awaiting confirmation. Current status: {}. Ignoring event or re-evaluating.",
                     order.getId(), order.getOrderStatus());
-            return;
+            // If it's PAYMENT_SUCCESSFUL and you want to transition it now, you can proceed.
+            // For now, if it's already AWAITING_FULFILLMENT_CONFIRMATION or AWAITING_SHIPMENT, we can skip.
+            if (order.getOrderStatus() == OrderStatus.AWAITING_FULFILLMENT_CONFIRMATION || order.getOrderStatus() == OrderStatus.AWAITING_SHIPMENT) {
+                return;
+            }
         }
+
 
         // Validate that the payment is for the current bidder on the order
         if (!order.getCurrentBidderId().equals(eventDto.getUserId())) { // Assuming DTO has userId who paid
@@ -264,17 +272,44 @@ public class OrderServiceImpl implements OrderService {
             throw new IllegalStateException("Payment user mismatch for order " + order.getId());
         }
 
-        order.setOrderStatus(OrderStatus.PAYMENT_SUCCESSFUL); // Or directly AWAITING_SHIPMENT
+        order.setOrderStatus(OrderStatus.AWAITING_FULFILLMENT_CONFIRMATION); // Or directly AWAITING_SHIPMENT
         order.setPaymentTransactionRef(eventDto.getPaymentIntentId()); // Store Stripe's PaymentIntent ID
         // Potentially store eventDto.getChargeId() if you add that to Order entity
         // order.setActualAmountPaid(eventDto.getAmountPaid()); // If you store this
 
         Order savedOrder = orderRepository.save(order);
-        log.info("Order {} status updated to PAYMENT_SUCCESSFUL. PaymentIntentId: {}",
+        log.info("Order {} status updated to AWAITING_FULFILLMENT_CONFIRMATION. PaymentIntentId: {}",
                 savedOrder.getId(), savedOrder.getPaymentTransactionRef());
 
-        // Publish event for Delivery Service / Notifications
+        publishOrderAwaitingFulfillmentConfirmationEvent(savedOrder);
+    }
+
+    @Override
+    @Transactional
+    public void confirmOrderFulfillment(UUID orderId, String sellerId) {
+        log.info("Seller {} attempting to confirm fulfillment for order {}", sellerId, orderId);
+        Order order = orderRepository.findById(orderId)
+                .orElseThrow(() -> new NoSuchElementException("Order not found: " + orderId));
+
+        if (!order.getSellerId().equals(sellerId)) {
+            log.warn("User {} is not the seller for order {}. Cannot confirm fulfillment.", sellerId, order.getSellerId());
+            throw new SecurityException("User not authorized for this action.");
+        }
+
+        if (order.getOrderStatus() != OrderStatus.AWAITING_FULFILLMENT_CONFIRMATION) {
+            log.warn("Order {} is not in AWAITING_FULFILLMENT_CONFIRMATION state. Current status: {}.", orderId, order.getOrderStatus());
+            throw new IllegalStateException("Order is not awaiting fulfillment confirmation.");
+        }
+
+        order.setOrderStatus(OrderStatus.AWAITING_SHIPMENT); // Or directly to what DeliveryService expects as a handoff
+        Order savedOrder = orderRepository.save(order);
+        log.info("Order {} fulfillment confirmed by seller. Status set to AWAITING_SHIPMENT.", savedOrder.getId());
+
+        // Now publish the event for DeliveryService
         publishOrderReadyForShippingEvent(savedOrder);
+
+        // (Optional) Publish an event for notifications about seller's confirmation
+        // publishOrderConfirmedBySellerEvent(savedOrder);
     }
 
     /**
@@ -529,38 +564,57 @@ public class OrderServiceImpl implements OrderService {
 
     @Override
     @Transactional
-    public void processSellerInitiatedCancellation(UUID orderId, String sellerId, String reason) {
+    public void processSellerInitiatedCancellation(UUID orderId, String sellerId, String reason) { // As discussed before
+        log.info("Seller {} attempting to cancel order {} with reason: {}", sellerId, orderId, reason);
         Order order = orderRepository.findById(orderId)
                 .orElseThrow(() -> new NoSuchElementException("Order not found: " + orderId));
 
         if (!order.getSellerId().equals(sellerId)) {
-            log.warn("User {} is not the seller for order {}. Seller: {}. Cannot cancel.",
-                    sellerId, orderId, order.getSellerId());
+            log.warn("User {} is not the seller for order {}. Cannot cancel.", sellerId, order.getSellerId());
             throw new SecurityException("Not authorized to cancel this order.");
         }
 
-        // Add business logic: In which states can a seller cancel?
-        // For example, cannot cancel if already shipped or if auction reopen is in progress.
-        if (order.getOrderStatus() == OrderStatus.AUCTION_REOPEN_INITIATED /* || order is shipped, etc. */) {
-            log.warn("Order {} cannot be cancelled by seller in its current state: {}", orderId, order.getOrderStatus());
-            throw new IllegalStateException("Order cannot be cancelled by seller in its current state.");
+        OrderStatus originalStatus = order.getOrderStatus();
+        String cancellationReasonText = (reason != null && !reason.isBlank()) ? reason : "Cancelled by seller";
+
+        // Define which statuses are cancellable by the seller directly through this path
+        Set<OrderStatus> cancellableStates = Set.of(
+                OrderStatus.AWAITING_WINNER_PAYMENT,
+                OrderStatus.AWAITING_NEXT_BIDDER_PAYMENT,
+                OrderStatus.AWAITING_FULFILLMENT_CONFIRMATION, // <<< Seller can cancel here
+                OrderStatus.PAYMENT_SUCCESSFUL // If it ever lingers in this state before AWAITING_FULFILLMENT_CONFIRMATION
+        );
+
+        if (!cancellableStates.contains(originalStatus) && originalStatus != OrderStatus.AWAITING_SELLER_DECISION) {
+            // AWAITING_SELLER_DECISION uses the specific processSellerDecision method with SellerDecisionType.CANCEL_SALE
+            log.warn("Order {} (status: {}) cannot be directly cancelled by seller via this path or is not in a cancellable state.", orderId, originalStatus);
+            throw new IllegalStateException("Order cannot be cancelled by seller in its current state via this general path.");
         }
 
-        String cancellationReason = (reason != null && !reason.isBlank()) ? reason : "Cancelled by seller.";
         order.setOrderStatus(OrderStatus.ORDER_CANCELLED_BY_SELLER);
-        order.setSellerDecision(SellerDecisionType.CANCEL_SALE); // Store the decision type if you have the field
-        // order.setCancellationReason(cancellationReason); // If you add such a field
-
+        // order.setCancellationReason(cancellationReasonText); // if you add a field
         orderRepository.save(order);
-        log.info("Order {} cancelled by seller {}. Reason: {}", orderId, sellerId, cancellationReason);
+        log.info("Order {} cancelled by seller. Original status: {}. Reason: {}", orderId, originalStatus, cancellationReasonText);
 
-        publishOrderCancelledEvent(order, cancellationReason);
+        publishOrderCancelledEvent(order, cancellationReasonText);
 
-        // IMPORTANT: If payment was already made, you'd need to publish an event
-        // to trigger a refund via the Payments service here.
-        // e.g., if (originalStatus == OrderStatus.PAYMENT_SUCCESSFUL || originalStatus == OrderStatus.AWAITING_SHIPMENT) {
-        // publishRefundRequiredEvent(order);
-        // }
+        // If order was paid (i.e., was in AWAITING_FULFILLMENT_CONFIRMATION or PAYMENT_SUCCESSFUL), trigger refund
+        if (originalStatus == OrderStatus.AWAITING_FULFILLMENT_CONFIRMATION || originalStatus == OrderStatus.PAYMENT_SUCCESSFUL) {
+            if (order.getPaymentTransactionRef() != null && order.getCurrentAmountDue() != null) { // Assuming currentAmountDue is the paid amount
+                log.info("Order {} was paid. Publishing RefundRequestedEvent.", orderId);
+                publishRefundRequestedEvent(
+                        order.getId(),
+                        order.getCurrentBidderId(),
+                        order.getPaymentTransactionRef(),
+                        order.getCurrentAmountDue(), // Use the amount that was paid
+                        order.getCurrency(),
+                        "Order cancelled by seller: " + cancellationReasonText
+                );
+            } else {
+                log.error("Critical: Order {} was paid but missing payment transaction ref or amount for refund.", orderId);
+                // This needs robust alerting and handling.
+            }
+        }
     }
 
 
@@ -700,6 +754,52 @@ public class OrderServiceImpl implements OrderService {
                     event);
         } catch (Exception e) {
             log.error("Error publishing SellerDecisionRequiredEvent for order {}: {}", order.getId(), e.getMessage(), e);
+        }
+    }
+
+    private void publishOrderAwaitingFulfillmentConfirmationEvent(Order order) {
+        OrderAwaitingFulfillmentConfirmationEventDto event = OrderAwaitingFulfillmentConfirmationEventDto.builder()
+                .eventId(UUID.randomUUID())
+                .eventTimestamp(LocalDateTime.now())
+                .orderId(order.getId())
+                .sellerId(order.getSellerId())
+                .buyerId(order.getCurrentBidderId()) // Current bidder is the buyer
+                .productTitleSnapshot(order.getProductTitleSnapshot())
+                .build();
+        try {
+            rabbitTemplate.convertAndSend(
+                    RabbitMqConfig.ORDERS_EVENTS_EXCHANGE,
+                    RabbitMqConfig.ORDER_EVENT_AWAITING_FULFILLMENT_CONFIRMATION_ROUTING_KEY, // <<< NEW ROUTING KEY
+                    event);
+            log.info("Published OrderAwaitingFulfillmentConfirmationEvent for order {}", order.getId());
+        } catch (Exception e) {
+            log.error("Error publishing OrderAwaitingFulfillmentConfirmationEvent for order {}: {}", order.getId(), e.getMessage(), e);
+        }
+    }
+
+    private void publishRefundRequestedEvent(UUID orderId, String buyerId, String paymentTransactionRef, BigDecimal amount, String currency, String reasonText) {
+        RefundRequestedEventDto event = RefundRequestedEventDto.builder()
+                .eventId(UUID.randomUUID())
+                .eventTimestamp(LocalDateTime.now())
+                .orderId(orderId)
+                .buyerId(buyerId)
+                .paymentTransactionRef(paymentTransactionRef)
+                .amountToRefund(amount)
+                .currency(currency)
+                .reason(reasonText)
+                .build();
+        try {
+            // This event should likely go to an exchange the PaymentsService listens to.
+            // It could be PAYMENTS_EVENTS_EXCHANGE or a specific commands exchange.
+            // For now, using ORDERS_EVENTS_EXCHANGE and assuming PaymentsService can pick it up,
+            // OR you might define a PAYMENTS_COMMANDS_EXCHANGE.
+            rabbitTemplate.convertAndSend(
+                    RabbitMqConfig.ORDERS_EVENTS_EXCHANGE, // Or PAYMENTS_COMMANDS_EXCHANGE if Payments service listens there
+                    RabbitMqConfig.PAYMENT_EVENT_REFUND_REQUESTED_ROUTING_KEY, // <<< NEW ROUTING KEY
+                    event);
+            log.info("Published RefundRequestedEvent for order {}", orderId);
+        } catch (Exception e) {
+            log.error("Error publishing RefundRequestedEvent for order {}: {}", orderId, e.getMessage(), e);
         }
     }
 

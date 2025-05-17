@@ -81,10 +81,19 @@ public interface OrderService {
     Page<OrderSummaryDto> getMySales(String sellerId, String statusFilter, Pageable pageable);
 
     /**
-     * 
-     * @param orderId
-     * @param sellerId
-     * @param reason
+     * Allows the seller to cancel an order before the buyer has made payment.
+     * Typically used if the seller cannot fulfill the order or if there is an issue before payment is completed.
+     * @param orderId The ID of the order to cancel.
+     * @param sellerId The ID of the authenticated seller initiating the cancellation.
+     * @param reason The reason provided by the seller for the cancellation.
      */
     void processSellerInitiatedCancellation(UUID orderId, String sellerId, String reason);
+
+    /**
+     * Allows the seller to confirm that payment has been received and the order is ready to be fulfilled (e.g., prepared for shipping).
+     * This should be called after payment is confirmed to proceed with order fulfillment.
+     * @param orderId The ID of the order to fulfill.
+     * @param sellerId The ID of the authenticated seller confirming fulfillment.
+     */
+    void confirmOrderFulfillment(UUID orderId, String sellerId);
 }

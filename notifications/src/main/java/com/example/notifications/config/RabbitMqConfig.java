@@ -16,12 +16,16 @@ public class RabbitMqConfig {
     public static final String NOTIFICATIONS_EXCHANGE = "notifications_exchange"; // Existing: For auction/comment events published TO this service
     public static final String ORDERS_EVENTS_EXCHANGE = "orders_events_exchange";     // New: For events published BY Orders Service
     public static final String USER_EVENTS_EXCHANGE = "user_events_exchange";         // New: For user-specific events published BY Orders Service (or other services)
+    public static final String PAYMENTS_EVENTS_EXCHANGE = "payments_events_exchange";
 
     // --- Queue Names for Auction/Comment Notifications (Existing) ---
     public static final String AUCTION_STARTED_QUEUE = "q.notification.auction.started";
     public static final String AUCTION_ENDED_QUEUE = "q.notification.auction.ended";
     public static final String AUCTION_OUTBID_QUEUE = "q.notification.auction.outbid";
     public static final String COMMENT_REPLIED_QUEUE = "q.notification.comment.replied";
+    public static final String REFUND_SUCCEEDED_NOTIFICATION_QUEUE = "q.notification.payment.refund.succeeded";
+    public static final String REFUND_FAILED_NOTIFICATION_QUEUE = "q.notification.payment.refund.failed";
+    public static final String ORDER_AWAITING_FULFILLMENT_CONFIRMATION_QUEUE = "q.notification.order.awaiting.fulfillment.confirmation";
 
     // --- Routing Keys for Auction/Comment Notifications (Existing) ---
     public static final String AUCTION_STARTED_ROUTING_KEY = "auction.*.started";
@@ -45,6 +49,9 @@ public class RabbitMqConfig {
     public static final String ORDER_EVENT_READY_FOR_SHIPPING_ROUTING_KEY = "order.event.ready-for-shipping";
     public static final String ORDER_EVENT_CANCELLED_ROUTING_KEY = "order.event.cancelled";
     public static final String USER_EVENT_PAYMENT_DEFAULTED_ROUTING_KEY = "user.event.payment.defaulted";
+    public static final String PAYMENT_EVENT_REFUND_SUCCEEDED_ROUTING_KEY = "payment.event.refund.succeeded";
+    public static final String PAYMENT_EVENT_REFUND_FAILED_ROUTING_KEY = "payment.event.refund.failed";
+    public static final String ORDER_EVENT_AWAITING_FULFILLMENT_CONFIRMATION_ROUTING_KEY = "order.event.awaiting.fulfillment.confirmation";
 
 
     // --- Exchange Beans ---
@@ -62,6 +69,11 @@ public class RabbitMqConfig {
     @Bean
     TopicExchange userEventsExchange() { // New: Declare it
         return new TopicExchange(USER_EVENTS_EXCHANGE, true, false);
+    }
+
+    @Bean
+    TopicExchange paymentsEventsExchange() {
+        return new TopicExchange(PAYMENTS_EVENTS_EXCHANGE, true, false);
     }
 
     // --- Queue Beans (Existing) ---
@@ -116,7 +128,20 @@ public class RabbitMqConfig {
         return QueueBuilder.durable(USER_PAYMENT_DEFAULTED_QUEUE).build();
     }
 
+    @Bean
+    Queue refundSucceededNotificationQueue() {
+        return QueueBuilder.durable(REFUND_SUCCEEDED_NOTIFICATION_QUEUE).build();
+    }
 
+    @Bean
+    Queue refundFailedNotificationQueue() {
+        return QueueBuilder.durable(REFUND_FAILED_NOTIFICATION_QUEUE).build();
+    }
+
+    @Bean
+    Queue orderAwaitingFulfillmentConfirmationQueue() {
+        return QueueBuilder.durable(ORDER_AWAITING_FULFILLMENT_CONFIRMATION_QUEUE).build();
+    }
     // --- Binding Beans (Existing) ---
     @Bean
     Binding startedBinding(Queue auctionStartedQueue, TopicExchange notificationsExchange) {
@@ -190,6 +215,26 @@ public class RabbitMqConfig {
                 .with(USER_EVENT_PAYMENT_DEFAULTED_ROUTING_KEY);
     }
 
+    @Bean
+    Binding refundSucceededNotificationBinding(Queue refundSucceededNotificationQueue, TopicExchange paymentsEventsExchange) {
+        return BindingBuilder.bind(refundSucceededNotificationQueue)
+                .to(paymentsEventsExchange) // Listen on the PAYMENTS_EVENTS_EXCHANGE
+                .with(PAYMENT_EVENT_REFUND_SUCCEEDED_ROUTING_KEY);
+    }
+
+    @Bean
+    Binding refundFailedNotificationBinding(Queue refundFailedNotificationQueue, TopicExchange paymentsEventsExchange) {
+        return BindingBuilder.bind(refundFailedNotificationQueue)
+                .to(paymentsEventsExchange) // Listen on the PAYMENTS_EVENTS_EXCHANGE
+                .with(PAYMENT_EVENT_REFUND_FAILED_ROUTING_KEY);
+    }
+
+    @Bean
+    Binding orderAwaitingFulfillmentConfirmationBinding(Queue orderAwaitingFulfillmentConfirmationQueue, TopicExchange ordersEventsExchange) {
+        return BindingBuilder.bind(orderAwaitingFulfillmentConfirmationQueue)
+                .to(ordersEventsExchange)
+                .with(ORDER_EVENT_AWAITING_FULFILLMENT_CONFIRMATION_ROUTING_KEY);
+    }
 
     // --- Message Converter (Essential for DTO conversion) ---
     @Bean

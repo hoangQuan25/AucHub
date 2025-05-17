@@ -142,4 +142,42 @@ public final class NotificationEvents {
         String finalOrderStatus; // As String, from OrderStatus.toString() or similar
         String cancellationReason;
     }
+
+    @Value
+    @Builder
+    public static class RefundSucceededEvent {
+        UUID eventId;
+        LocalDateTime eventTimestamp;
+        UUID orderId;
+        String buyerId; // Crucial for targeting the notification
+        String paymentIntentId;
+        String refundId; // Stripe's Refund ID
+        Long amountRefunded; // Amount in smallest currency unit
+        String currency;
+        String status; // e.g., "succeeded"
+        LocalDateTime refundedAt;
+    }
+
+    @Value
+    @Builder
+    public static class RefundFailedEvent {
+        UUID eventId;
+        LocalDateTime eventTimestamp;
+        UUID orderId;
+        String buyerId; // Crucial for targeting the notification
+        String paymentIntentId;
+        String failureReason;
+        String failureCode; // Optional
+    }
+
+    @Value
+    @Builder
+    public static class OrderAwaitingFulfillmentConfirmationEvent {
+        UUID eventId;
+        LocalDateTime eventTimestamp;
+        UUID orderId;
+        String sellerId;
+        String buyerId; // Or buyerUsernameSnapshot if available and preferred
+        String productTitleSnapshot;
+    }
 }
