@@ -4,32 +4,57 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="6c40838e-6221-4c81-ab31-df2a3dd2a03a" name="Changes" comment="">
-      <change afterPath="$PROJECT_DIR$/orders/src/main/java/com/example/orders/dto/event/OrderAwaitingFulfillmentConfirmationEventDto.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/orders/src/main/java/com/example/orders/dto/event/OrderConfirmedBySellerEventDto.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/orders/src/main/java/com/example/orders/dto/event/RefundRequestedEventDto.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/payments/src/main/java/com/example/payments/dto/request/RefundRequestedEventDto.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/payments/src/main/java/com/example/payments/dto/response/RefundFailedEventDto.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/payments/src/main/java/com/example/payments/dto/response/RefundSucceededEventDto.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/payments/src/main/java/com/example/payments/listener/RefundEventListener.java" afterDir="false" />
+    <list default="true" id="3a162283-5be8-46d0-949d-517f55ab3cb9" name="Changes" comment="">
+      <change afterPath="$PROJECT_DIR$/.idea/AucHub.iml" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/deliveries/src/main/java/com/example/deliveries/config/RabbitMqConfig.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/deliveries/src/main/java/com/example/deliveries/dto/event/DeliveryCreatedEventDto.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/deliveries/src/main/java/com/example/deliveries/dto/event/DeliveryDeliveredEventDto.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/deliveries/src/main/java/com/example/deliveries/dto/event/DeliveryIssueReportedEventDto.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/deliveries/src/main/java/com/example/deliveries/dto/event/DeliveryShippedEventDto.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/deliveries/src/main/java/com/example/deliveries/dto/event/OrderReadyForShippingEventDto.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/deliveries/src/main/java/com/example/deliveries/dto/request/MarkAsShippedRequestDto.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/deliveries/src/main/java/com/example/deliveries/dto/request/ReportDeliveryIssueRequestDto.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/deliveries/src/main/java/com/example/deliveries/dto/request/UpdateToDeliveredRequestDto.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/deliveries/src/main/java/com/example/deliveries/entity/Delivery.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/deliveries/src/main/java/com/example/deliveries/entity/DeliveryStatus.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/deliveries/src/main/java/com/example/deliveries/listener/OrderEventListener.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/deliveries/src/main/java/com/example/deliveries/repository/DeliveryRepository.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/deliveries/src/main/java/com/example/deliveries/service/DeliveryService.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/deliveries/src/main/java/com/example/deliveries/service/impl/DeliveryServiceImpl.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/payments/src/main/java/com/example/payments/dto/request/ConfirmStripePaymentMethodRequestDto.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/payments/src/main/java/com/example/payments/dto/request/CreateStripeSetupIntentRequestDto.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/payments/src/main/java/com/example/payments/dto/response/CreateStripeSetupIntentResponseDto.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/payments/src/main/java/com/example/payments/dto/response/StripePaymentMethodDetailsDto.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/users/src/main/java/com/example/users/client/PaymentServiceClient.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/users/src/main/java/com/example/users/client/dto/ConfirmStripePaymentMethodRequestClientDto.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/users/src/main/java/com/example/users/client/dto/CreateStripeSetupIntentRequestClientDto.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/users/src/main/java/com/example/users/client/dto/CreateStripeSetupIntentResponseClientDto.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/users/src/main/java/com/example/users/client/dto/StripePaymentMethodDetailsClientDto.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/users/src/main/java/com/example/users/dto/StripeSetupConfirmationRequestDto.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/compiler.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/compiler.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/encodings.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/encodings.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/graduation_pj.iml" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/misc.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/misc.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/modules.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/modules.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/frontend/src/constants/orderConstants.js" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/constants/orderConstants.js" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/frontend/src/pages/MyOrdersPage.jsx" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/pages/MyOrdersPage.jsx" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/frontend/src/pages/MySalesPage.jsx" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/pages/MySalesPage.jsx" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/frontend/src/pages/OrderDetailPage.jsx" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/pages/OrderDetailPage.jsx" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/notifications/src/main/java/com/example/notifications/config/RabbitMqConfig.java" beforeDir="false" afterPath="$PROJECT_DIR$/notifications/src/main/java/com/example/notifications/config/RabbitMqConfig.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/notifications/src/main/java/com/example/notifications/event/NotificationEvents.java" beforeDir="false" afterPath="$PROJECT_DIR$/notifications/src/main/java/com/example/notifications/event/NotificationEvents.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/notifications/src/main/java/com/example/notifications/listener/NotificationEventListener.java" beforeDir="false" afterPath="$PROJECT_DIR$/notifications/src/main/java/com/example/notifications/listener/NotificationEventListener.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/notifications/src/main/java/com/example/notifications/service/NotificationService.java" beforeDir="false" afterPath="$PROJECT_DIR$/notifications/src/main/java/com/example/notifications/service/NotificationService.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/notifications/src/main/java/com/example/notifications/service/impl/NotificationServiceImpl.java" beforeDir="false" afterPath="$PROJECT_DIR$/notifications/src/main/java/com/example/notifications/service/impl/NotificationServiceImpl.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/orders/src/main/java/com/example/orders/config/RabbitMqConfig.java" beforeDir="false" afterPath="$PROJECT_DIR$/orders/src/main/java/com/example/orders/config/RabbitMqConfig.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/orders/src/main/java/com/example/orders/controller/OrdersController.java" beforeDir="false" afterPath="$PROJECT_DIR$/orders/src/main/java/com/example/orders/controller/OrdersController.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/orders/src/main/java/com/example/orders/entity/OrderStatus.java" beforeDir="false" afterPath="$PROJECT_DIR$/orders/src/main/java/com/example/orders/entity/OrderStatus.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/orders/src/main/java/com/example/orders/service/OrderService.java" beforeDir="false" afterPath="$PROJECT_DIR$/orders/src/main/java/com/example/orders/service/OrderService.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/orders/src/main/java/com/example/orders/service/impl/OrderServiceImpl.java" beforeDir="false" afterPath="$PROJECT_DIR$/orders/src/main/java/com/example/orders/service/impl/OrderServiceImpl.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/payments/src/main/java/com/example/payments/config/RabbitMqConfig.java" beforeDir="false" afterPath="$PROJECT_DIR$/payments/src/main/java/com/example/payments/config/RabbitMqConfig.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/frontend/src/pages/TimedAuctionDetailPage.jsx" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/pages/TimedAuctionDetailPage.jsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/frontend/src/pages/UserInfoPage.jsx" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/pages/UserInfoPage.jsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/payments/src/main/java/com/example/payments/controller/PaymentController.java" beforeDir="false" afterPath="$PROJECT_DIR$/payments/src/main/java/com/example/payments/controller/PaymentController.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/payments/src/main/java/com/example/payments/dto/request/CreatePaymentIntentRequestDto.java" beforeDir="false" afterPath="$PROJECT_DIR$/payments/src/main/java/com/example/payments/dto/request/CreatePaymentIntentRequestDto.java" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/payments/src/main/java/com/example/payments/service/PaymentService.java" beforeDir="false" afterPath="$PROJECT_DIR$/payments/src/main/java/com/example/payments/service/PaymentService.java" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/payments/src/main/java/com/example/payments/service/impl/StripePaymentServiceImpl.java" beforeDir="false" afterPath="$PROJECT_DIR$/payments/src/main/java/com/example/payments/service/impl/StripePaymentServiceImpl.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/payments/src/main/resources/application.yml" beforeDir="false" afterPath="$PROJECT_DIR$/payments/src/main/resources/application.yml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/users/pom.xml" beforeDir="false" afterPath="$PROJECT_DIR$/users/pom.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/users/src/main/java/com/example/users/UsersApplication.java" beforeDir="false" afterPath="$PROJECT_DIR$/users/src/main/java/com/example/users/UsersApplication.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/users/src/main/java/com/example/users/controller/UserController.java" beforeDir="false" afterPath="$PROJECT_DIR$/users/src/main/java/com/example/users/controller/UserController.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/users/src/main/java/com/example/users/dto/UpdateUserDto.java" beforeDir="false" afterPath="$PROJECT_DIR$/users/src/main/java/com/example/users/dto/UpdateUserDto.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/users/src/main/java/com/example/users/dto/UserBasicInfoDto.java" beforeDir="false" afterPath="$PROJECT_DIR$/users/src/main/java/com/example/users/dto/UserBasicInfoDto.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/users/src/main/java/com/example/users/dto/UserDto.java" beforeDir="false" afterPath="$PROJECT_DIR$/users/src/main/java/com/example/users/dto/UserDto.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/users/src/main/java/com/example/users/entity/User.java" beforeDir="false" afterPath="$PROJECT_DIR$/users/src/main/java/com/example/users/entity/User.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/users/src/main/java/com/example/users/mapper/impl/UserMapperImpl.java" beforeDir="false" afterPath="$PROJECT_DIR$/users/src/main/java/com/example/users/mapper/impl/UserMapperImpl.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/users/src/main/java/com/example/users/service/UserService.java" beforeDir="false" afterPath="$PROJECT_DIR$/users/src/main/java/com/example/users/service/UserService.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/users/src/main/java/com/example/users/service/impl/UserServiceImpl.java" beforeDir="false" afterPath="$PROJECT_DIR$/users/src/main/java/com/example/users/service/impl/UserServiceImpl.java" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -39,6 +64,7 @@
   <component name="FileTemplateManagerImpl">
     <option name="RECENT_TEMPLATES">
       <list>
+        <option value="Enum" />
         <option value="Interface" />
         <option value="Class" />
       </list>
@@ -47,31 +73,27 @@
   <component name="Git.Settings">
     <option name="RECENT_GIT_ROOT_PATH" value="$PROJECT_DIR$" />
   </component>
-  <component name="KubernetesApiPersistence">{}</component>
-  <component name="KubernetesApiProvider">{
-  &quot;isMigrated&quot;: true
-}</component>
   <component name="ProjectColorInfo">{
   &quot;customColor&quot;: &quot;&quot;,
   &quot;associatedIndex&quot;: 1
 }</component>
-  <component name="ProjectId" id="2wrhUklu1CKC46OZ3MT76IpxHxc" />
-  <component name="ProjectLevelVcsManager">
-    <ConfirmationsSetting value="2" id="Add" />
-  </component>
+  <component name="ProjectId" id="2xEXBoYrTaxL15z2LN4wd51j1Bu" />
   <component name="ProjectViewState">
     <option name="hideEmptyMiddlePackages" value="true" />
     <option name="showLibraryContents" value="true" />
   </component>
   <component name="PropertiesComponent">{
   &quot;keyToString&quot;: {
+    &quot;ModuleVcsDetector.initialDetectionPerformed&quot;: &quot;true&quot;,
     &quot;RequestMappingsPanelOrder0&quot;: &quot;0&quot;,
     &quot;RequestMappingsPanelOrder1&quot;: &quot;1&quot;,
     &quot;RequestMappingsPanelWidth0&quot;: &quot;75&quot;,
     &quot;RequestMappingsPanelWidth1&quot;: &quot;75&quot;,
     &quot;RunOnceActivity.ShowReadmeOnStart&quot;: &quot;true&quot;,
     &quot;RunOnceActivity.git.unshallow&quot;: &quot;true&quot;,
+    &quot;SHARE_PROJECT_CONFIGURATION_FILES&quot;: &quot;true&quot;,
     &quot;Spring Boot.ConfigserverApplication.executor&quot;: &quot;Run&quot;,
+    &quot;Spring Boot.DeliveriesApplication.executor&quot;: &quot;Run&quot;,
     &quot;Spring Boot.EurekaserverApplication.executor&quot;: &quot;Run&quot;,
     &quot;Spring Boot.GatewayserverApplication.executor&quot;: &quot;Run&quot;,
     &quot;Spring Boot.LiveAuctionsApplication.executor&quot;: &quot;Run&quot;,
@@ -81,7 +103,7 @@
     &quot;Spring Boot.ProductsApplication.executor&quot;: &quot;Run&quot;,
     &quot;Spring Boot.TimedAuctionsApplication.executor&quot;: &quot;Run&quot;,
     &quot;Spring Boot.UsersApplication.executor&quot;: &quot;Run&quot;,
-    &quot;git-widget-placeholder&quot;: &quot;feat/refund&quot;,
+    &quot;git-widget-placeholder&quot;: &quot;delivery&quot;,
     &quot;node.js.detected.package.eslint&quot;: &quot;true&quot;,
     &quot;node.js.detected.package.tslint&quot;: &quot;true&quot;,
     &quot;node.js.selected.package.eslint&quot;: &quot;(autodetect)&quot;,
@@ -91,13 +113,13 @@
     &quot;project.structure.proportion&quot;: &quot;0.0&quot;,
     &quot;project.structure.side.proportion&quot;: &quot;0.0&quot;,
     &quot;run.configurations.included.in.services&quot;: &quot;true&quot;,
-    &quot;settings.editor.selected.configurable&quot;: &quot;preferences.pluginManager&quot;,
     &quot;vue.rearranger.settings.migration&quot;: &quot;true&quot;
   }
 }</component>
   <component name="RunDashboard">
     <option name="configurationTypes">
       <set>
+        <option value="KtorApplicationConfigurationType" />
         <option value="MicronautRunConfigurationType" />
         <option value="QuarkusRunConfigurationType" />
         <option value="SpringBootApplicationConfigurationType" />
@@ -108,6 +130,15 @@
     <configuration name="ConfigserverApplication" type="SpringBootApplicationConfigurationType" factoryName="Spring Boot" nameIsGenerated="true">
       <module name="configserver" />
       <option name="SPRING_BOOT_MAIN_CLASS" value="com.example.configserver.ConfigserverApplication" />
+      <method v="2">
+        <option name="Make" enabled="true" />
+      </method>
+    </configuration>
+    <configuration name="DeliveriesApplication" type="SpringBootApplicationConfigurationType" factoryName="Spring Boot">
+      <option name="ALTERNATIVE_JRE_PATH" value="21" />
+      <option name="ALTERNATIVE_JRE_PATH_ENABLED" value="true" />
+      <module name="deliveries" />
+      <option name="SPRING_BOOT_MAIN_CLASS" value="com.example.deliveries.DeliveriesApplication" />
       <method v="2">
         <option name="Make" enabled="true" />
       </method>
@@ -139,14 +170,6 @@
       <option name="FRAME_DEACTIVATION_UPDATE_POLICY" value="UpdateClassesAndResources" />
       <module name="notifications" />
       <option name="SPRING_BOOT_MAIN_CLASS" value="com.example.notifications.NotificationsApplication" />
-      <method v="2">
-        <option name="Make" enabled="true" />
-      </method>
-    </configuration>
-    <configuration name="OrdersApplication" type="SpringBootApplicationConfigurationType" factoryName="Spring Boot" nameIsGenerated="true">
-      <option name="FRAME_DEACTIVATION_UPDATE_POLICY" value="UpdateClassesAndResources" />
-      <module name="orders" />
-      <option name="SPRING_BOOT_MAIN_CLASS" value="com.example.orders.OrdersApplication" />
       <method v="2">
         <option name="Make" enabled="true" />
       </method>
@@ -191,6 +214,19 @@
         <option name="Make" enabled="true" />
       </method>
     </configuration>
+    <list>
+      <item itemvalue="Spring Boot.ConfigserverApplication" />
+      <item itemvalue="Spring Boot.EurekaserverApplication" />
+      <item itemvalue="Spring Boot.GatewayserverApplication" />
+      <item itemvalue="Spring Boot.LiveAuctionsApplication" />
+      <item itemvalue="Spring Boot.NotificationsApplication" />
+      <item itemvalue="Spring Boot.OrdersApplication" />
+      <item itemvalue="Spring Boot.DeliveriesApplication" />
+      <item itemvalue="Spring Boot.PaymentsApplication" />
+      <item itemvalue="Spring Boot.ProductsApplication" />
+      <item itemvalue="Spring Boot.TimedAuctionsApplication" />
+      <item itemvalue="Spring Boot.UsersApplication" />
+    </list>
   </component>
   <component name="SharedIndexes">
     <attachedChunks>
@@ -200,23 +236,16 @@
       </set>
     </attachedChunks>
   </component>
-  <component name="SpellCheckerSettings" RuntimeDictionaries="0" Folders="0" CustomDictionaries="0" DefaultDictionary="application-level" UseSingleDictionary="true" transferred="true" />
   <component name="TaskManager">
     <task active="true" id="Default" summary="Default task">
-      <changelist id="6c40838e-6221-4c81-ab31-df2a3dd2a03a" name="Changes" comment="" />
-      <created>1746805620562</created>
+      <changelist id="3a162283-5be8-46d0-949d-517f55ab3cb9" name="Changes" comment="" />
+      <created>1747504074853</created>
       <option name="number" value="Default" />
       <option name="presentableId" value="Default" />
-      <updated>1746805620562</updated>
-      <workItem from="1746805622829" duration="2317000" />
-      <workItem from="1746856700880" duration="9517000" />
-      <workItem from="1746895016480" duration="2024000" />
-      <workItem from="1747237216439" duration="7226000" />
-      <workItem from="1747269383464" duration="1288000" />
-      <workItem from="1747377873024" duration="1366000" />
-      <workItem from="1747406585957" duration="10775000" />
-      <workItem from="1747468097236" duration="10506000" />
-      <workItem from="1747496902691" duration="4079000" />
+      <updated>1747504074853</updated>
+      <workItem from="1747504076499" duration="2893000" />
+      <workItem from="1747562244148" duration="5934000" />
+      <workItem from="1747575449296" duration="6913000" />
     </task>
     <servers />
   </component>

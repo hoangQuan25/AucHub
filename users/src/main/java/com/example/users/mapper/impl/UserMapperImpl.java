@@ -1,6 +1,7 @@
-// src/main/java/com/example/users/mapper/UserMapperManualImpl.java
+// File: com.example.users.mapper.impl.UserMapperImpl.java
 package com.example.users.mapper.impl;
 
+// ... imports ...
 import com.example.users.dto.UserBasicInfoDto;
 import com.example.users.dto.UserDto;
 import com.example.users.dto.UpdateUserDto;
@@ -15,76 +16,75 @@ public class UserMapperImpl implements UserMapper {
     public UserDto toUserDto(User user) {
         if (user == null) return null;
 
-        UserDto dto = new UserDto();
-        dto.setId(user.getId());
-        dto.setUsername(user.getUsername());
-        dto.setEmail(user.getEmail());
-        dto.setFirstName(user.getFirstName());
-        dto.setLastName(user.getLastName());
-        dto.setPhoneNumber(user.getPhoneNumber());
-        dto.setSeller(user.isSeller());
-
-        // Map new direct fields
-        dto.setStreetAddress(user.getStreetAddress());
-        dto.setCity(user.getCity());
-        dto.setStateProvince(user.getStateProvince());
-        dto.setPostalCode(user.getPostalCode());
-        dto.setCountry(user.getCountry());
-        dto.setPaymentCardType(user.getPaymentCardType());
-        dto.setPaymentLast4Digits(user.getPaymentLast4Digits());
-        dto.setPaymentExpiryMonth(user.getPaymentExpiryMonth());
-        dto.setPaymentExpiryYear(user.getPaymentExpiryYear());
-
-        dto.setCreatedAt(user.getCreatedAt());
-        dto.setUpdatedAt(user.getUpdatedAt());
-        return dto;
+        return UserDto.builder()
+                .id(user.getId())
+                .username(user.getUsername())
+                .email(user.getEmail())
+                .firstName(user.getFirstName())
+                .lastName(user.getLastName())
+                .phoneNumber(user.getPhoneNumber())
+                .isSeller(user.isSeller())
+                .createdAt(user.getCreatedAt())
+                .updatedAt(user.getUpdatedAt())
+                // Address
+                .streetAddress(user.getStreetAddress())
+                .city(user.getCity())
+                .stateProvince(user.getStateProvince())
+                .postalCode(user.getPostalCode())
+                .country(user.getCountry())
+                // Stripe & Default Card Info
+                .stripeCustomerId(user.getStripeCustomerId())
+                .stripeDefaultPaymentMethodId(user.getStripeDefaultPaymentMethodId())
+                .hasDefaultPaymentMethod(user.getStripeDefaultPaymentMethodId() != null) // Derived
+                .defaultCardBrand(user.getDefaultCardBrand())
+                .defaultCardLast4(user.getDefaultCardLast4())
+                .defaultCardExpiryMonth(user.getDefaultCardExpiryMonth())
+                .defaultCardExpiryYear(user.getDefaultCardExpiryYear())
+                .build();
     }
 
     @Override
     public void updateUserFromDto(UpdateUserDto dto, User user) {
         if (dto == null || user == null) return;
 
-        // Update basic info (only if DTO field is not null)
+        // Update basic info
         if (dto.getFirstName() != null) user.setFirstName(dto.getFirstName());
         if (dto.getLastName() != null) user.setLastName(dto.getLastName());
         if (dto.getPhoneNumber() != null) user.setPhoneNumber(dto.getPhoneNumber());
 
-        // Update address info (only if DTO field is not null)
+        // Update address info
         if (dto.getStreetAddress() != null) user.setStreetAddress(dto.getStreetAddress());
         if (dto.getCity() != null) user.setCity(dto.getCity());
         if (dto.getStateProvince() != null) user.setStateProvince(dto.getStateProvince());
         if (dto.getPostalCode() != null) user.setPostalCode(dto.getPostalCode());
         if (dto.getCountry() != null) user.setCountry(dto.getCountry());
 
-        // Update payment info (only if DTO field is not null)
-        if (dto.getPaymentCardType() != null) user.setPaymentCardType(dto.getPaymentCardType());
-        if (dto.getPaymentLast4Digits() != null) user.setPaymentLast4Digits(dto.getPaymentLast4Digits());
-        if (dto.getPaymentExpiryMonth() != null) user.setPaymentExpiryMonth(dto.getPaymentExpiryMonth());
-        if (dto.getPaymentExpiryYear() != null) user.setPaymentExpiryYear(dto.getPaymentExpiryYear());
-
-        // Note: This simple null check means you cannot clear a field by sending null.
-        // If you need that, adjust the logic (e.g., check if the key exists in the request).
+        // DO NOT update Stripe or default card display fields from this DTO.
+        // Those are managed by the payment method setup flow.
     }
 
-    // --- ADD THIS IMPLEMENTATION ---
     @Override
     public UserBasicInfoDto toUserBasicInfoDto(User user) {
         if (user == null) {
             return null;
         }
-        // Use the builder if UserBasicInfoDto has @Builder, otherwise use constructor/setters
         return UserBasicInfoDto.builder()
                 .id(user.getId())
                 .username(user.getUsername())
                 .email(user.getEmail())
-                // Add any other basic fields needed here
+                .phoneNumber(user.getPhoneNumber()) // Added
+                // Address fields
+                .streetAddress(user.getStreetAddress())
+                .city(user.getCity())
+                .stateProvince(user.getStateProvince())
+                .postalCode(user.getPostalCode())
+                .country(user.getCountry())
+                // Stripe related identifiers
+                .stripeCustomerId(user.getStripeCustomerId())
+                .stripeDefaultPaymentMethodId(user.getStripeDefaultPaymentMethodId())
+                // Displayable default card info
+                .defaultCardBrand(user.getDefaultCardBrand())
+                .defaultCardLast4(user.getDefaultCardLast4())
                 .build();
-        /* Or using setters:
-        UserBasicInfoDto dto = new UserBasicInfoDto();
-        dto.setId(user.getId());
-        dto.setUsername(user.getUsername());
-        return dto;
-        */
     }
-    // --- END OF ADDITION ---
 }

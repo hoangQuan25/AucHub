@@ -1,7 +1,11 @@
 package com.example.payments.controller; // In your Payment Service
 
+import com.example.payments.dto.request.ConfirmStripePaymentMethodRequestDto;
 import com.example.payments.dto.request.CreatePaymentIntentRequestDto;
+import com.example.payments.dto.request.CreateStripeSetupIntentRequestDto;
 import com.example.payments.dto.response.CreatePaymentIntentResponseDto;
+import com.example.payments.dto.response.CreateStripeSetupIntentResponseDto;
+import com.example.payments.dto.response.StripePaymentMethodDetailsDto;
 import com.example.payments.service.PaymentService;
 import com.stripe.exception.SignatureVerificationException;
 import com.stripe.exception.StripeException;
@@ -35,6 +39,47 @@ public class PaymentController {
             log.error("Unexpected error while creating PaymentIntent for order {}: {}", requestDto.getOrderId(), e.getMessage(), e);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                     .body("An unexpected error occurred during payment intent creation.");
+        }
+    }
+
+    @PostMapping("/setup-intent")
+    public ResponseEntity<?> createStripeSetupIntent(@Valid @RequestBody CreateStripeSetupIntentRequestDto requestDto) {
+        log.info("Received request to create Stripe SetupIntent for user ID: {}", requestDto.getUserId());
+        try {
+            CreateStripeSetupIntentResponseDto response = paymentService.createStripeSetupIntent(requestDto);
+            log.info("Stripe SetupIntent {} created successfully for user ID: {}, Stripe Customer ID: {}",
+                    response.getSetupIntentId(), requestDto.getUserId(), response.getStripeCustomerId());
+            return ResponseEntity.ok(response);
+        } catch (StripeException e) {
+            log.error("Stripe error while creating SetupIntent for user {}: {}", requestDto.getUserId(), e.getMessage());
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body("Error creating Stripe SetupIntent: " + e.getMessage());
+        } catch (Exception e) {
+            log.error("Unexpected error while creating SetupIntent for user {}: {}", requestDto.getUserId(), e.getMessage(), e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body("An unexpected error occurred during SetupIntent creation.");
+        }
+    }
+
+    // --- NEW ENDPOINT for confirming a PaymentMethod after SetupIntent completion ---
+    @PostMapping("/confirm-payment-method")
+    public ResponseEntity<?> confirmAndSaveStripePaymentMethod(@Valid @RequestBody ConfirmStripePaymentMethodRequestDto requestDto) {
+        log.info("Received request to confirm Stripe PaymentMethod ID: {} for user ID: {}",
+                requestDto.getStripePaymentMethodId(), requestDto.getUserId());
+        try {
+            StripePaymentMethodDetailsDto response = paymentService.confirmAndSavePaymentMethod(requestDto);
+            log.info("Successfully confirmed and processed PaymentMethod {} for Stripe Customer ID: {} (User ID: {})",
+                    response.getStripePaymentMethodId(), response.getStripeCustomerId(), requestDto.getUserId());
+            return ResponseEntity.ok(response);
+        } catch (StripeException e) {
+            log.error("Stripe error while confirming PaymentMethod {} for user {}: {}",
+                    requestDto.getStripePaymentMethodId(), requestDto.getUserId(), e.getMessage());
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body("Error confirming Stripe PaymentMethod: " + e.getMessage());
+        } catch (Exception e) {
+            log.error("Unexpected error while confirming PaymentMethod for user {}: {}", requestDto.getUserId(), e.getMessage(), e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body("An unexpected error occurred during PaymentMethod confirmation.");
         }
     }
 }

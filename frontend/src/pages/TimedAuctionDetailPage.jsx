@@ -102,6 +102,12 @@ function TimedAuctionDetailPage() {
     navigate("/my-orders");
   };
 
+  const [userProfile, setUserProfile] = useState(null);
+  const [isProfileLoading, setIsProfileLoading] = useState(false); // To prevent multiple fetches or show loading
+
+  // --- NEW STATE for Payment Method Required Modal ---
+  const [isPaymentMethodModalOpen, setIsPaymentMethodModalOpen] = useState(false);
+
   // --- State ---
   const [auctionDetails, setAuctionDetails] = useState(null);
   const [bidHistory, setBidHistory] = useState([]); // Visible bid history
@@ -141,6 +147,24 @@ function TimedAuctionDetailPage() {
   const commentsIntervalRef = useRef(null);
 
   const loggedInUserId = initialized ? keycloak.subject : null;
+
+  const fetchUserProfileForBidding = useCallback(async () => {
+    if (initialized && keycloak.authenticated && !userProfile && !isProfileLoading) { // Fetch only if not already fetched or loading
+      setIsProfileLoading(true);
+      console.log("Fetching user profile for bidding check...");
+      try {
+        await keycloak.updateToken(5); // Ensure token is fresh
+        const response = await apiClient.get("/users/me"); // Endpoint for current user's full profile
+        setUserProfile(response.data);
+      } catch (err) {
+        console.error("Failed to fetch user profile for bidding check:", err);
+        // Handle error - user might not be able to bid if profile can't be checked
+        // For now, we just log it. Bidding attempt will fail gracefully if userProfile is still null.
+      } finally {
+        setIsProfileLoading(false);
+      }
+    }
+  }, [initialized, keycloak, userProfile, isProfileLoading]);
 
   // --- Fetching Functions with Corrected useCallback Dependencies ---
   const fetchAuctionDetails = useCallback(async () => {
@@ -245,9 +269,17 @@ function TimedAuctionDetailPage() {
       // Use the stable function references from useCallback
       detailsIntervalRef.current = setInterval(fetchAuctionDetails, 15 * 1000);
       commentsIntervalRef.current = setInterval(fetchComments, 30 * 1000);
+
+      if (keycloak.authenticated) { // Only fetch profile if authenticated
+        fetchUserProfileForBidding();
+      } else {
+        setUserProfile(null); // Clear profile if user logs out
+      }
+
     } else {
       setIsLoadingDetails(false);
       setIsLoadingComments(false);
+      setUserProfile(null); // Clear profile if auctionId or auth changes
     }
 
     // Cleanup
@@ -257,7 +289,7 @@ function TimedAuctionDetailPage() {
       clearInterval(commentsIntervalRef.current);
     };
     // Dependencies remain the same, but fetchAuctionDetails/fetchComments are now stable
-  }, [auctionId, initialized, fetchAuctionDetails, fetchComments]);
+  }, [auctionId, initialized, fetchAuctionDetails, fetchComments, fetchUserProfileForBidding]);
 
   useEffect(() => {
     if (auctionDetails?.nextBidAmount != null) {
@@ -280,6 +312,26 @@ function TimedAuctionDetailPage() {
 
   // --- Place Max Bid Handler ---
   const handlePlaceBid = async () => {
+    if (!initialized || !keycloak.authenticated) {
+      setBidError("Please log in to place a bid.");
+      // Could also open login modal/redirect: keycloak.login();
+      return;
+    }
+
+    // --- NEW: Check for payment method BEFORE proceeding ---
+    if (!userProfile || !userProfile.hasDefaultPaymentMethod) {
+      // If profile is still loading, user might need to click again once loaded.
+      // Or disable bid button while profileLoading is true.
+      if (isProfileLoading) {
+          setBidError("Verifying payment method status, please wait and try again.");
+          return;
+      }
+      console.log("User has no default payment method. Prompting to update profile.");
+      setIsPaymentMethodModalOpen(true); // Open the modal
+      return; // Stop the bid placement
+    }
+    // --- END OF NEW CHECK ---
+    
     if (
       !auctionDetails ||
       isBidding ||
@@ -897,6 +949,21 @@ function TimedAuctionDetailPage() {
         </div>
       </section>
       {/* --- End Comments Section --- */}
+      <ConfirmationModal
+        isOpen={isPaymentMethodModalOpen}
+        onClose={() => setIsPaymentMethodModalOpen(false)}
+        onConfirm={() => {
+          navigate('/profile'); // Navigate to user profile page
+          setIsPaymentMethodModalOpen(false);
+        }}
+        title="Payment Method Required"
+        message="To place a bid, you need a payment method saved to your profile. Please go to your profile to add or update your payment information."
+        confirmText="Go to Profile"
+        cancelText="Later" // Or "Close"
+        confirmButtonClass="bg-indigo-600 hover:bg-indigo-700" // Style as needed
+        // No isLoading or error props specifically for this informational modal,
+        // unless you want to add them for some reason.
+      />
       {/* Cancel Confirmation Modal */}
       <ConfirmationModal
         isOpen={isCancelConfirmOpen}

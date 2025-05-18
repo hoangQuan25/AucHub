@@ -1,7 +1,5 @@
-// src/main/java/com/example/users/service/impl/UserServiceImpl.java
 package com.example.users.service.impl;
 
-// REMOVE imports for Address/Payment entities, DTOs, mappers, repos, List
 import com.example.users.dto.UpdateUserDto;
 import com.example.users.dto.UserBasicInfoDto;
 import com.example.users.dto.UserDto;
@@ -13,15 +11,15 @@ import com.example.users.service.KeycloakAdminService;
 import com.example.users.service.UserService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.keycloak.representations.idm.UserRepresentation;
+import org.keycloak.representations.idm.UserRepresentation; // Keep this if getOrCreateUserProfile uses it
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.util.CollectionUtils;
+import org.springframework.util.CollectionUtils; // Keep this
 
-import java.util.Collections;
-import java.util.List;
-import java.util.Map;
-import java.util.stream.Collectors;
+import java.util.Collections; // Keep this
+import java.util.List;       // Keep this
+import java.util.Map;        // Keep this
+import java.util.stream.Collectors; // Keep this
 
 
 @Service
@@ -32,14 +30,12 @@ public class UserServiceImpl implements UserService {
     private final UserRepository userRepository;
     private final UserMapper userMapper;
     private final KeycloakAdminService keycloakAdminService;
-    // REMOVE AddressRepository, PaymentMethodRepository, AddressMapper, PaymentMethodMapper injections
 
     @Override
     @Transactional
     public UserDto getOrCreateUserProfile(String userId, String username, String email) {
+        // ... (existing implementation is fine - new User() will have null Stripe fields initially)
         log.info("Attempting to fetch or create profile for user ID: {}", userId);
-
-        // Logic remains the same - new User() will have null address/payment fields initially
         return userRepository.findById(userId)
                 .map(existingUser -> {
                     log.info("Found existing user profile for ID: {}", userId);
@@ -48,19 +44,15 @@ public class UserServiceImpl implements UserService {
                 .orElseGet(() -> {
                     log.info("User profile not found locally for ID: {}. Fetching from Keycloak and creating.", userId);
                     try {
-                        UserRepresentation keycloakUser = keycloakAdminService.getKeycloakUserById(userId);
-                        log.debug("Fetched Keycloak UserRepresentation: ID={}, Username={}, Email={}, FirstName={}, LastName={}",
-                                keycloakUser.getId(), keycloakUser.getUsername(), keycloakUser.getEmail(),
-                                keycloakUser.getFirstName(), keycloakUser.getLastName());
-
+                        UserRepresentation keycloakUserRep = keycloakAdminService.getKeycloakUserById(userId); // Renamed for clarity
                         User newUser = new User();
-                        newUser.setId(keycloakUser.getId());
-                        newUser.setUsername(keycloakUser.getUsername());
-                        newUser.setEmail(keycloakUser.getEmail());
-                        newUser.setFirstName(keycloakUser.getFirstName());
-                        newUser.setLastName(keycloakUser.getLastName());
-                        // Address and Payment fields will be null by default
-                        newUser.setSeller(false);
+                        newUser.setId(keycloakUserRep.getId());
+                        newUser.setUsername(keycloakUserRep.getUsername());
+                        newUser.setEmail(keycloakUserRep.getEmail());
+                        newUser.setFirstName(keycloakUserRep.getFirstName());
+                        newUser.setLastName(keycloakUserRep.getLastName());
+                        // Address, Stripe, and Payment display fields will be null by default
+                        newUser.setSeller(false); // Default seller status
 
                         User savedUser = userRepository.save(newUser);
                         log.info("Successfully created and saved new user profile for ID: {}", userId);
@@ -75,25 +67,23 @@ public class UserServiceImpl implements UserService {
     @Override
     @Transactional
     public UserDto updateUserProfile(String userId, UpdateUserDto updateUserDto) {
-        log.debug("Updating profile for user ID: {}", userId);
-        // Find the existing user
+        // This method now correctly focuses on user-editable fields (name, phone, address)
+        // as payment card display fields were removed from UpdateUserDto.
+        log.debug("Updating profile (name, phone, address) for user ID: {}", userId);
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new UserNotFoundException("User not found with id: " + userId));
 
-        // Use the updated mapper to apply changes from DTO to Entity
-        userMapper.updateUserFromDto(updateUserDto, user);
+        userMapper.updateUserFromDto(updateUserDto, user); // Mapper only updates fields present in UpdateUserDto
 
-        // Save the updated user
         User updatedUser = userRepository.save(user);
         log.info("Profile updated successfully for user ID: {}", userId);
-        // Map back to DTO to return
         return userMapper.toUserDto(updatedUser);
     }
 
     @Override
     @Transactional
     public void activateSellerRole(String userId) {
-        // This logic remains the same
+        // ... (existing implementation is fine) ...
         log.debug("Activating seller role for user ID: {}", userId);
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new UserNotFoundException("User not found with id: " + userId));
@@ -103,7 +93,6 @@ public class UserServiceImpl implements UserService {
             return;
         }
         keycloakAdminService.addSellerRoleToUser(userId);
-        log.info("KeycloakAdminService successfully processed role addition for user ID: {}", userId);
         user.setSeller(true);
         userRepository.save(user);
         log.info("Internal seller status updated successfully for user ID: {}", userId);
@@ -111,34 +100,50 @@ public class UserServiceImpl implements UserService {
 
 
     @Override
-    @Transactional(readOnly = true) // Read-only transaction is sufficient
+    @Transactional(readOnly = true)
     public Map<String, UserBasicInfoDto> getUsersBasicInfo(List<String> userIds) {
+        // ... (existing implementation is fine, UserMapper now maps more fields to UserBasicInfoDto) ...
         if (CollectionUtils.isEmpty(userIds)) {
             log.debug("Received empty list of user IDs for basic info lookup.");
             return Collections.emptyMap();
         }
-
         log.info("Fetching basic info for {} user IDs.", userIds.size());
-        List<User> users = userRepository.findAllById(userIds); // Fetch users matching the IDs
+        List<User> users = userRepository.findAllById(userIds);
 
         if (users.isEmpty()) {
             log.warn("No users found in DB for provided IDs: {}", userIds);
             return Collections.emptyMap();
         }
-
-        // Convert the list of found users to a Map<UserId, UserBasicInfoDto>
         Map<String, UserBasicInfoDto> resultMap = users.stream()
-                .map(userMapper::toUserBasicInfoDto) // Map each User entity to UserBasicInfoDto
-                .filter(dto -> dto != null && dto.getId() != null) // Ensure mapping was successful and ID exists
+                .map(userMapper::toUserBasicInfoDto)
+                .filter(dto -> dto != null && dto.getId() != null)
                 .collect(Collectors.toMap(
-                        UserBasicInfoDto::getId, // Key of the map is the user ID
-                        dto -> dto              // Value of the map is the UserBasicInfoDto itself
+                        UserBasicInfoDto::getId,
+                        dto -> dto
                 ));
-
         log.debug("Returning basic info map for {} users.", resultMap.size());
         return resultMap;
     }
-    // --- END OF IMPLEMENTATION ---
 
-    // REMOVE all implementations for Address and PaymentMethod CRUD methods
+    // --- NEW METHOD IMPLEMENTATION ---
+    @Override
+    @Transactional
+    public void saveStripePaymentDetails(String userId, String stripeCustomerId, String stripeDefaultPaymentMethodId,
+                                         String cardBrand, String last4, String expMonth, String expYear) {
+        log.info("Saving Stripe payment details for user ID: {}. Stripe Customer ID: {}, PM ID: {}",
+                userId, stripeCustomerId, stripeDefaultPaymentMethodId);
+
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new UserNotFoundException("User not found with id: " + userId + " while trying to save Stripe details."));
+
+        user.setStripeCustomerId(stripeCustomerId);
+        user.setStripeDefaultPaymentMethodId(stripeDefaultPaymentMethodId);
+        user.setDefaultCardBrand(cardBrand);
+        user.setDefaultCardLast4(last4);
+        user.setDefaultCardExpiryMonth(expMonth);
+        user.setDefaultCardExpiryYear(expYear);
+
+        userRepository.save(user);
+        log.info("Successfully saved Stripe payment details for user ID: {}", userId);
+    }
 }

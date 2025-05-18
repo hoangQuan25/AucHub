@@ -19,5 +19,13 @@ public interface UserService {
 
     Map<String, UserBasicInfoDto> getUsersBasicInfo(List<String> userIds);
 
-    // REMOVE all Address and PaymentMethod method signatures
+    void saveStripePaymentDetails(
+            String userId,
+            String stripeCustomerId,
+            String stripeDefaultPaymentMethodId,
+            String cardBrand,
+            String last4,
+            String expMonth,
+            String expYear
+    );
 }
