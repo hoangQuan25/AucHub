@@ -32,7 +32,16 @@ public class CreatePaymentIntentRequestDto {
     @NotEmpty(message = "Currency cannot be empty")
     private String currency; // e.g., "vnd" (lowercase for Stripe)
 
+    private String description;
+
+
     // Optional fields you might want to pass to Stripe
-    private String description; // e.g., "Payment for Order #123 - Auction Item XYZ"
-    private String customerEmail; // Useful for guest checkouts or Stripe receipts
+    private String stripeCustomerId;           // cus_xxx (if you want to charge default or a specific PM of this customer)
+    private String stripePaymentMethodId;      // pm_xxx (if you want to charge this specific saved payment method)
+    private Boolean confirmImmediately;        // Default to false. If true, backend attempts to confirm PI immediately.
+    // If true & off_session=true, useful for subscriptions/auto-charges.
+    // If true & on_session, Stripe might still require frontend action for SCA.
+    private Boolean offSession;
+
+    private String returnUrl; // <<< NEW FIELD: URL to redirect to after off-site authentication
 }

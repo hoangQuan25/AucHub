@@ -4,14 +4,14 @@ import com.example.payments.config.RabbitMqConfig;
 import com.example.payments.config.StripeConfig;
 import com.example.payments.dto.event.PaymentFailedEventDto;
 import com.example.payments.dto.event.PaymentSucceededEventDto;
+import com.example.payments.dto.request.ConfirmStripePaymentMethodRequestDto;
 import com.example.payments.dto.request.CreatePaymentIntentRequestDto;
+import com.example.payments.dto.request.CreateStripeSetupIntentRequestDto;
 import com.example.payments.dto.request.RefundRequestedEventDto;
-import com.example.payments.dto.response.CreatePaymentIntentResponseDto;
+import com.example.payments.dto.response.*;
 // Assuming you have a PaymentIntentRecord entity and repository
 // import com.example.payments.entity.PaymentIntentRecord;
 // import com.example.payments.repository.PaymentIntentRecordRepository;
-import com.example.payments.dto.response.RefundFailedEventDto;
-import com.example.payments.dto.response.RefundSucceededEventDto;
 import com.example.payments.service.PaymentService;
 
 import com.stripe.Stripe;
@@ -19,22 +19,20 @@ import com.stripe.exception.SignatureVerificationException;
 import com.stripe.exception.StripeException;
 import com.stripe.model.*;
 import com.stripe.net.Webhook; // For signature verification
-import com.stripe.param.PaymentIntentCreateParams;
-import com.stripe.param.RefundCreateParams;
+import com.stripe.param.*;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.amqp.rabbit.core.RabbitTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional; // If updating local DB
+import org.springframework.util.StringUtils;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.Instant;
 import java.time.LocalDateTime;
 import java.time.ZoneOffset;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.UUID;
+import java.util.*;
 
 @Service
 @RequiredArgsConstructor
@@ -50,33 +48,100 @@ public class StripePaymentServiceImpl implements PaymentService {
     @Override
     @Transactional
     public CreatePaymentIntentResponseDto createPaymentIntent(CreatePaymentIntentRequestDto requestDto) throws StripeException {
+        log.info("Creating PaymentIntent for orderId: {}, userId: {}, usingStripeCustomerId: {}, usingStripePaymentMethodId: {}",
+                requestDto.getOrderId(), requestDto.getUserId(),
+                requestDto.getStripeCustomerId() != null, requestDto.getStripePaymentMethodId() != null);
+
         Map<String, String> metadata = new HashMap<>();
         metadata.put("order_id", requestDto.getOrderId().toString());
         metadata.put("user_id", requestDto.getUserId());
-        if(requestDto.getDescription() != null) {
+        if (StringUtils.hasText(requestDto.getDescription())) {
             metadata.put("description", requestDto.getDescription());
         }
 
-        PaymentIntentCreateParams params =
+        PaymentIntentCreateParams.Builder paramsBuilder =
                 PaymentIntentCreateParams.builder()
-                        .setAmount(requestDto.getAmount()) // Amount in smallest currency unit (long)
+                        .setAmount(requestDto.getAmount())
                         .setCurrency(requestDto.getCurrency().toLowerCase())
-                        .putAllMetadata(metadata)
-                        .setAutomaticPaymentMethods(
-                                PaymentIntentCreateParams.AutomaticPaymentMethods.builder()
-                                        .setEnabled(true)
-                                        .build())
-                        // You can add 'capture_method' = 'manual' if you plan to authorize then capture later
-                        // For direct charges, this is fine.
-                        .build();
+                        .putAllMetadata(metadata);
 
+        // --- LOGIC TO USE SAVED PAYMENT METHOD ---
+        if (StringUtils.hasText(requestDto.getStripeCustomerId())) {
+            paramsBuilder.setCustomer(requestDto.getStripeCustomerId());
+            log.debug("Setting customer for PaymentIntent: {}", requestDto.getStripeCustomerId());
+        }
+
+        if (StringUtils.hasText(requestDto.getStripePaymentMethodId())) {
+            paramsBuilder.setPaymentMethod(requestDto.getStripePaymentMethodId());
+            log.debug("Setting specific payment_method for PaymentIntent: {}", requestDto.getStripePaymentMethodId());
+            // If using a specific payment method, it's usually good practice to also provide the customer it belongs to.
+            if (!StringUtils.hasText(requestDto.getStripeCustomerId())) {
+                log.warn("stripePaymentMethodId provided without stripeCustomerId. This might work for some cases but is generally not recommended.");
+                // Stripe might infer customer if PM is uniquely attached, but explicitly providing customer is better.
+            }
+        }
+
+        // If no specific payment method is set, and a customer is set,
+        // Stripe will attempt to use the customer's default payment method if confirm=true.
+        // Or, if automatic_payment_methods is enabled, Stripe chooses.
+
+        // Confirmation Logic
+        if (Boolean.TRUE.equals(requestDto.getConfirmImmediately())) {
+            paramsBuilder.setConfirm(true);
+            log.debug("PaymentIntent will be attempted to confirm immediately.");
+
+            if (!StringUtils.hasText(requestDto.getReturnUrl())) {
+                // This situation should ideally not happen if confirm is true and redirect is possible.
+                // Stripe might still error out if it needs to redirect and no return_url is provided.
+                // For robustness, you could throw an error or have a default configurable return_url.
+                log.warn("confirmImmediately is true, but no returnUrl provided in request for orderId: {}. " +
+                        "Stripe might require it if redirection is needed.", requestDto.getOrderId());
+                // Consider throwing: throw new IllegalArgumentException("returnUrl is required when confirmImmediately is true and payment method might redirect.");
+                // For now, let's proceed, Stripe will error if it's mandatory for the flow.
+            } else {
+                paramsBuilder.setReturnUrl(requestDto.getReturnUrl()); // <<< SET THE RETURN URL
+                log.debug("Setting return_url for PaymentIntent: {}", requestDto.getReturnUrl());
+            }
+
+            if (Boolean.TRUE.equals(requestDto.getOffSession()) && StringUtils.hasText(requestDto.getStripeCustomerId())) {
+                // For off-session with a saved card (customer must be set).
+                paramsBuilder.setOffSession(true);
+                // If you set confirm=true and off_session=true, you MUST provide a payment_method or ensure the customer has a default.
+                // If payment_method is not provided, Stripe uses the customer's default.
+                if (!StringUtils.hasText(requestDto.getStripePaymentMethodId()) && StringUtils.hasText(requestDto.getStripeCustomerId())) {
+                    log.debug("Attempting off-session confirm using customer's default payment method.");
+                } else if (StringUtils.hasText(requestDto.getStripePaymentMethodId())) {
+                    log.debug("Attempting off-session confirm using specific payment_method: {}", requestDto.getStripePaymentMethodId());
+                } else {
+                    log.warn("Off-session confirm requested but no customer or specific payment method ID provided. This will likely fail.");
+                    // This scenario will likely lead to an error from Stripe if confirm=true.
+                }
+            }
+        } else {
+            // If not confirming immediately, enable automatic_payment_methods so the frontend
+            // Elements can pick payment methods. This is the typical flow for new cards.
+            // If a customer and PM are set, but confirm=false, the client_secret can be used to confirm on frontend with that PM.
+            if (!StringUtils.hasText(requestDto.getStripePaymentMethodId())) { // Only enable auto PM if not using a specific saved one already
+                paramsBuilder.setAutomaticPaymentMethods(
+                        PaymentIntentCreateParams.AutomaticPaymentMethods.builder()
+                                .setEnabled(true)
+                                .build());
+                log.debug("Automatic payment methods enabled for PaymentIntent.");
+            }
+        }
+        // For saved payment methods where user is present, you might want to set 'setup_future_usage' to 'off_session'
+        // if the PI itself is creating/confirming a new PM that you also want to save.
+        // But if you are *using* an *already saved* PM, this is not needed here.
+
+        PaymentIntentCreateParams params = paramsBuilder.build();
         PaymentIntent paymentIntent = PaymentIntent.create(params);
-        log.debug("Stripe PaymentIntent created: ID={}, Status={}, ClientSecret relevant for FE",
+
+        log.info("PaymentIntent created/retrieved: ID={}, Status={}, ClientSecret relevant for FE",
                 paymentIntent.getId(), paymentIntent.getStatus());
 
         return CreatePaymentIntentResponseDto.builder()
                 .paymentIntentId(paymentIntent.getId())
-                .clientSecret(paymentIntent.getClientSecret())
+                .clientSecret(paymentIntent.getClientSecret()) // Always return client_secret for frontend
                 .status(paymentIntent.getStatus())
                 .build();
     }
@@ -220,6 +285,193 @@ public class StripePaymentServiceImpl implements PaymentService {
             throw e; // Re-throw to allow listener to handle AMQP aspects if needed
         }
     }
+
+    // --- NEW METHOD IMPLEMENTATIONS for SetupIntent Flow ---
+    @Override
+    @Transactional // Not strictly needed if not writing to local DB here, but good practice
+    public CreateStripeSetupIntentResponseDto createStripeSetupIntent(CreateStripeSetupIntentRequestDto requestDto) throws StripeException {
+        log.info("Creating Stripe SetupIntent for userId: {}", requestDto.getUserId());
+        String stripeCustomerId = requestDto.getStripeCustomerId();
+        String userId = requestDto.getUserId();
+        String userEmail = requestDto.getUserEmail();
+        String userName = requestDto.getUserName();
+
+        // 1. Get or Create Stripe Customer
+        if (!StringUtils.hasText(stripeCustomerId)) {
+            // Option: Check local DB for mapping userId -> stripeCustomerId if you store it
+            // UserStripeCustomerMapping mapping = userStripeCustomerRepository.findByUserId(requestDto.getUserId());
+            // if (mapping != null) stripeCustomerId = mapping.getStripeCustomerId();
+
+            // If still no stripeCustomerId, create a new Stripe Customer
+            if (!StringUtils.hasText(stripeCustomerId)) {
+                CustomerCreateParams.Builder customerParamsBuilder = CustomerCreateParams.builder()
+                        .setDescription("Customer for user_id: " + userId)
+                        .putMetadata("user_id", userId);
+
+                if (StringUtils.hasText(userEmail)) {
+                    customerParamsBuilder.setEmail(userEmail); // <<< USE THE PROVIDED EMAIL
+                } else {
+                    // Fallback or error if email is mandatory for Stripe Customer creation and not provided
+                    log.warn("User email not provided for Stripe Customer creation for userId: {}. This might be an issue.", userId);
+                    // Stripe might require an email. If so, this creation might fail or create a less useful customer object.
+                    // Consider making userEmail mandatory in CreateStripeSetupIntentRequestDto if Stripe always needs it.
+                }
+                if (StringUtils.hasText(userName)) {
+                    customerParamsBuilder.setName(userName); // <<< USE THE PROVIDED NAME
+                }
+
+                Customer customer = Customer.create(customerParamsBuilder.build());
+                stripeCustomerId = customer.getId();
+                log.info("Created new Stripe Customer ID: {} for userId: {}", stripeCustomerId, requestDto.getUserId());
+                // Optional: Save this mapping (userId -> stripeCustomerId) locally in PaymentsService or UsersService
+            }
+        } else {
+            // Optionally verify the existing stripeCustomerId by retrieving it
+            try {
+                // Optionally, update existing customer with new email/name if provided
+                Customer existingCustomer = Customer.retrieve(stripeCustomerId);
+                CustomerUpdateParams.Builder updateParamsBuilder = CustomerUpdateParams.builder();
+                boolean needsUpdate = false;
+                if (StringUtils.hasText(userEmail) && !userEmail.equals(existingCustomer.getEmail())) {
+                    updateParamsBuilder.setEmail(userEmail);
+                    needsUpdate = true;
+                }
+                if (StringUtils.hasText(userName) && !userName.equals(existingCustomer.getName())) {
+                    updateParamsBuilder.setName(userName);
+                    needsUpdate = true;
+                }
+                // Always ensure metadata user_id is present or updated
+                if(!userId.equals(existingCustomer.getMetadata().get("user_id"))){
+                    updateParamsBuilder.putMetadata("user_id", userId);
+                    needsUpdate = true;
+                }
+
+
+                if (needsUpdate) {
+                    existingCustomer.update(updateParamsBuilder.build());
+                    log.info("Updated existing Stripe Customer ID: {} with new details for userId: {}", stripeCustomerId, userId);
+                } else {
+                    log.info("Using existing Stripe Customer ID: {} for userId: {}", stripeCustomerId, userId);
+                }
+
+            } catch (StripeException e) {
+                log.error("Failed to retrieve or update existing Stripe Customer ID {}: {}. Check if ID is valid.", stripeCustomerId, e.getMessage());
+                // Depending on policy, you might try to create a new one or rethrow.
+                // For simplicity, rethrowing, but this path might need more robust handling.
+                throw e;
+            }
+        }
+
+        // 2. Create SetupIntent
+        List<String> pmTypes = List.of("card");
+        SetupIntentCreateParams setupIntentParams = SetupIntentCreateParams.builder()
+                .setCustomer(stripeCustomerId)
+                .addAllPaymentMethodType(pmTypes)                  // accepts List<String>
+                .setUsage(SetupIntentCreateParams.Usage.OFF_SESSION)
+                .putMetadata("user_id", requestDto.getUserId())
+                .build();
+
+        SetupIntent setupIntent = SetupIntent.create(setupIntentParams);
+
+        log.info("Stripe SetupIntent created: ID={}, ClientSecret available.", setupIntent.getId());
+        return CreateStripeSetupIntentResponseDto.builder()
+                .clientSecret(setupIntent.getClientSecret())
+                .stripeCustomerId(stripeCustomerId) // Return the customer ID used/created
+                .setupIntentId(setupIntent.getId())
+                .build();
+    }
+
+    @Override
+    @Transactional
+    public StripePaymentMethodDetailsDto confirmAndSavePaymentMethod(ConfirmStripePaymentMethodRequestDto requestDto) throws StripeException {
+        log.info("Confirming payment method setup for userId: {}, PaymentMethodId: {}", requestDto.getUserId(), requestDto.getStripePaymentMethodId());
+        String stripePaymentMethodId = requestDto.getStripePaymentMethodId();
+        String stripeCustomerId = requestDto.getStripeCustomerId();
+
+        // 1. Retrieve PaymentMethod details from Stripe to get card brand, last4, expiry
+        PaymentMethod paymentMethod = PaymentMethod.retrieve(stripePaymentMethodId);
+        if (paymentMethod.getCustomer() != null && StringUtils.hasText(stripeCustomerId) && !paymentMethod.getCustomer().equals(stripeCustomerId)) {
+            log.warn("PaymentMethod {} is already attached to a different customer ({}). Expected {}. This might be an issue or require detaching and reattaching.",
+                    stripePaymentMethodId, paymentMethod.getCustomer(), stripeCustomerId);
+            // For simplicity, we'll proceed assuming it can be attached or is meant for this customer.
+            // Stripe might throw an error if you try to attach an already attached PM to a different customer
+            // without detaching first, or if it was a single-use PM.
+        }
+
+
+        // 2. Ensure Stripe Customer exists (or use the one from the PM if it's already attached and matches)
+        // If stripeCustomerId was not passed in request, or if paymentMethod isn't attached yet.
+        if (!StringUtils.hasText(stripeCustomerId)) {
+            if (paymentMethod.getCustomer() != null) {
+                stripeCustomerId = paymentMethod.getCustomer();
+                log.info("Using Stripe Customer ID {} from retrieved PaymentMethod {}", stripeCustomerId, stripePaymentMethodId);
+            } else {
+                // If no customer ID from request AND no customer attached to PM, create one.
+                // This scenario should ideally be handled by ensuring customer is created during SetupIntent creation.
+                CustomerCreateParams customerParams = CustomerCreateParams.builder()
+                        .setDescription("Customer for user_id: " + requestDto.getUserId())
+                        .putMetadata("user_id", requestDto.getUserId())
+//                         .setEmail(userEmail) // Ideally get user's email
+                        .build();
+                Customer customer = Customer.create(customerParams);
+                stripeCustomerId = customer.getId();
+                log.info("Created new Stripe Customer {} for userId {} during PM confirmation", stripeCustomerId, requestDto.getUserId());
+            }
+        }
+
+        // 3. Attach PaymentMethod to Customer (idempotent - won't error if already attached to this customer)
+        try {
+            if (paymentMethod.getCustomer() == null || !paymentMethod.getCustomer().equals(stripeCustomerId)) {
+                PaymentMethodAttachParams attachParams = PaymentMethodAttachParams.builder().setCustomer(stripeCustomerId).build();
+                paymentMethod = paymentMethod.attach(attachParams);
+                log.info("Attached PaymentMethod {} to Customer {}", stripePaymentMethodId, stripeCustomerId);
+            }
+        } catch (StripeException e) {
+            log.error("Failed to attach PaymentMethod {} to Customer {}: {}", stripePaymentMethodId, stripeCustomerId, e.getMessage());
+            throw e; // Re-throw, UsersService needs to know attachment failed.
+        }
+
+
+        // 4. Optionally, update Customer to set this as the default payment method
+        CustomerUpdateParams customerUpdateParams = CustomerUpdateParams.builder()
+                .setInvoiceSettings(
+                        CustomerUpdateParams.InvoiceSettings.builder()
+                                .setDefaultPaymentMethod(stripePaymentMethodId)
+                                .build())
+                .build();
+        Customer updatedCustomer = Customer.retrieve(stripeCustomerId).update(customerUpdateParams);
+        log.info("Set PaymentMethod {} as default for Customer {}", stripePaymentMethodId, updatedCustomer.getId());
+
+
+        // 5. Extract card details for returning to UsersService
+        String cardBrand = null;
+        String last4 = null;
+        String expMonth = null;
+        String expYear = null;
+        boolean isDefault = (updatedCustomer.getInvoiceSettings() != null &&
+                stripePaymentMethodId.equals(updatedCustomer.getInvoiceSettings().getDefaultPaymentMethod()));
+
+
+        if (paymentMethod.getCard() != null) {
+            cardBrand = paymentMethod.getCard().getBrand();
+            last4 = paymentMethod.getCard().getLast4();
+            expMonth = String.format("%02d", paymentMethod.getCard().getExpMonth()); // Ensure two digits
+            expYear = String.valueOf(paymentMethod.getCard().getExpYear());
+        } else {
+            log.warn("PaymentMethod {} does not have card details. Type: {}", stripePaymentMethodId, paymentMethod.getType());
+        }
+
+        return StripePaymentMethodDetailsDto.builder()
+                .stripeCustomerId(stripeCustomerId)
+                .stripePaymentMethodId(stripePaymentMethodId)
+                .cardBrand(cardBrand)
+                .last4(last4)
+                .expiryMonth(expMonth)
+                .expiryYear(expYear)
+                .isDefaultSource(isDefault)
+                .build();
+    }
+
 
     private static long getAmountToRefundInSmallestUnit(RefundRequestedEventDto event) {
         long amountToRefundInSmallestUnit;
