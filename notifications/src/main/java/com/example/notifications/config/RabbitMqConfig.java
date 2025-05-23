@@ -17,6 +17,7 @@ public class RabbitMqConfig {
     public static final String ORDERS_EVENTS_EXCHANGE = "orders_events_exchange";     // New: For events published BY Orders Service
     public static final String USER_EVENTS_EXCHANGE = "user_events_exchange";         // New: For user-specific events published BY Orders Service (or other services)
     public static final String PAYMENTS_EVENTS_EXCHANGE = "payments_events_exchange";
+    public static final String DELIVERIES_EVENTS_EXCHANGE = "deliveries_events_exchange";
 
     // --- Queue Names for Auction/Comment Notifications (Existing) ---
     public static final String AUCTION_STARTED_QUEUE = "q.notification.auction.started";
@@ -41,6 +42,11 @@ public class RabbitMqConfig {
     public static final String ORDER_READY_FOR_SHIPPING_QUEUE = "q.notification.order.ready.for.shipping";
     public static final String ORDER_CANCELLED_QUEUE = "q.notification.order.cancelled";
     public static final String USER_PAYMENT_DEFAULTED_QUEUE = "q.notification.user.payment.defaulted"; // From USER_EVENTS_EXCHANGE
+    public static final String DELIVERY_CREATED_NOTIFICATION_QUEUE = "q.notification.delivery.created";
+    public static final String DELIVERY_SHIPPED_NOTIFICATION_QUEUE = "q.notification.delivery.shipped";
+    public static final String DELIVERY_DELIVERED_NOTIFICATION_QUEUE = "q.notification.delivery.delivered";
+    public static final String DELIVERY_ISSUE_REPORTED_NOTIFICATION_QUEUE = "q.notification.delivery.issue.reported";
+    public static final String DELIVERY_AWAITING_BUYER_CONFIRMATION_NOTIFICATION_QUEUE = "q.notification.delivery.awaiting_buyer_confirmation";
 
     // --- Routing Keys for Order & User Event Notifications (New - must match publisher in OrderService) ---
     public static final String ORDER_EVENT_CREATED_ROUTING_KEY = "order.event.created";
@@ -52,6 +58,11 @@ public class RabbitMqConfig {
     public static final String PAYMENT_EVENT_REFUND_SUCCEEDED_ROUTING_KEY = "payment.event.refund.succeeded";
     public static final String PAYMENT_EVENT_REFUND_FAILED_ROUTING_KEY = "payment.event.refund.failed";
     public static final String ORDER_EVENT_AWAITING_FULFILLMENT_CONFIRMATION_ROUTING_KEY = "order.event.awaiting.fulfillment.confirmation";
+    public static final String DELIVERY_EVENT_CREATED_ROUTING_KEY = "delivery.event.created";
+    public static final String DELIVERY_EVENT_SHIPPED_ROUTING_KEY = "delivery.event.shipped";
+    public static final String DELIVERY_EVENT_DELIVERED_ROUTING_KEY = "delivery.event.delivered";
+    public static final String DELIVERY_EVENT_ISSUE_REPORTED_ROUTING_KEY = "delivery.event.issue.reported";
+    public static final String DELIVERY_EVENT_AWAITING_BUYER_CONFIRMATION_ROUTING_KEY = "delivery.event.awaiting.buyer.confirmation";
 
 
     // --- Exchange Beans ---
@@ -74,6 +85,12 @@ public class RabbitMqConfig {
     @Bean
     TopicExchange paymentsEventsExchange() {
         return new TopicExchange(PAYMENTS_EVENTS_EXCHANGE, true, false);
+    }
+
+    @Bean
+    TopicExchange deliveriesEventsExchange() {
+        // Durable, non-auto-delete. Assumes Deliveries service also declares it this way.
+        return new TopicExchange(DELIVERIES_EVENTS_EXCHANGE, true, false);
     }
 
     // --- Queue Beans (Existing) ---
@@ -142,6 +159,32 @@ public class RabbitMqConfig {
     Queue orderAwaitingFulfillmentConfirmationQueue() {
         return QueueBuilder.durable(ORDER_AWAITING_FULFILLMENT_CONFIRMATION_QUEUE).build();
     }
+
+    @Bean
+    Queue deliveryCreatedNotificationQueue() {
+        return QueueBuilder.durable(DELIVERY_CREATED_NOTIFICATION_QUEUE).build();
+    }
+
+    @Bean
+    Queue deliveryShippedNotificationQueue() {
+        return QueueBuilder.durable(DELIVERY_SHIPPED_NOTIFICATION_QUEUE).build();
+    }
+
+    @Bean
+    Queue deliveryDeliveredNotificationQueue() {
+        return QueueBuilder.durable(DELIVERY_DELIVERED_NOTIFICATION_QUEUE).build();
+    }
+
+    @Bean
+    Queue deliveryIssueReportedNotificationQueue() {
+        return QueueBuilder.durable(DELIVERY_ISSUE_REPORTED_NOTIFICATION_QUEUE).build();
+    }
+
+    @Bean
+    Queue deliveryAwaitingBuyerConfirmationNotificationQueue() {
+        return QueueBuilder.durable(DELIVERY_AWAITING_BUYER_CONFIRMATION_NOTIFICATION_QUEUE).build();
+    }
+
     // --- Binding Beans (Existing) ---
     @Bean
     Binding startedBinding(Queue auctionStartedQueue, TopicExchange notificationsExchange) {
@@ -234,6 +277,41 @@ public class RabbitMqConfig {
         return BindingBuilder.bind(orderAwaitingFulfillmentConfirmationQueue)
                 .to(ordersEventsExchange)
                 .with(ORDER_EVENT_AWAITING_FULFILLMENT_CONFIRMATION_ROUTING_KEY);
+    }
+
+    @Bean
+    Binding deliveryCreatedNotificationBinding(Queue deliveryCreatedNotificationQueue, TopicExchange deliveriesEventsExchange) {
+        return BindingBuilder.bind(deliveryCreatedNotificationQueue)
+                .to(deliveriesEventsExchange)
+                .with(DELIVERY_EVENT_CREATED_ROUTING_KEY);
+    }
+
+    @Bean
+    Binding deliveryShippedNotificationBinding(Queue deliveryShippedNotificationQueue, TopicExchange deliveriesEventsExchange) {
+        return BindingBuilder.bind(deliveryShippedNotificationQueue)
+                .to(deliveriesEventsExchange)
+                .with(DELIVERY_EVENT_SHIPPED_ROUTING_KEY);
+    }
+
+    @Bean
+    Binding deliveryDeliveredNotificationBinding(Queue deliveryDeliveredNotificationQueue, TopicExchange deliveriesEventsExchange) {
+        return BindingBuilder.bind(deliveryDeliveredNotificationQueue)
+                .to(deliveriesEventsExchange)
+                .with(DELIVERY_EVENT_DELIVERED_ROUTING_KEY);
+    }
+
+    @Bean
+    Binding deliveryAwaitingBuyerConfirmationNotificationBinding(Queue deliveryAwaitingBuyerConfirmationNotificationQueue, TopicExchange deliveriesEventsExchange) {
+        return BindingBuilder.bind(deliveryAwaitingBuyerConfirmationNotificationQueue)
+                .to(deliveriesEventsExchange)
+                .with(DELIVERY_EVENT_AWAITING_BUYER_CONFIRMATION_ROUTING_KEY);
+    }
+
+    @Bean
+    Binding deliveryIssueReportedNotificationBinding(Queue deliveryIssueReportedNotificationQueue, TopicExchange deliveriesEventsExchange) {
+        return BindingBuilder.bind(deliveryIssueReportedNotificationQueue)
+                .to(deliveriesEventsExchange)
+                .with(DELIVERY_EVENT_ISSUE_REPORTED_ROUTING_KEY);
     }
 
     // --- Message Converter (Essential for DTO conversion) ---

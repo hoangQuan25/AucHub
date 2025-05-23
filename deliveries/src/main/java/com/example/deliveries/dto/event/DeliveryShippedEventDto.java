@@ -24,5 +24,5 @@ public class DeliveryShippedEventDto {
     private LocalDateTime shippedAt;
     private String courierName;
     private String trackingNumber;
-    // private LocalDate estimatedDeliveryDate; // Optional
+    private String productInfoSnapshot; // Added for notification context
 }

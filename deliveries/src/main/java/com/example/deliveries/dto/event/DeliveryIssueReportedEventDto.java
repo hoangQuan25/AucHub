@@ -24,4 +24,5 @@ public class DeliveryIssueReportedEventDto {
     private String reporterId; // Who reported (BUYER, SELLER, SYSTEM)
     private String issueNotes;
     private String newStatus; // e.g. "ISSUE_REPORTED"
+    private String productInfoSnapshot; // Brief description of items
 }

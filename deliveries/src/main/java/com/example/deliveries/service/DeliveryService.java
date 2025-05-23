@@ -4,9 +4,11 @@ package com.example.deliveries.service;
 import com.example.deliveries.dto.event.OrderReadyForShippingEventDto;
 import com.example.deliveries.dto.request.ReportDeliveryIssueRequestDto;
 import com.example.deliveries.dto.request.MarkAsShippedRequestDto;
+import com.example.deliveries.dto.request.ReturnRequestDto;
 import com.example.deliveries.dto.request.UpdateToDeliveredRequestDto;
 import com.example.deliveries.entity.Delivery; // So we can return Delivery objects if needed by controller
 
+import java.time.LocalDateTime;
 import java.util.UUID;
 // Potentially add DTOs for return types if needed by controller later, e.g., DeliveryDetailsDto
 
@@ -38,6 +40,30 @@ public interface DeliveryService {
     Delivery updateDeliveryStatusToDelivered(UUID deliveryId, String sellerId, UpdateToDeliveredRequestDto requestDto);
 
     /**
+     * Confirms receipt of the delivery by the buyer.
+     * @param deliveryId The ID of the delivery.
+     * @param buyerId The ID of the buyer confirming receipt.
+     * @return The updated Delivery entity or a DTO.
+     */
+    Delivery confirmReceiptByBuyer(UUID deliveryId, String buyerId);
+
+    /**
+     * Initiates a return request by the buyer for a delivery.
+     * @param deliveryId The ID of the delivery.
+     * @param buyerId The ID of the buyer requesting the return.
+     * @param returnRequest DTO containing details about the return request.
+     * @return The updated Delivery entity or a DTO.
+     */
+    Delivery requestReturnByBuyer(UUID deliveryId, String buyerId, ReturnRequestDto returnRequest);
+
+    /**
+     * Processes auto-completion of a delivery if the confirmation deadline has passed.
+     * @param deliveryId The ID of the delivery.
+     * @param originalConfirmationDeadline The original deadline for confirming receipt.
+     */
+    void processAutoCompletion(UUID deliveryId, LocalDateTime originalConfirmationDeadline);
+
+    /**
      * Allows a seller to report an issue with a delivery.
      * @param deliveryId The ID of the delivery.
      * @param sellerId The ID of the seller reporting the issue.
@@ -46,9 +72,19 @@ public interface DeliveryService {
      */
     Delivery reportDeliveryIssue(UUID deliveryId, String sellerId, ReportDeliveryIssueRequestDto requestDto);
 
-    // --- Query methods (can be added later as needed by controllers) ---
-    // Optional<Delivery> getDeliveryById(UUID deliveryId);
-    // Optional<Delivery> getDeliveryByOrderId(UUID orderId);
-    // Page<Delivery> getDeliveriesForBuyer(String buyerId, Pageable pageable);
-    // Page<Delivery> getDeliveriesForSeller(String sellerId, Pageable pageable);
+    /**
+     * Retrieves a delivery record by its associated order ID.
+     * @param orderId The ID of the order.
+     * @param userId The ID of the user requesting the information (for authorization).
+     * @return The Delivery entity or a DTO.
+     */
+    Delivery getDeliveryByOrderId(UUID orderId, String userId);
+
+    /**
+     * Retrieves a delivery record by its ID.
+     * @param deliveryId The ID of the delivery.
+     * @param userId The ID of the user requesting the information (for authorization).
+     * @return The Delivery entity or a DTO.
+     */
+    Delivery getDeliveryById(UUID deliveryId, String userId);
 }

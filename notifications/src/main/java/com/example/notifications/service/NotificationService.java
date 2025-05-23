@@ -4,6 +4,7 @@ import com.example.notifications.dto.FollowingAuctionSummaryDto;
 import com.example.notifications.dto.NotificationDto;
 import com.example.notifications.entity.AuctionStatus;
 import com.example.notifications.event.NotificationEvents.*; // Import event types
+import com.example.notifications.event.DeliveryEvents;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 
@@ -45,6 +46,12 @@ public interface NotificationService {
     void processRefundSucceeded(RefundSucceededEvent event);
     void processRefundFailed(RefundFailedEvent event);
     void processOrderAwaitingFulfillmentConfirmation(OrderAwaitingFulfillmentConfirmationEvent event);
+
+    void processDeliveryCreated(DeliveryEvents.DeliveryCreatedEventDto event);
+    void processDeliveryShipped(DeliveryEvents.DeliveryShippedEventDto event);
+    void processDeliveryDelivered(DeliveryEvents.DeliveryDeliveredEventDto event);
+    void processDeliveryAwaitingBuyerConfirmation(DeliveryEvents.DeliveryAwaitingBuyerConfirmationEventDto event);
+    void processDeliveryIssueReported(DeliveryEvents.DeliveryIssueReportedEventDto event);
 
     /**
      * Retrieves a paginated list of notifications for a specific user.

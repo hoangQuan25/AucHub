@@ -9,6 +9,7 @@ import com.example.orders.dto.response.OrderSummaryDto;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 
+import java.time.LocalDateTime;
 import java.util.UUID;
 
 public interface OrderService {
@@ -96,4 +97,13 @@ public interface OrderService {
      * @param sellerId The ID of the authenticated seller confirming fulfillment.
      */
     void confirmOrderFulfillment(UUID orderId, String sellerId);
+
+    /**
+     * Processes the confirmation of delivery receipt by the buyer.
+     * This is typically called when the buyer confirms they have received the order.
+     * @param orderId The ID of the order.
+     * @param buyerId The ID of the authenticated buyer confirming receipt.
+     * @param confirmationTimestamp The timestamp of when the confirmation was made.
+     */
+    void processOrderCompletionByBuyer(UUID orderId, String buyerId, LocalDateTime confirmationTimestamp);
 }

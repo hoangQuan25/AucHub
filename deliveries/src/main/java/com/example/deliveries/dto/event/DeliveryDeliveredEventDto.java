@@ -21,5 +21,6 @@ public class DeliveryDeliveredEventDto {
     private UUID orderId;
     private String buyerId;
     private String sellerId;
+    private String productInfoSnapshot; // Brief description of items
     private LocalDateTime deliveredAt;
 }

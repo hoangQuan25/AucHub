@@ -22,6 +22,7 @@ public class RabbitMqConfig {
     public static final String USER_EVENTS_EXCHANGE = "user_events_exchange";
     public static final String NOTIFICATIONS_EXCHANGE_NAME = "notifications_exchange";
     public static final String PAYMENTS_EVENTS_EXCHANGE_NAME = "payments_events_exchange";
+    public static final String DELIVERIES_EVENTS_EXCHANGE = "deliveries_events_exchange";
 
 
     // === Queues ===
@@ -30,6 +31,7 @@ public class RabbitMqConfig {
     public static final String ORDERS_AUCTION_ENDED_QUEUE = "orders_auction_ended_queue";
     public static final String ORDERS_PAYMENT_SUCCEEDED_QUEUE = "orders_payment_succeeded_queue";
     public static final String ORDERS_PAYMENT_FAILED_QUEUE = "orders_payment_failed_queue";
+    public static final String ORDERS_DELIVERY_RECEIPT_CONFIRMED_QUEUE = "orders_delivery_receipt_confirmed_queue";
 
     // === Routing Keys ===
     // For commands/messages to the schedule exchange
@@ -49,6 +51,8 @@ public class RabbitMqConfig {
     public static final String PAYMENT_SUCCEEDED_ROUTING_KEY = "payment.event.succeeded";
     public static final String PAYMENT_FAILED_ROUTING_KEY = "payment.event.failed";
     public static final String AUCTION_ENDED_ROUTING_KEY_PATTERN = "auction.*.ended";
+    public static final String DELIVERY_EVENT_RECEIPT_CONFIRMED_ROUTING_KEY = "delivery.event.receipt.confirmed";
+
 
     // === Exchanges ===
 
@@ -100,6 +104,12 @@ public class RabbitMqConfig {
                 .build();
     }
 
+    @Bean
+    TopicExchange deliveriesEventsExchange() {
+        // Durable, non-auto-delete. Assumes Deliveries service also declares it this way.
+        return new TopicExchange(DELIVERIES_EVENTS_EXCHANGE, true, false);
+    }
+
 
     // === Queues ===
 
@@ -129,6 +139,13 @@ public class RabbitMqConfig {
         return QueueBuilder.durable(ORDERS_PAYMENT_FAILED_QUEUE).build();
     }
 
+    @Bean
+    Queue ordersDeliveryReceiptConfirmedQueue() {
+        return QueueBuilder.durable(ORDERS_DELIVERY_RECEIPT_CONFIRMED_QUEUE)
+                // .withArgument("x-dead-letter-exchange", "your_dlx_exchange_name") // Optional DLX
+                // .withArgument("x-dead-letter-routing-key", "dlx.orders.delivery_receipt_confirmed")
+                .build();
+    }
     // === Bindings ===
 
     @Bean
@@ -162,6 +179,14 @@ public class RabbitMqConfig {
                 .bind(ordersPaymentFailedQueue)
                 .to(paymentsEventsExchange)
                 .with(PAYMENT_FAILED_ROUTING_KEY); // Listen for specific failure event
+    }
+
+    @Bean
+    Binding ordersDeliveryReceiptConfirmedBinding(Queue ordersDeliveryReceiptConfirmedQueue, TopicExchange deliveriesEventsExchange) {
+        return BindingBuilder
+                .bind(ordersDeliveryReceiptConfirmedQueue)
+                .to(deliveriesEventsExchange)
+                .with(DELIVERY_EVENT_RECEIPT_CONFIRMED_ROUTING_KEY);
     }
 
     @Bean

@@ -30,7 +30,7 @@ public class OrderReadyForShippingEventDto {
     private UUID auctionId; // For context if needed
 
     // Product Information (Snapshot)
-    private UUID productId; // Original product ID
+    private Long productId; // Product ID from OrdersService
     private String productTitleSnapshot;
     // private int quantity; // If relevant for delivery
     // private String productImageUrlSnapshot; // Optional

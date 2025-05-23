@@ -1,6 +1,7 @@
 package com.example.notifications.listener;
 
 import com.example.notifications.config.RabbitMqConfig;
+import com.example.notifications.event.DeliveryEvents;
 import com.example.notifications.event.NotificationEvents.*; // Import event classes
 import com.example.notifications.service.NotificationService; // Create this service next
 import lombok.RequiredArgsConstructor;
@@ -155,6 +156,62 @@ public class NotificationEventListener {
             notificationService.processOrderAwaitingFulfillmentConfirmation(event);
         } catch (Exception e) {
             log.error("Error processing OrderAwaitingFulfillmentConfirmationEvent for order {}: {}", event.getOrderId(), e.getMessage(), e);
+        }
+    }
+
+    @RabbitListener(queues = RabbitMqConfig.DELIVERY_CREATED_NOTIFICATION_QUEUE)
+    public void handleDeliveryCreated(@Payload DeliveryEvents.DeliveryCreatedEventDto event) {
+        log.info("Received DeliveryCreatedEvent: deliveryId={}, orderId={}, buyerId={}, sellerId={}",
+                event.getDeliveryId(), event.getOrderId(), event.getBuyerId(), event.getSellerId());
+        try {
+            notificationService.processDeliveryCreated(event); // We'll define this in NotificationService
+        } catch (Exception e) {
+            log.error("Error processing DeliveryCreatedEvent for deliveryId {}: {}", event.getDeliveryId(), e.getMessage(), e);
+            // Consider error handling / dead-lettering
+        }
+    }
+
+    @RabbitListener(queues = RabbitMqConfig.DELIVERY_SHIPPED_NOTIFICATION_QUEUE)
+    public void handleDeliveryShipped(@Payload DeliveryEvents.DeliveryShippedEventDto event) {
+        log.info("Received DeliveryShippedEvent: deliveryId={}, orderId={}, trackingNumber={}",
+                event.getDeliveryId(), event.getOrderId(), event.getTrackingNumber());
+        try {
+            notificationService.processDeliveryShipped(event); // We'll define this in NotificationService
+        } catch (Exception e) {
+            log.error("Error processing DeliveryShippedEvent for deliveryId {}: {}", event.getDeliveryId(), e.getMessage(), e);
+        }
+    }
+
+    @RabbitListener(queues = RabbitMqConfig.DELIVERY_DELIVERED_NOTIFICATION_QUEUE)
+    public void handleDeliveryDelivered(@Payload DeliveryEvents.DeliveryDeliveredEventDto event) {
+        log.info("Received DeliveryDeliveredEvent: deliveryId={}, orderId={}, deliveredAt={}",
+                event.getDeliveryId(), event.getOrderId(), event.getDeliveredAt());
+        try {
+            notificationService.processDeliveryDelivered(event); // We'll define this in NotificationService
+        } catch (Exception e) {
+            log.error("Error processing DeliveryDeliveredEvent for deliveryId {}: {}", event.getDeliveryId(), e.getMessage(), e);
+        }
+    }
+
+    @RabbitListener(queues = RabbitMqConfig.DELIVERY_AWAITING_BUYER_CONFIRMATION_NOTIFICATION_QUEUE)
+    public void handleDeliveryAwaitingBuyerConfirmation(@Payload DeliveryEvents.DeliveryAwaitingBuyerConfirmationEventDto event) {
+        log.info("Received DeliveryAwaitingBuyerConfirmationEvent: deliveryId={}, orderId={}, buyerId={}",
+                event.getDeliveryId(), event.getOrderId(), event.getBuyerId());
+        try {
+            notificationService.processDeliveryAwaitingBuyerConfirmation(event);
+        } catch (Exception e) {
+            log.error("Error processing DeliveryAwaitingBuyerConfirmationEvent for deliveryId {}: {}", event.getDeliveryId(), e.getMessage(), e);
+        }
+    }
+
+    @RabbitListener(queues = RabbitMqConfig.DELIVERY_ISSUE_REPORTED_NOTIFICATION_QUEUE)
+    public void handleDeliveryIssueReported(@Payload DeliveryEvents.DeliveryIssueReportedEventDto event) {
+        log.info("Received DeliveryIssueReportedEvent: deliveryId={}, orderId={}, issue='{}'",
+                event.getDeliveryId(), event.getOrderId(), event.getIssueNotes());
+        try {
+            notificationService.processDeliveryIssueReported(event); // We'll define this in NotificationService
+        } catch (Exception e) {
+            log.error("Error processing DeliveryIssueReportedEvent for deliveryId {}: {}", event.getDeliveryId(), e.getMessage(), e);
         }
     }
 }

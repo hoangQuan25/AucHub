@@ -1,10 +1,17 @@
 package com.example.deliveries.entity;
 
+// In com.example.deliveries.entity.DeliveryStatus.java
 public enum DeliveryStatus {
-    PENDING_PREPARATION,    // Initial: Order confirmed, seller to prepare package.
-    READY_FOR_SHIPMENT,   // Seller has packed, ready to give to courier.
-    SHIPPED_IN_TRANSIT,   // Seller handed to courier, provided tracking.
-    DELIVERED,            // Seller confirms (based on tracking/buyer) it's delivered.
-    ISSUE_REPORTED,       // Seller reports an issue (e.g., buyer claim, return by courier).
-    CANCELLED             // If a delivery itself can be cancelled before shipment (rare for this phase)
+    PENDING_PREPARATION,
+    READY_FOR_SHIPMENT,
+    SHIPPED_IN_TRANSIT,
+    DELIVERED,            // Courier/Seller marks as physically delivered
+    // --- NEW STATUSES for buyer confirmation flow ---
+    AWAITING_BUYER_CONFIRMATION, // Item delivered, waiting for buyer to confirm receipt or system to auto-confirm
+    RECEIPT_CONFIRMED_BY_BUYER,  // Buyer clicked "Item Received"
+    COMPLETED_AUTO,              // System auto-confirmed after X days
+    RETURN_REQUESTED_BY_BUYER,   // Buyer initiated a return/refund request
+    // --- End New Statuses ---
+    ISSUE_REPORTED,       // General issue reported (can be by seller or system)
+    CANCELLED             // Delivery cancelled (rare, usually before shipment)
 }
