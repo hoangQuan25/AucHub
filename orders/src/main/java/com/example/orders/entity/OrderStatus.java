@@ -19,6 +19,7 @@ public enum OrderStatus {
     AWAITING_SHIPMENT, // If you want this intermediary step before Delivery service takes over
     // ORDER_SHIPPED,
     // ORDER_DELIVERED,
+    COMPLETED,
 
     // Order cancellation states
     ORDER_CANCELLED_NO_PAYMENT_FINAL, // No one paid after all attempts

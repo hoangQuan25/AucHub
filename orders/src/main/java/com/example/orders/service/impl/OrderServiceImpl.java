@@ -1,5 +1,7 @@
 package com.example.orders.service.impl;
 
+import com.example.orders.client.UserServiceClient;
+import com.example.orders.client.dto.UserBasicInfoDto;
 import com.example.orders.commands.OrderWorkflowCommands.CheckPaymentTimeoutCommand;
 import com.example.orders.config.OrderPaymentProperties;
 import com.example.orders.config.RabbitMqConfig;
@@ -22,11 +24,10 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.time.Duration;
 import java.time.LocalDateTime;
-import java.util.NoSuchElementException;
-import java.util.Set;
-import java.util.UUID;
+import java.util.*;
 
 @Service
 @RequiredArgsConstructor
@@ -37,6 +38,9 @@ public class OrderServiceImpl implements OrderService {
     private final OrderPaymentProperties paymentProperties;
     private final RabbitTemplate rabbitTemplate;
     private final OrderMapper orderMapper;
+    private final UserServiceClient userServiceClient;
+
+    private static final BigDecimal BUYER_PREMIUM_RATE = new BigDecimal("0.10");
 
     @Override
     @Transactional
@@ -62,7 +66,20 @@ public class OrderServiceImpl implements OrderService {
         LocalDateTime paymentDeadline = LocalDateTime.now().plus(paymentDuration);
         int currentPaymentOfferAttempt = 1;
 
+        BigDecimal winningBid = eventDto.getWinningBid();
+        BigDecimal buyerPremium = BigDecimal.ZERO; // Default to zero
+        if (winningBid != null && BUYER_PREMIUM_RATE.compareTo(BigDecimal.ZERO) > 0) {
+            // Calculate premium: winningBid * BUYER_PREMIUM_RATE
+            buyerPremium = winningBid.multiply(BUYER_PREMIUM_RATE).setScale(2, RoundingMode.HALF_UP); // Scale to 2 decimal places
+        }
+        BigDecimal totalAmountDue = winningBid != null ? winningBid.add(buyerPremium) : buyerPremium;
+
         log.info("RECEIVE ORDER!: {}", eventDto.toString());
+        log.info("Calculated for Order (Auction ID {}): Winning Bid={}, Buyer Premium ({%})={}, Total Due={}",
+                eventDto.getAuctionId(),
+                winningBid,
+                BUYER_PREMIUM_RATE.multiply(new BigDecimal(100)).stripTrailingZeros().toPlainString(), // display as percentage
+                totalAmountDue);
 
         Order order = Order.builder()
                 .auctionId(eventDto.getAuctionId())
@@ -81,15 +98,19 @@ public class OrderServiceImpl implements OrderService {
                 .eligibleThirdBidderId(eventDto.getThirdHighestBidderId())
                 .eligibleThirdBidAmount(eventDto.getThirdHighestBidAmount())
                 .currentBidderId(eventDto.getWinnerId())
-                .currentAmountDue(eventDto.getWinningBid())
+                .currentAmountDue(totalAmountDue)
                 .paymentDeadline(paymentDeadline)
                 .orderStatus(OrderStatus.AWAITING_WINNER_PAYMENT)
                 .paymentOfferAttempt(currentPaymentOfferAttempt)
                 .build();
 
         Order savedOrder = orderRepository.save(order);
-        log.info("Created new order ID {} for auction ID {}. Auction Type: {}",
-                savedOrder.getId(), savedOrder.getAuctionId(), savedOrder.getAuctionType());
+        log.info("Created new order ID {} for auction ID {}. Winning Bid: {}, Buyer Premium: {}, Total Due: {}. Auction Type: {}",
+                savedOrder.getId(), savedOrder.getAuctionId(),
+                savedOrder.getInitialWinningBidAmount(),
+                buyerPremium, // Log calculated premium
+                savedOrder.getCurrentAmountDue(),
+                savedOrder.getAuctionType());
 
         schedulePaymentTimeoutCheck(savedOrder.getId(), paymentDeadline, currentPaymentOfferAttempt);
         // Use savedOrder.getAuctionType() for publishing the event
@@ -138,9 +159,15 @@ public class OrderServiceImpl implements OrderService {
             log.info("Second offered bidder timed out for order {}.", orderId);
             if (order.getEligibleThirdBidderId() != null && order.getEligibleThirdBidAmount() != null) {
                 log.info("Offering order {} to third eligible bidder: {}", orderId, order.getEligibleThirdBidderId());
+
+                BigDecimal thirdBidderBid = order.getEligibleThirdBidAmount();
+                BigDecimal premiumForThirdBidder = thirdBidderBid.multiply(BUYER_PREMIUM_RATE).setScale(2, RoundingMode.HALF_UP);
+                BigDecimal totalDueForThirdBidder = thirdBidderBid.add(premiumForThirdBidder);
+
                 order.setCurrentBidderId(order.getEligibleThirdBidderId());
-                order.setCurrentAmountDue(order.getEligibleThirdBidAmount());
+                order.setCurrentAmountDue(totalDueForThirdBidder);
                 order.setPaymentOfferAttempt(3);
+
                 Duration nextBidderPaymentDuration = paymentProperties.getNextBidderDuration();
                 LocalDateTime newDeadline = LocalDateTime.now().plus(nextBidderPaymentDuration);
                 order.setPaymentDeadline(newDeadline);
@@ -193,8 +220,13 @@ public class OrderServiceImpl implements OrderService {
             case OFFER_TO_NEXT_BIDDER:
                 if (order.getEligibleSecondBidderId() != null && order.getEligibleSecondBidAmount() != null) {
                     log.info("Seller chose to offer order {} to second eligible bidder: {}", orderId, order.getEligibleSecondBidderId());
+
+                    BigDecimal secondBid = order.getEligibleSecondBidAmount();
+                    BigDecimal premiumForSecondBid = secondBid.multiply(BUYER_PREMIUM_RATE).setScale(2, RoundingMode.HALF_UP);
+                    BigDecimal totalDueForSecondBid = secondBid.add(premiumForSecondBid);
+
                     order.setCurrentBidderId(order.getEligibleSecondBidderId());
-                    order.setCurrentAmountDue(order.getEligibleSecondBidAmount());
+                    order.setCurrentAmountDue(totalDueForSecondBid);
                     order.setPaymentOfferAttempt(2);
                     Duration nextBidderPaymentDuration = paymentProperties.getNextBidderDuration();
                     LocalDateTime newDeadline = LocalDateTime.now().plus(nextBidderPaymentDuration);
@@ -312,6 +344,61 @@ public class OrderServiceImpl implements OrderService {
         // publishOrderConfirmedBySellerEvent(savedOrder);
     }
 
+    @Override
+    @Transactional
+    public void processOrderCompletionByBuyer(UUID orderId, String buyerId, LocalDateTime confirmationTimestamp) {
+        log.info("Processing order completion by buyer {} for order ID: {}. Confirmation time: {}",
+                buyerId, orderId, confirmationTimestamp);
+
+        Order order = orderRepository.findById(orderId)
+                .orElseThrow(() -> {
+                    log.error("Order not found for completion: {}", orderId);
+                    return new NoSuchElementException("Order not found for completion: " + orderId);
+                });
+
+        // Authorization/Validation: Check if the buyerId matches the order's current bidder
+        if (!order.getCurrentBidderId().equals(buyerId)) {
+            log.warn("Attempt to complete order {} by user {} who is not the current buyer {}.",
+                    orderId, buyerId, order.getCurrentBidderId());
+            // Depending on strictness, you might throw an exception or just log
+            // For now, we'll proceed but this is a point of validation.
+        }
+
+        // Validate current order status - should be in a state that can be completed
+        // e.g., AWAITING_SHIPMENT, or perhaps a state that reflects it's been handed to delivery.
+        // For simplicity, if DeliveriesService confirms delivery was confirmed by buyer, we trust it.
+        // More robust check:
+        /*
+        if (order.getOrderStatus() != OrderStatus.AWAITING_SHIPMENT &&
+            order.getOrderStatus() != SomeOtherPostShipmentStatusIfNotUsingDeliveryStatusDirectly) {
+            log.warn("Order {} is in status {} and cannot be marked COMPLETED by buyer confirmation at this stage.",
+                    orderId, order.getOrderStatus());
+            throw new IllegalStateException("Order cannot be completed from its current status: " + order.getOrderStatus());
+        }
+        */
+
+        if (order.getOrderStatus() == OrderStatus.COMPLETED) {
+            log.warn("Order {} is already COMPLETED. Ignoring duplicate completion event.", orderId);
+            return;
+        }
+
+        order.setOrderStatus(OrderStatus.COMPLETED);
+        String note = String.format("Order completed. Buyer (%s) confirmed receipt at %s.",
+                buyerId,
+                confirmationTimestamp.toString());
+        order.setInternalNotes(order.getInternalNotes() == null ? note : order.getInternalNotes() + "; " + note);
+
+        Order savedOrder = orderRepository.save(order);
+        log.info("Order {} status updated to COMPLETED.", savedOrder.getId());
+
+        // Optional: Publish an OrderCompletedEvent if other services need to react
+        // publishOrderCompletedEvent(savedOrder, "BUYER_CONFIRMED");
+
+        // Here, you might also trigger logic for seller payout if that's managed by OrdersService
+        // or publish an event that PaymentsService listens to for payout.
+        // For now, just updating the status.
+    }
+
     /**
      * Processes a failed payment event from the Payment Service.
      *
@@ -366,8 +453,13 @@ public class OrderServiceImpl implements OrderService {
             log.info("Second offered bidder's payment failed for order {}.", order.getId());
             if (order.getEligibleThirdBidderId() != null && order.getEligibleThirdBidAmount() != null) {
                 log.info("Offering order {} to third eligible bidder: {}", order.getId(), order.getEligibleThirdBidderId());
+
+                BigDecimal thirdBid = order.getEligibleThirdBidAmount();
+                BigDecimal premiumForThirdBid = thirdBid.multiply(BUYER_PREMIUM_RATE).setScale(2, RoundingMode.HALF_UP);
+                BigDecimal totalDueForThirdBid = thirdBid.add(premiumForThirdBid);
+
                 order.setCurrentBidderId(order.getEligibleThirdBidderId());
-                order.setCurrentAmountDue(order.getEligibleThirdBidAmount());
+                order.setCurrentAmountDue(totalDueForThirdBid);
                 order.setPaymentOfferAttempt(3);
                 Duration nextBidderPaymentDuration = paymentProperties.getNextBidderDuration();
                 LocalDateTime newDeadline = LocalDateTime.now().plus(nextBidderPaymentDuration);
@@ -507,8 +599,13 @@ public class OrderServiceImpl implements OrderService {
             log.info("Second offered bidder cancelled payment for order {}.", orderId);
             if (order.getEligibleThirdBidderId() != null && order.getEligibleThirdBidAmount() != null) {
                 log.info("Offering order {} to third eligible bidder: {}", orderId, order.getEligibleThirdBidderId());
+
+                BigDecimal thirdBid = order.getEligibleThirdBidAmount();
+                BigDecimal premiumForThirdBid = thirdBid.multiply(BUYER_PREMIUM_RATE).setScale(2, RoundingMode.HALF_UP);
+                BigDecimal totalDueForThirdBid = thirdBid.add(premiumForThirdBid);
+
                 order.setCurrentBidderId(order.getEligibleThirdBidderId());
-                order.setCurrentAmountDue(order.getEligibleThirdBidAmount());
+                order.setCurrentAmountDue(totalDueForThirdBid);
                 order.setPaymentOfferAttempt(3);
                 Duration nextBidderPaymentDuration = paymentProperties.getNextBidderDuration();
                 LocalDateTime newDeadline = LocalDateTime.now().plus(nextBidderPaymentDuration);
@@ -804,18 +901,56 @@ public class OrderServiceImpl implements OrderService {
     }
 
     private void publishOrderReadyForShippingEvent(Order order) {
+        UserBasicInfoDto buyerInfo = null;
+        String recipientName = "Valued Customer";
+
+        if (order.getCurrentBidderId() == null) {
+            log.error("Cannot publish OrderReadyForShippingEvent for order {}: currentBidderId is null.", order.getId());
+            return; // Or handle error appropriately
+        }
+
+        try {
+            log.debug("Fetching user info for buyer ID: {}", order.getCurrentBidderId());
+            Map<String, UserBasicInfoDto> usersMap = userServiceClient.getUsersBasicInfoByIds(Collections.singletonList(order.getCurrentBidderId()));
+            buyerInfo = usersMap.get(order.getCurrentBidderId());
+
+            if (buyerInfo != null) {
+                log.debug("Fetched buyer info: {}", buyerInfo);
+                if (buyerInfo.getUsername() != null && !buyerInfo.getUsername().isBlank()) {
+                    recipientName = buyerInfo.getUsername();
+                } else {
+                    // Fallback if username is blank but we have an ID
+                    recipientName = "Customer (ID: " + order.getCurrentBidderId().substring(0, Math.min(8, order.getCurrentBidderId().length())) + ")";
+                }
+            } else {
+                log.warn("No buyer info found for buyer ID: {} for order {}", order.getCurrentBidderId(), order.getId());
+            }
+        } catch (Exception e) {
+            log.error("Failed to fetch buyer info for order {}. Proceeding with potentially incomplete address. Error: {}", order.getId(), e.getMessage(), e);
+            // buyerInfo will remain null, and address fields will be null in the event
+        }
+
         OrderReadyForShippingEventDto event = OrderReadyForShippingEventDto.builder()
                 .eventId(UUID.randomUUID())
                 .eventTimestamp(LocalDateTime.now())
                 .orderId(order.getId())
                 .auctionId(order.getAuctionId())
-                .productId(order.getProductId())
+                .productId(order.getProductId()) // This should be Long
                 .productTitleSnapshot(order.getProductTitleSnapshot())
                 .sellerId(order.getSellerId())
-                .buyerId(order.getCurrentBidderId()) // This is the one who successfully paid
-                .amountPaid(order.getCurrentAmountDue().longValueExact()) // Assuming amount is stored as such or from payment event
+                .buyerId(order.getCurrentBidderId())
+                .amountPaid(order.getCurrentAmountDue()) // Assuming DTO field is BigDecimal
                 .currency(order.getCurrency())
                 .paymentTransactionRef(order.getPaymentTransactionRef())
+                // Populate shipping address from buyerInfo
+                .shippingRecipientName(recipientName)
+                .shippingStreetAddress(buyerInfo != null ? buyerInfo.getStreetAddress() : null)
+                .shippingCity(buyerInfo != null ? buyerInfo.getCity() : null)
+                // Add stateProvince if your UserBasicInfoDto and OrderReadyForShippingEventDto have it
+                // .shippingStateProvince(buyerInfo != null ? buyerInfo.getStateProvince() : null)
+                .shippingPostalCode(buyerInfo != null ? buyerInfo.getPostalCode() : null)
+                .shippingCountry(buyerInfo != null ? buyerInfo.getCountry() : null)
+                .shippingPhoneNumber(buyerInfo != null ? buyerInfo.getPhoneNumber() : null)
                 .build();
 
         log.info("Publishing OrderReadyForShippingEvent for order ID: {}", order.getId());

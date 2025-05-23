@@ -37,7 +37,6 @@ public final class NotificationEvents {
         BigDecimal winningBid;
     }
 
-    /** Event published when a user's max bid is surpassed by another user. */
     @Value
     @Builder
     public static class OutbidEvent {
@@ -49,7 +48,6 @@ public final class NotificationEvents {
         @NotNull String newHighestBidderUsernameSnapshot;
     }
 
-    /** Event published when a comment receives a reply. */
     @Value
     @Builder
     public static class CommentReplyEvent {

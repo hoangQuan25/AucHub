@@ -11,6 +11,7 @@ import com.example.notifications.dto.NotificationDto; // DTO for WebSocket paylo
 import com.example.notifications.entity.AuctionFollower;
 import com.example.notifications.entity.Notification; // DB Entity
 import com.example.notifications.entity.AuctionStatus; // Enum for status check
+import com.example.notifications.event.DeliveryEvents;
 import com.example.notifications.event.NotificationEvents.*; // Event types
 import com.example.notifications.mapper.NotificationMapper;
 import com.example.notifications.repository.AuctionFollowerRepository;
@@ -65,6 +66,12 @@ public class NotificationServiceImpl implements NotificationService {
     private static final String TYPE_REFUND_SUCCEEDED = "REFUND_SUCCEEDED";
     private static final String TYPE_REFUND_FAILED = "REFUND_FAILED";
     private static final String TYPE_ORDER_AWAITING_FULFILLMENT_CONFIRMATION = "ORDER_AWAITING_FULFILLMENT_CONFIRMATION";
+
+    private static final String TYPE_DELIVERY_CREATED = "DELIVERY_CREATED";
+    private static final String TYPE_DELIVERY_SHIPPED = "DELIVERY_SHIPPED";
+    private static final String TYPE_DELIVERY_DELIVERED = "DELIVERY_DELIVERED";
+    private static final String TYPE_DELIVERY_AWAITING_BUYER_CONFIRMATION = "DELIVERY_AWAITING_BUYER_CONFIRMATION";
+    private static final String TYPE_DELIVERY_ISSUE_REPORTED = "DELIVERY_ISSUE_REPORTED";
 
 
     private static final DateTimeFormatter SHORT_DATE_TIME_FORMATTER = DateTimeFormatter.ofLocalizedDateTime(FormatStyle.SHORT);
@@ -415,6 +422,135 @@ public class NotificationServiceImpl implements NotificationService {
             saveAndSendNotification(event.getBuyerId(), TYPE_ORDER_AWAITING_FULFILLMENT_CONFIRMATION, buyerMessage, event.getOrderId(), null);
             log.info("Notified buyer {} for order {} that payment is confirmed, awaiting seller fulfillment.", event.getBuyerId(), event.getOrderId());
         }
+    }
+
+    @Override
+    @Transactional
+    public void processDeliveryCreated(DeliveryEvents.DeliveryCreatedEventDto event) {
+        log.debug("Processing DeliveryCreatedEvent for deliveryId: {}", event.getDeliveryId());
+        String productInfo = truncate(event.getProductInfoSnapshot(), 50);
+        String orderIdShort = event.getOrderId().toString().substring(0, 8);
+        String deliveryIdShort = event.getDeliveryId().toString().substring(0, 8);
+
+        // Notify Buyer
+        String buyerMessage = String.format("The seller is preparing your order #%s (%s) for shipment. Delivery ID: #%s.",
+                orderIdShort, productInfo, deliveryIdShort);
+        // For delivery notifications, using event.getDeliveryId() as the relatedId seems most direct.
+        saveAndSendNotification(event.getBuyerId(), TYPE_DELIVERY_CREATED, buyerMessage, event.getDeliveryId(), null);
+
+        // Notify Seller
+        String sellerMessage = String.format("Please prepare order #%s (%s) for shipment. Delivery ID: #%s.",
+                orderIdShort, productInfo, deliveryIdShort);
+        saveAndSendNotification(event.getSellerId(), TYPE_DELIVERY_CREATED, sellerMessage, event.getDeliveryId(), null);
+
+        log.info("Processed DeliveryCreatedEvent for delivery {}, notified buyer {} and seller {}.",
+                event.getDeliveryId(), event.getBuyerId(), event.getSellerId());
+    }
+
+    @Override
+    @Transactional
+    public void processDeliveryShipped(DeliveryEvents.DeliveryShippedEventDto event) {
+        log.debug("Processing DeliveryShippedEvent for deliveryId: {}", event.getDeliveryId());
+        String productInfo = truncate(event.getProductInfoSnapshot(), 50);
+        String orderIdShort = event.getOrderId().toString().substring(0, 8);
+
+        // Notify Buyer
+        String buyerMessage = String.format("Shipped! Your order #%s (%s) is on its way via %s. Tracking: %s.",
+                orderIdShort,
+                productInfo,
+                event.getCourierName(),
+                event.getTrackingNumber());
+        saveAndSendNotification(event.getBuyerId(), TYPE_DELIVERY_SHIPPED, buyerMessage, event.getDeliveryId(), null);
+
+        // Optional: Notify Seller (though they initiated this, a confirmation notification might be redundant)
+        // String sellerMessage = String.format("You've marked order #%s (%s) as shipped with tracking %s.",
+        // orderIdShort, productInfo, event.getTrackingNumber());
+        // saveAndSendNotification(event.getSellerId(), TYPE_DELIVERY_SHIPPED, sellerMessage, event.getDeliveryId(), null);
+
+        log.info("Processed DeliveryShippedEvent for delivery {}, notified buyer {}.",
+                event.getDeliveryId(), event.getBuyerId());
+    }
+
+    @Override
+    @Transactional
+    public void processDeliveryDelivered(DeliveryEvents.DeliveryDeliveredEventDto event) {
+        log.debug("Processing DeliveryDeliveredEvent for deliveryId: {}", event.getDeliveryId());
+        String productInfo = truncate(event.getProductInfoSnapshot(), 50);
+        String orderIdShort = event.getOrderId().toString().substring(0, 8);
+        String deliveredAtFormatted = event.getDeliveredAt() != null ? event.getDeliveredAt().format(SHORT_DATE_TIME_FORMATTER) : "recently";
+
+
+        // Notify Buyer
+        String buyerMessage = String.format("Delivered! Your order #%s (%s) was marked as delivered on %s.",
+                orderIdShort, productInfo, deliveredAtFormatted);
+        saveAndSendNotification(event.getBuyerId(), TYPE_DELIVERY_DELIVERED, buyerMessage, event.getDeliveryId(), null);
+
+        // Notify Seller
+        String sellerMessage = String.format("Order #%s (%s) for buyer %s has been marked as delivered on %s.",
+                orderIdShort, productInfo, event.getBuyerId(), deliveredAtFormatted); // Consider fetching buyer username if desired
+        saveAndSendNotification(event.getSellerId(), TYPE_DELIVERY_DELIVERED, sellerMessage, event.getDeliveryId(), null);
+
+        log.info("Processed DeliveryDeliveredEvent for delivery {}, notified buyer {} and seller {}.",
+                event.getDeliveryId(), event.getBuyerId(), event.getSellerId());
+    }
+
+    @Override
+    @Transactional
+    public void processDeliveryAwaitingBuyerConfirmation(DeliveryEvents.DeliveryAwaitingBuyerConfirmationEventDto event) {
+        log.debug("Processing DeliveryAwaitingBuyerConfirmationEvent for delivery ID: {}", event.getDeliveryId());
+        String productInfo = truncate(event.getProductInfoSnapshot(), 40);
+        String orderIdShort = event.getOrderId().toString().substring(0, 8);
+        String deliveredAtStr = event.getDeliveredAt() != null ? event.getDeliveredAt().format(SHORT_DATE_TIME_FORMATTER) : "recently";
+
+        // Notify Buyer
+        String buyerMessage = String.format(
+                "Item Delivered! Your order #%s (%s) was marked as delivered around %s. Please confirm receipt within 3 days via the order details page.",
+                orderIdShort, productInfo, deliveredAtStr
+        );
+        saveAndSendNotification(event.getBuyerId(), TYPE_DELIVERY_AWAITING_BUYER_CONFIRMATION, buyerMessage, event.getDeliveryId(), null);
+
+        // Notify Seller
+        String sellerMessage = String.format(
+                "Item Delivered for order #%s (%s). Awaiting buyer's confirmation of receipt.",
+                orderIdShort, productInfo
+        );
+        saveAndSendNotification(event.getSellerId(), TYPE_DELIVERY_AWAITING_BUYER_CONFIRMATION, sellerMessage, event.getDeliveryId(), null);
+
+        log.info("Processed DeliveryAwaitingBuyerConfirmationEvent for delivery {}, notified buyer {} and seller {}.",
+                event.getDeliveryId(), event.getBuyerId(), event.getSellerId());
+    }
+
+    @Override
+    @Transactional
+    public void processDeliveryIssueReported(DeliveryEvents.DeliveryIssueReportedEventDto event) {
+        log.debug("Processing DeliveryIssueReportedEvent for deliveryId: {}", event.getDeliveryId());
+        String productInfo = truncate(event.getProductInfoSnapshot(), 50);
+        String orderIdShort = event.getOrderId().toString().substring(0, 8);
+        String issue = truncate(event.getIssueNotes(), 70);
+
+        // Notify Buyer (if the issue is relevant to them, e.g., failed delivery attempt)
+        // The message here depends on the nature of "issue reported".
+        // If it's a "failed delivery attempt", the message is more specific.
+        // For a generic "issue reported by seller", the buyer message might be different or not sent.
+        // Let's assume the "Phase 1" requirement: "A delivery attempt for order #XYZ failed. Reason: {...}"
+        String buyerMessage = String.format("Delivery Update for order #%s (%s): An issue was reported - '%s'. Please check order details or contact support.",
+                orderIdShort, productInfo, issue);
+        saveAndSendNotification(event.getBuyerId(), TYPE_DELIVERY_ISSUE_REPORTED, buyerMessage, event.getDeliveryId(), null);
+
+
+        // Notify Seller (if the issue was reported by the system or needs their attention)
+        // If the seller *is* the reporter, this might be redundant unless it's a confirmation.
+        if (!event.getSellerId().equals(event.getReporterId())) {
+            String sellerMessage = String.format("Issue reported for delivery #%s (order #%s, product %s): '%s'. Reported by: %s.",
+                    event.getDeliveryId().toString().substring(0,8), orderIdShort, productInfo, issue, event.getReporterId());
+            saveAndSendNotification(event.getSellerId(), TYPE_DELIVERY_ISSUE_REPORTED, sellerMessage, event.getDeliveryId(), null);
+        } else {
+            log.info("Seller {} reported the issue for delivery {}. No separate notification to seller.", event.getSellerId(), event.getDeliveryId());
+        }
+
+
+        log.info("Processed DeliveryIssueReportedEvent for delivery {}, issue: '{}'. Notified buyer {}.",
+                event.getDeliveryId(), event.getIssueNotes(), event.getBuyerId());
     }
 
 
