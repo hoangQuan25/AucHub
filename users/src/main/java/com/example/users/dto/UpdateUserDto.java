@@ -16,6 +16,8 @@ public class UpdateUserDto {
     @Size(max = 20, message = "Phone number cannot exceed 20 characters")
     private String phoneNumber;
 
+    private String sellerDescription;
+
     // Address fields (user can update these)
     @Size(max = 255) private String streetAddress;
     @Size(max = 100) private String city;

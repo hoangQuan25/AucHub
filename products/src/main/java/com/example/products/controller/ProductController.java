@@ -8,6 +8,10 @@ import com.example.products.service.ProductService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
+import org.springframework.data.web.PageableDefault;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -57,6 +61,19 @@ public class ProductController {
         return ResponseEntity.ok(products);
     }
 
+    @GetMapping("/seller/{sellerId}/products") // e.g., /api/products/seller/{sellerId}/products
+    public ResponseEntity<Page<ProductDto>> getPublicProductsBySeller(
+            @PathVariable String sellerId,
+            // TODO: Add filters like status (e.g., AVAILABLE, SOLD_OUT) if your Product entity has them
+            // @RequestParam(value = "status", required = false) ProductStatus status,
+            @PageableDefault(size = 12, sort = "createdAt", direction = Sort.Direction.DESC) Pageable pageable) {
+        log.info("Fetching public products for sellerId: {} with pagination {}", sellerId, pageable);
+        // Optionally, add filtering by product status if applicable (e.g., only "AVAILABLE" products)
+        Page<ProductDto> products = productService.getProductsBySeller(sellerId, pageable);
+        log.info("Found {} products for sellerId: {}", products.getTotalElements(), sellerId);
+        return ResponseEntity.ok(products);
+    }
+
     @GetMapping("/{productId}")
     public ResponseEntity<ProductDto> getProductById(
             @PathVariable Long productId) {
@@ -66,9 +83,4 @@ public class ProductController {
         ProductDto product = productService.getProductById(productId);
         return ResponseEntity.ok(product);
     }
-
-    // TODO: Add endpoints later for GET /api/products/{id}, PUT /api/products/{id}, DELETE /api/products/{id}
-    // Make sure to check ownership (sellerId) in update/delete operations!
-
-    // TODO: Add endpoint for GET /api/products (public listing - maybe needs pagination?)
 }

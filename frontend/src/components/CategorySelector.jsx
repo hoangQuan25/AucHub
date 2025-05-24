@@ -22,6 +22,7 @@ const CategoryItem = ({ category, allCategories, selectedIds, onSelectionChange 
       <div className="flex items-center p-2 rounded-lg hover:bg-gray-100">
         {children.length > 0 && (
           <button
+            type="button"
             onClick={toggleCollapse}
             className="flex-shrink-0 mr-2 text-gray-500 hover:text-gray-700 focus:outline-none"
             aria-label={collapsed ? 'Expand' : 'Collapse'}

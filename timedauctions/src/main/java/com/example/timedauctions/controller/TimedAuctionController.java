@@ -88,6 +88,48 @@ public class TimedAuctionController {
         return ResponseEntity.ok(page);
     }
 
+    @GetMapping("/seller/{sellerId}/timed-auctions") // e.g., /api/timed-auctions/seller/{sellerId}
+    public ResponseEntity<Page<TimedAuctionSummaryDto>> getPublicTimedAuctionsBySeller(
+            @PathVariable String sellerId, // Seller's public ID or username (if service supports resolving username)
+            // Re-use existing filter parameters
+            @RequestParam(value = "status", required = false) AuctionStatus status,
+            @RequestParam(value = "ended", required = false) Boolean ended,
+            @RequestParam(value = "categoryIds", required = false) Set<Long> categoryIds,
+            @RequestParam(value = "from", required = false)
+            @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime from,
+            @RequestParam(value = "activeOnly", defaultValue = "true") boolean activeOnly, // New param to easily get active/scheduled
+            @PageableDefault(size = 12, sort = "endTime", direction = Sort.Direction.DESC) Pageable pageable
+    ) {
+        log.info("Fetching public TIMED auctions for sellerId: {} (status={}, ended={}, cats={}, from={}, activeOnly={}, page={})",
+                sellerId, status, ended, categoryIds, from, activeOnly, pageable);
+
+        // Refine filtering logic for public view if needed
+        AuctionStatus effectiveStatus = status;
+        Boolean effectiveEnded = ended;
+
+        if (activeOnly) { // If client requests activeOnly, override other status/ended filters
+            effectiveStatus = AuctionStatus.ACTIVE; // Or combine ACTIVE and SCHEDULED if that's what "activeOnly" means
+            effectiveEnded = false; // Explicitly not ended
+            // You might want to default sort to startTime ASC for active/scheduled
+            // pageable = PageRequest.of(pageable.getPageNumber(), pageable.getPageSize(), Sort.by(Sort.Direction.ASC, "startTime"));
+        } else {
+            if (Boolean.TRUE.equals(effectiveEnded) && effectiveStatus != null) {
+                log.warn("Both 'status' and 'ended=true' provided for public seller auctions, ignoring 'status'.");
+                effectiveStatus = null;
+            }
+        }
+
+        Page<TimedAuctionSummaryDto> page = timedAuctionService.getSellerAuctions(
+                sellerId,
+                effectiveStatus,
+                effectiveEnded,
+                categoryIds,
+                from,
+                pageable
+        );
+        return ResponseEntity.ok(page);
+    }
+
     @GetMapping("/{auctionId}")
     public ResponseEntity<TimedAuctionDetailsDto> getAuctionDetails(
             @PathVariable UUID auctionId) {

@@ -1,13 +1,16 @@
 package com.example.users.service.impl;
 
+import com.example.users.dto.PublicSellerProfileDto;
 import com.example.users.dto.UpdateUserDto;
 import com.example.users.dto.UserBasicInfoDto;
 import com.example.users.dto.UserDto;
 import com.example.users.entity.User;
+import com.example.users.exception.ResourceNotFoundException;
 import com.example.users.exception.UserNotFoundException;
 import com.example.users.mapper.UserMapper;
 import com.example.users.repository.UserRepository;
 import com.example.users.service.KeycloakAdminService;
+import com.example.users.service.SellerReviewService;
 import com.example.users.service.UserService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -30,6 +33,7 @@ public class UserServiceImpl implements UserService {
     private final UserRepository userRepository;
     private final UserMapper userMapper;
     private final KeycloakAdminService keycloakAdminService;
+    private final SellerReviewService sellerReviewService; // Assuming this is needed for public profile
 
     @Override
     @Transactional
@@ -64,19 +68,45 @@ public class UserServiceImpl implements UserService {
                 });
     }
 
+    // com.example.users.service.impl.UserServiceImpl.java
     @Override
     @Transactional
     public UserDto updateUserProfile(String userId, UpdateUserDto updateUserDto) {
-        // This method now correctly focuses on user-editable fields (name, phone, address)
-        // as payment card display fields were removed from UpdateUserDto.
-        log.debug("Updating profile (name, phone, address) for user ID: {}", userId);
+        log.debug("Updating profile for user ID: {}", userId);
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new UserNotFoundException("User not found with id: " + userId));
 
-        userMapper.updateUserFromDto(updateUserDto, user); // Mapper only updates fields present in UpdateUserDto
+        userMapper.updateUserFromDto(updateUserDto, user); // This will map firstName, lastName, address, etc.
+
+        // Explicitly handle sellerDescription
+        if (user.isSeller()) {
+
+            if (updateUserDto.getSellerDescription() != null) { // Check if the field was provided in the request
+                user.setSellerDescription(updateUserDto.getSellerDescription());
+            }
+        } else {
+
+            if (updateUserDto.getSellerDescription() != null) {
+                log.warn("Attempt to set seller description for non-seller user ID: {}. Ignoring.", userId);
+            }
+            user.setSellerDescription(null); // Ensure it's cleared if they are not a seller
+        }
 
         User updatedUser = userRepository.save(user);
         log.info("Profile updated successfully for user ID: {}", userId);
+        return userMapper.toUserDto(updatedUser);
+    }
+
+    @Override
+    @Transactional
+    public UserDto updateAvatarUrl(String userId, String avatarUrl) {
+        log.info("Updating avatar URL for user ID: {}", userId);
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new UserNotFoundException("User not found with id: " + userId + " while updating avatar."));
+
+        user.setAvatarUrl(avatarUrl);
+        User updatedUser = userRepository.save(user);
+        log.info("Avatar URL updated successfully for user ID: {}", userId);
         return userMapper.toUserDto(updatedUser);
     }
 
@@ -124,6 +154,32 @@ public class UserServiceImpl implements UserService {
         log.debug("Returning basic info map for {} users.", resultMap.size());
         return resultMap;
     }
+
+    @Override
+    @Transactional(readOnly = true)
+    public PublicSellerProfileDto getPublicSellerProfile(String userIdOrUsername) {
+        log.debug("Fetching public seller profile for identifier: {}", userIdOrUsername);
+        User user = userRepository.findByUsername(userIdOrUsername)
+                .orElseGet(() -> userRepository.findById(userIdOrUsername)
+                        .orElseThrow(() -> new ResourceNotFoundException("Seller not found with identifier: " + userIdOrUsername)));
+
+        if (!user.isSeller()) {
+            throw new ResourceNotFoundException("User " + userIdOrUsername + " is not a registered seller.");
+        }
+
+        PublicSellerProfileDto dto = userMapper.toPublicSellerProfileDto(user);
+
+        // Fetch and set average rating and review count
+        Double avgRating = sellerReviewService.getAverageRatingForSeller(user.getId());
+        Long revCount = sellerReviewService.getReviewCountForSeller(user.getId());
+
+        dto.setAverageRating(avgRating); // Will be null if no reviews
+        dto.setReviewCount(revCount != null ? revCount : 0L);
+
+
+        return dto;
+    }
+
 
     // --- NEW METHOD IMPLEMENTATION ---
     @Override

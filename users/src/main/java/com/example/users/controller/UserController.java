@@ -6,14 +6,15 @@ import com.example.users.client.dto.ConfirmStripePaymentMethodRequestClientDto;
 import com.example.users.client.dto.CreateStripeSetupIntentRequestClientDto;
 import com.example.users.client.dto.CreateStripeSetupIntentResponseClientDto;
 import com.example.users.client.dto.StripePaymentMethodDetailsClientDto;
-import com.example.users.dto.StripeSetupConfirmationRequestDto;
-import com.example.users.dto.UserBasicInfoDto;
-import com.example.users.dto.UserDto;
-import com.example.users.dto.UpdateUserDto;
+import com.example.users.dto.*;
+import com.example.users.service.SellerReviewService;
 import com.example.users.service.UserService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.web.PageableDefault;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity; // Keep
 import org.springframework.web.bind.annotation.*; // Keep
@@ -31,6 +32,7 @@ public class UserController {
 
     private final UserService userService;
     private final PaymentServiceClient paymentServiceClient; // Assuming this is a Feign client
+    private final SellerReviewService sellerReviewService; // Assuming this is a service for handling reviews
     private static final String USER_ID_HEADER = "X-User-ID";
     private static final String USER_EMAIL_HEADER = "X-User-Email";
     private static final String USER_USERNAME_HEADER = "X-User-Username";
@@ -60,6 +62,49 @@ public class UserController {
         log.info("POST /me/activate-seller request for user ID: {}", userId);
         userService.activateSellerRole(userId);
         return ResponseEntity.noContent().build();
+    }
+
+    @PutMapping("/me/avatar") // Or @PostMapping, PUT is common for updates
+    public ResponseEntity<UserDto> updateUserAvatar(
+            @RequestHeader(USER_ID_HEADER) String userId,
+            @RequestBody AvatarUpdateRequestDto avatarUpdateRequest) { // Expecting JSON like {"avatarUrl": "http://..."}
+        log.info("PUT /me/avatar request for user ID: {}", userId);
+        if (avatarUpdateRequest == null || avatarUpdateRequest.getAvatarUrl() == null || avatarUpdateRequest.getAvatarUrl().trim().isEmpty()) {
+            log.warn("Avatar URL is missing in the request for user ID: {}", userId);
+            return ResponseEntity.badRequest().build(); // Or a more descriptive error
+        }
+        // You might want to add URL validation here if necessary
+        UserDto updatedUserProfile = userService.updateAvatarUrl(userId, avatarUpdateRequest.getAvatarUrl());
+        return ResponseEntity.ok(updatedUserProfile);
+    }
+
+    @GetMapping("/sellers/{identifier}") // Using "identifier" to accept ID or username
+    public ResponseEntity<PublicSellerProfileDto> getPublicSellerProfile(
+            @PathVariable("identifier") String identifier) {
+        log.info("GET /sellers/{} public profile request", identifier);
+        PublicSellerProfileDto sellerProfile = userService.getPublicSellerProfile(identifier);
+        return ResponseEntity.ok(sellerProfile);
+    }
+
+    @PostMapping("/submit-review") // Changed to a more RESTful name
+    public ResponseEntity<ReviewDto> createReview(
+            @RequestHeader(USER_ID_HEADER) String buyerId, // Get buyer ID from header (set by API Gateway/Auth service)
+            @Valid @RequestBody CreateReviewDto createReviewDto) {
+        log.info("POST /reviews request from buyer ID: {}", buyerId);
+        // Simple check: Make sure the authenticated user is not trying to submit a review as someone else.
+        // More complex validation (e.g., can this buyerId review this orderId from this sellerId)
+        // is handled in the service layer.
+        ReviewDto createdReview = sellerReviewService.createReview(createReviewDto, buyerId);
+        return ResponseEntity.status(HttpStatus.CREATED).body(createdReview);
+    }
+
+    @GetMapping("/seller/{sellerId}")
+    public ResponseEntity<Page<ReviewDto>> getReviewsForSeller(
+            @PathVariable String sellerId,
+            @PageableDefault(size = 10, sort = "createdAt,desc") Pageable pageable) {
+        log.info("GET /reviews/seller/{} request", sellerId);
+        Page<ReviewDto> reviews = sellerReviewService.getReviewsForSeller(sellerId, pageable);
+        return ResponseEntity.ok(reviews);
     }
 
     @GetMapping("/batch")

@@ -18,7 +18,9 @@ public class UserDto {
     private String firstName;
     private String lastName;
     private String phoneNumber;
+    private String avatarUrl;
     private boolean isSeller;
+    private String sellerDescription;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
 

@@ -90,6 +90,34 @@ public class LiveAuctionController {
         return ResponseEntity.ok(page);
     }
 
+    @GetMapping("/seller/{sellerId}/live-auctions")
+    public ResponseEntity<Page<LiveAuctionSummaryDto>> getPublicLiveAuctionsBySeller(
+            @PathVariable String sellerId,
+            // We'll primarily be interested in ACTIVE or SCHEDULED for public display
+            @RequestParam(value = "status", required = false) AuctionStatus status,
+            @RequestParam(value = "categoryIds", required = false) Set<Long> categoryIds,
+            @RequestParam(value = "from", required = false) // Might be less relevant for 'current' live auctions
+            @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime from,
+            @PageableDefault(size = 12, sort = "startTime", direction = Sort.Direction.ASC) Pageable pageable // Default sort for upcoming/active
+    ) {
+        log.info("Fetching public LIVE auctions for sellerId: {} (status={}, cats={}, from={}, page={})",
+                sellerId, status, categoryIds, from, pageable);
+
+        AuctionStatus effectiveStatus = status;
+        if (status == null) {
+
+        }
+
+        Page<LiveAuctionSummaryDto> page = liveAuctionService.getSellerAuctions(
+                sellerId,
+                effectiveStatus, // Pass the status (can be null for service to decide default or all non-ended)
+                categoryIds,
+                from,
+                pageable
+        );
+        return ResponseEntity.ok(page);
+    }
+
     @PostMapping("/{auctionId}/hammer")
     public ResponseEntity<Void> hammerDown(
             @RequestHeader(USER_ID_HEADER) String sellerId,
