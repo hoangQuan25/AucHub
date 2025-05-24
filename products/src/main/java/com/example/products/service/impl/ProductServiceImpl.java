@@ -15,6 +15,8 @@ import com.example.products.repository.ProductRepository;
 import com.example.products.service.ProductService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -165,5 +167,14 @@ public class ProductServiceImpl implements ProductService {
         List<Category> categories = categoryRepository.findAll(); // Fetch all
         // Let frontend build hierarchy from flat list + parentId for simplicity now
         return categoryMapper.toCategoryDtoList(categories);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public Page<ProductDto> getProductsBySeller(String sellerId, Pageable pageable) {
+        log.debug("Fetching products for seller ID: {} with pagination: {}", sellerId, pageable);
+        Page<Product> productsPage = productRepository.findBySellerId(sellerId, pageable);
+        // Map Page<Product> to Page<ProductDto>
+        return productsPage.map(productMapper::toProductDto);
     }
 }

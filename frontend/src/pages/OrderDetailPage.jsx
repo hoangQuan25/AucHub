@@ -21,6 +21,7 @@ import OrderDeliveryProgress from "../components/order/OrderDeliveryProgress";
 import BuyerDeliveryActions from "../components/order/BuyerDeliverActions";
 import MarkAsShippedFormModal from "../components/delivery/MarkAsShippedFormModal";
 import MarkAsDeliveredFormModal from "../components/delivery/MarkAsDeliveredFormModal";
+import SubmitReviewModal from "../components/SubmitReviewModal";
 
 const STRIPE_PUBLISHABLE_KEY =
   "pk_test_51RN788QoAglQPjjvhupJXkisXj7R7wt7epc8hYTUbDBTCxumwAownPBKNMM8NfNVza13yVVf6SrfAnmAxoiJtfRw00cIVf2LIl";
@@ -70,6 +71,9 @@ function OrderDetailPage() {
   const [isConfirmingReceipt, setIsConfirmingReceipt] = useState(false);
   const [isRequestingReturn, setIsRequestingReturn] = useState(false); // If you have a separate loading for this
   const [buyerActionError, setBuyerActionError] = useState("");
+
+  const [isReviewModalOpen, setIsReviewModalOpen] = useState(false);
+  const [reviewSubmissionMessage, setReviewSubmissionMessage] = useState({ type: '', text: '' });
 
   const fetchUserProfile = useCallback(async () => {
     if (initialized && keycloak.authenticated) {
@@ -483,6 +487,31 @@ function OrderDetailPage() {
     }
   };
 
+  const handleOpenReviewModal = () => {
+    setReviewSubmissionMessage({ type: '', text: '' }); // Clear previous messages
+    setIsReviewModalOpen(true);
+  };
+
+  const handleCloseReviewModal = () => {
+    setIsReviewModalOpen(false);
+  };
+
+  const handleReviewSuccess = (submittedReview) => {
+    console.log("Review submitted successfully:", submittedReview);
+    setReviewSubmissionMessage({ type: 'success', text: 'Thank you for your review!' });
+    // Optionally, you might want to mark something locally so the "Leave Review" button disappears or changes
+    // For instance, add a state like: const [hasReviewed, setHasReviewed] = useState(false);
+    // and setHasReviewed(true) here. Then use `hasReviewed` to hide the button.
+    // Or, simply rely on the backend to prevent further reviews for this order.
+    // Refreshing details might not show the review immediately unless the order page itself shows reviews for its items/seller.
+  };
+
+  const handleReviewError = (errorMessage) => {
+    // Error is already shown in the modal, but if you want to show it on the page after modal closes:
+    // setReviewSubmissionMessage({ type: 'error', text: errorMessage });
+    console.error("Review submission failed:", errorMessage);
+  };
+
   // Derived states
   const isSeller =
     initialized &&
@@ -532,6 +561,13 @@ function OrderDetailPage() {
     order.status !== "PAYMENT_SUCCESSFUL" &&
     order.status !== "AWAITING_FULFILLMENT_CONFIRMATION" &&
     !order.status?.includes("CANCELLED");
+
+  const canLeaveReview =
+    initialized &&
+    keycloak.authenticated &&
+    order &&
+    keycloak.subject === order.currentBidderId && 
+    order.status === "COMPLETED";
 
   let currentPayerBidAmount = 0;
   let buyerPremiumAmount = 0;
@@ -669,6 +705,28 @@ function OrderDetailPage() {
         }
       />
 
+      {reviewSubmissionMessage.text && (
+        <div className={`my-4 p-3 rounded text-sm ${reviewSubmissionMessage.type === 'success' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
+          {reviewSubmissionMessage.text}
+        </div>
+      )}
+
+      {/* --- "Leave a Review" Button Section for Buyer --- */}
+      {canLeaveReview && (
+        <div className="mt-6 p-4 bg-white rounded-lg shadow">
+          <h3 className="text-lg font-semibold mb-3 text-gray-800">Share Your Feedback</h3>
+          <p className="text-sm text-gray-600 mb-4">
+            Your order is complete. Would you like to leave a review for the seller, {order.sellerUsernameSnapshot || 'this seller'}?
+          </p>
+          <button
+            onClick={handleOpenReviewModal}
+            className="bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-2 px-4 rounded transition duration-150 ease-in-out"
+          >
+            Leave a Review
+          </button>
+        </div>
+      )}
+
       {/* Modals remain here as they are controlled by OrderDetailPage's state */}
       <ConfirmationModal
         isOpen={isPaymentConfirmOpen}
@@ -787,6 +845,17 @@ function OrderDetailPage() {
         isLoading={isMarkingAsDelivered}
         apiError={markAsDeliveredError}
       />
+      {order && order.sellerId && ( // Condition relies on order and order.sellerId being present
+         <SubmitReviewModal
+            isOpen={isReviewModalOpen}
+            onClose={handleCloseReviewModal}
+            orderId={order.id}
+            sellerId={order.sellerId} // This comes from the order object
+            sellerName={order.sellerUsernameSnapshot || order.sellerId} // Fallback to sellerId if name snapshot isn't there
+            onSuccess={handleReviewSuccess}
+            onError={handleReviewError}
+         />
+      )}
     </div>
   );
 }

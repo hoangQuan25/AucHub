@@ -1,11 +1,12 @@
 // src/components/Sidebar.jsx – now includes the new “My Auctions” link for sellers
-import React from 'react';
-import { NavLink } from 'react-router-dom';
-import { useKeycloak } from '@react-keycloak/web';
+import React from "react";
+import { NavLink } from "react-router-dom";
+import { useKeycloak } from "@react-keycloak/web";
 
 function Sidebar() {
   const { keycloak } = useKeycloak();
-  const isSeller = keycloak.hasRealmRole('ROLE_SELLER');
+  const isSeller = keycloak.hasRealmRole("ROLE_SELLER");
+  const username = keycloak.tokenParsed?.preferred_username;
 
   const linkStyle = "block py-2 px-4 rounded hover:bg-gray-700";
   const activeLinkStyle = "bg-gray-700";
@@ -18,7 +19,9 @@ function Sidebar() {
             <NavLink
               to="/"
               end
-              className={({ isActive }) => `${linkStyle} ${isActive ? activeLinkStyle : ''}`}
+              className={({ isActive }) =>
+                `${linkStyle} ${isActive ? activeLinkStyle : ""}`
+              }
             >
               Homepage
             </NavLink>
@@ -27,7 +30,9 @@ function Sidebar() {
           <li>
             <NavLink
               to="/all-auctions"
-              className={({ isActive }) => `${linkStyle} ${isActive ? activeLinkStyle : ''}`}
+              className={({ isActive }) =>
+                `${linkStyle} ${isActive ? activeLinkStyle : ""}`
+              }
             >
               All Active Auctions
             </NavLink>
@@ -35,37 +40,28 @@ function Sidebar() {
 
           {isSeller && (
             <>
-              <li>
-                <NavLink
-                  to="/my-auctions"
-                  className={({ isActive }) => `${linkStyle} ${isActive ? activeLinkStyle : ''}`}
-                >
-                  Your Auctions
-                </NavLink>
-              </li>
-              <li>
-                <NavLink
-                  to="/my-products"
-                  className={({ isActive }) => `${linkStyle} ${isActive ? activeLinkStyle : ''}`}
-                >
-                  Your Products
-                </NavLink>
-              </li>
-              <li>
-                <NavLink
-                  to="/my-sales"
-                  className={({ isActive }) => `${linkStyle} ${isActive ? activeLinkStyle : ''}`}
-                >
-                  Your Sales
-                </NavLink>
-              </li>
+              {username && ( // Only show if username is available
+                <li>
+                  <NavLink
+                    // Use the username (or ID if that's your identifier) for the route
+                    to={`/seller/${username}`}
+                    className={({ isActive }) =>
+                      `${linkStyle} ${isActive ? activeLinkStyle : ""}`
+                    }
+                  >
+                    My Public Shop
+                  </NavLink>
+                </li>
+              )}
             </>
           )}
 
           <li>
             <NavLink
               to="/profile"
-              className={({ isActive }) => `${linkStyle} ${isActive ? activeLinkStyle : ''}`}
+              className={({ isActive }) =>
+                `${linkStyle} ${isActive ? activeLinkStyle : ""}`
+              }
             >
               Account Settings
             </NavLink>

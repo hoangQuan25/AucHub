@@ -5,45 +5,53 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="3a162283-5be8-46d0-949d-517f55ab3cb9" name="Changes" comment="">
-      <change afterPath="$PROJECT_DIR$/deliveries/src/main/java/com/example/deliveries/commands/DeliveryWorkflowCommands.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/deliveries/src/main/java/com/example/deliveries/controller/DeliveriesController.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/deliveries/src/main/java/com/example/deliveries/dto/event/DeliveryAutoCompletedEventDto.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/deliveries/src/main/java/com/example/deliveries/dto/event/DeliveryAwaitingBuyerConfirmationEventDto.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/deliveries/src/main/java/com/example/deliveries/dto/event/DeliveryReceiptConfirmedByBuyerEventDto.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/deliveries/src/main/java/com/example/deliveries/dto/event/DeliveryReturnRequestedEventDto.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/deliveries/src/main/java/com/example/deliveries/dto/request/ReturnRequestDto.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/deliveries/src/main/java/com/example/deliveries/dto/response/DeliveryDetailDto.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/deliveries/src/main/java/com/example/deliveries/listener/DeliveryWorkflowListener.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/deliveries/src/main/java/com/example/deliveries/mapper/DeliveryMapper.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/notifications/src/main/java/com/example/notifications/event/DeliveryEvents.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/orders/src/main/java/com/example/orders/client/UserServiceClient.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/orders/src/main/java/com/example/orders/client/dto/UserBasicInfoDto.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/orders/src/main/java/com/example/orders/dto/event/DeliveryReceiptConfirmedByBuyerEventDto.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/orders/src/main/java/com/example/orders/listener/DeliveryEventListener.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/users/src/main/java/com/example/users/config/RabbitMqConfig.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/users/src/main/java/com/example/users/dto/AvatarUpdateRequestDto.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/users/src/main/java/com/example/users/dto/CreateReviewDto.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/users/src/main/java/com/example/users/dto/PublicSellerProfileDto.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/users/src/main/java/com/example/users/dto/ReviewDto.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/users/src/main/java/com/example/users/dto/event/DeliveryCompletionEventPayload.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/users/src/main/java/com/example/users/entity/ReviewEligibility.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/users/src/main/java/com/example/users/entity/SellerReview.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/users/src/main/java/com/example/users/exception/OperationNotAllowedException.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/users/src/main/java/com/example/users/exception/ResourceNotFoundException.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/users/src/main/java/com/example/users/listener/DeliveryCompletionListener.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/users/src/main/java/com/example/users/mapper/SellerReviewMapper.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/users/src/main/java/com/example/users/repository/ReviewEligibilityRepository.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/users/src/main/java/com/example/users/repository/SellerReviewRepository.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/users/src/main/java/com/example/users/service/SellerReviewService.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/users/src/main/java/com/example/users/service/impl/SellerReviewServiceImpl.java" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/deliveries/src/main/java/com/example/deliveries/config/RabbitMqConfig.java" beforeDir="false" afterPath="$PROJECT_DIR$/deliveries/src/main/java/com/example/deliveries/config/RabbitMqConfig.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/deliveries/src/main/java/com/example/deliveries/dto/event/DeliveryDeliveredEventDto.java" beforeDir="false" afterPath="$PROJECT_DIR$/deliveries/src/main/java/com/example/deliveries/dto/event/DeliveryDeliveredEventDto.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/deliveries/src/main/java/com/example/deliveries/dto/event/DeliveryIssueReportedEventDto.java" beforeDir="false" afterPath="$PROJECT_DIR$/deliveries/src/main/java/com/example/deliveries/dto/event/DeliveryIssueReportedEventDto.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/deliveries/src/main/java/com/example/deliveries/dto/event/DeliveryShippedEventDto.java" beforeDir="false" afterPath="$PROJECT_DIR$/deliveries/src/main/java/com/example/deliveries/dto/event/DeliveryShippedEventDto.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/deliveries/src/main/java/com/example/deliveries/dto/event/OrderReadyForShippingEventDto.java" beforeDir="false" afterPath="$PROJECT_DIR$/deliveries/src/main/java/com/example/deliveries/dto/event/OrderReadyForShippingEventDto.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/deliveries/src/main/java/com/example/deliveries/dto/request/MarkAsShippedRequestDto.java" beforeDir="false" afterPath="$PROJECT_DIR$/deliveries/src/main/java/com/example/deliveries/dto/request/MarkAsShippedRequestDto.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/deliveries/src/main/java/com/example/deliveries/dto/request/ReportDeliveryIssueRequestDto.java" beforeDir="false" afterPath="$PROJECT_DIR$/deliveries/src/main/java/com/example/deliveries/dto/request/ReportDeliveryIssueRequestDto.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/deliveries/src/main/java/com/example/deliveries/dto/request/UpdateToDeliveredRequestDto.java" beforeDir="false" afterPath="$PROJECT_DIR$/deliveries/src/main/java/com/example/deliveries/dto/request/UpdateToDeliveredRequestDto.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/deliveries/src/main/java/com/example/deliveries/entity/DeliveryStatus.java" beforeDir="false" afterPath="$PROJECT_DIR$/deliveries/src/main/java/com/example/deliveries/entity/DeliveryStatus.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/deliveries/src/main/java/com/example/deliveries/service/DeliveryService.java" beforeDir="false" afterPath="$PROJECT_DIR$/deliveries/src/main/java/com/example/deliveries/service/DeliveryService.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/deliveries/src/main/java/com/example/deliveries/service/impl/DeliveryServiceImpl.java" beforeDir="false" afterPath="$PROJECT_DIR$/deliveries/src/main/java/com/example/deliveries/service/impl/DeliveryServiceImpl.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/frontend/src/App.jsx" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/App.jsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/frontend/src/components/CategorySelector.jsx" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/components/CategorySelector.jsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/frontend/src/components/EditProfileModal.jsx" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/components/EditProfileModal.jsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/frontend/src/components/Header.jsx" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/components/Header.jsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/frontend/src/components/ProductDetailModal.jsx" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/components/ProductDetailModal.jsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/frontend/src/components/SellerDecisionModal.jsx" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/components/SellerDecisionModal.jsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/frontend/src/components/Sidebar.jsx" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/components/Sidebar.jsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/frontend/src/pages/MySalesPage.jsx" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/pages/MySalesPage.jsx" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/frontend/src/pages/OrderDetailPage.jsx" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/pages/OrderDetailPage.jsx" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/gatewayserver/src/main/java/com/example/gatewayserver/GatewayserverApplication.java" beforeDir="false" afterPath="$PROJECT_DIR$/gatewayserver/src/main/java/com/example/gatewayserver/GatewayserverApplication.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/notifications/src/main/java/com/example/notifications/config/RabbitMqConfig.java" beforeDir="false" afterPath="$PROJECT_DIR$/notifications/src/main/java/com/example/notifications/config/RabbitMqConfig.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/notifications/src/main/java/com/example/notifications/event/NotificationEvents.java" beforeDir="false" afterPath="$PROJECT_DIR$/notifications/src/main/java/com/example/notifications/event/NotificationEvents.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/notifications/src/main/java/com/example/notifications/listener/NotificationEventListener.java" beforeDir="false" afterPath="$PROJECT_DIR$/notifications/src/main/java/com/example/notifications/listener/NotificationEventListener.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/notifications/src/main/java/com/example/notifications/service/NotificationService.java" beforeDir="false" afterPath="$PROJECT_DIR$/notifications/src/main/java/com/example/notifications/service/NotificationService.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/notifications/src/main/java/com/example/notifications/service/impl/NotificationServiceImpl.java" beforeDir="false" afterPath="$PROJECT_DIR$/notifications/src/main/java/com/example/notifications/service/impl/NotificationServiceImpl.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/orders/src/main/java/com/example/orders/config/RabbitMqConfig.java" beforeDir="false" afterPath="$PROJECT_DIR$/orders/src/main/java/com/example/orders/config/RabbitMqConfig.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/orders/src/main/java/com/example/orders/dto/event/OrderReadyForShippingEventDto.java" beforeDir="false" afterPath="$PROJECT_DIR$/orders/src/main/java/com/example/orders/dto/event/OrderReadyForShippingEventDto.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/orders/src/main/java/com/example/orders/entity/OrderStatus.java" beforeDir="false" afterPath="$PROJECT_DIR$/orders/src/main/java/com/example/orders/entity/OrderStatus.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/orders/src/main/java/com/example/orders/service/OrderService.java" beforeDir="false" afterPath="$PROJECT_DIR$/orders/src/main/java/com/example/orders/service/OrderService.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/orders/src/main/java/com/example/orders/service/impl/OrderServiceImpl.java" beforeDir="false" afterPath="$PROJECT_DIR$/orders/src/main/java/com/example/orders/service/impl/OrderServiceImpl.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/frontend/src/pages/UserInfoPage.jsx" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/pages/UserInfoPage.jsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/liveauctions/src/main/java/com/example/liveauctions/controller/LiveAuctionController.java" beforeDir="false" afterPath="$PROJECT_DIR$/liveauctions/src/main/java/com/example/liveauctions/controller/LiveAuctionController.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/orders/src/main/java/com/example/orders/dto/response/OrderSummaryDto.java" beforeDir="false" afterPath="$PROJECT_DIR$/orders/src/main/java/com/example/orders/dto/response/OrderSummaryDto.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/orders/src/main/java/com/example/orders/mapper/OrderMapper.java" beforeDir="false" afterPath="$PROJECT_DIR$/orders/src/main/java/com/example/orders/mapper/OrderMapper.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/payments/src/main/resources/application.yml" beforeDir="false" afterPath="$PROJECT_DIR$/payments/src/main/resources/application.yml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/products/src/main/java/com/example/products/controller/ProductController.java" beforeDir="false" afterPath="$PROJECT_DIR$/products/src/main/java/com/example/products/controller/ProductController.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/products/src/main/java/com/example/products/repository/ProductRepository.java" beforeDir="false" afterPath="$PROJECT_DIR$/products/src/main/java/com/example/products/repository/ProductRepository.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/products/src/main/java/com/example/products/service/ProductService.java" beforeDir="false" afterPath="$PROJECT_DIR$/products/src/main/java/com/example/products/service/ProductService.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/products/src/main/java/com/example/products/service/impl/ProductServiceImpl.java" beforeDir="false" afterPath="$PROJECT_DIR$/products/src/main/java/com/example/products/service/impl/ProductServiceImpl.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/timedauctions/src/main/java/com/example/timedauctions/controller/TimedAuctionController.java" beforeDir="false" afterPath="$PROJECT_DIR$/timedauctions/src/main/java/com/example/timedauctions/controller/TimedAuctionController.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/users/pom.xml" beforeDir="false" afterPath="$PROJECT_DIR$/users/pom.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/users/src/main/java/com/example/users/controller/UserController.java" beforeDir="false" afterPath="$PROJECT_DIR$/users/src/main/java/com/example/users/controller/UserController.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/users/src/main/java/com/example/users/dto/UpdateUserDto.java" beforeDir="false" afterPath="$PROJECT_DIR$/users/src/main/java/com/example/users/dto/UpdateUserDto.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/users/src/main/java/com/example/users/dto/UserBasicInfoDto.java" beforeDir="false" afterPath="$PROJECT_DIR$/users/src/main/java/com/example/users/dto/UserBasicInfoDto.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/users/src/main/java/com/example/users/dto/UserDto.java" beforeDir="false" afterPath="$PROJECT_DIR$/users/src/main/java/com/example/users/dto/UserDto.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/users/src/main/java/com/example/users/entity/User.java" beforeDir="false" afterPath="$PROJECT_DIR$/users/src/main/java/com/example/users/entity/User.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/users/src/main/java/com/example/users/mapper/UserMapper.java" beforeDir="false" afterPath="$PROJECT_DIR$/users/src/main/java/com/example/users/mapper/UserMapper.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/users/src/main/java/com/example/users/mapper/impl/UserMapperImpl.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/users/src/main/java/com/example/users/repository/UserRepository.java" beforeDir="false" afterPath="$PROJECT_DIR$/users/src/main/java/com/example/users/repository/UserRepository.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/users/src/main/java/com/example/users/service/UserService.java" beforeDir="false" afterPath="$PROJECT_DIR$/users/src/main/java/com/example/users/service/UserService.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/users/src/main/java/com/example/users/service/impl/UserServiceImpl.java" beforeDir="false" afterPath="$PROJECT_DIR$/users/src/main/java/com/example/users/service/impl/UserServiceImpl.java" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -95,7 +103,7 @@
     &quot;Spring Boot.ProductsApplication.executor&quot;: &quot;Run&quot;,
     &quot;Spring Boot.TimedAuctionsApplication.executor&quot;: &quot;Run&quot;,
     &quot;Spring Boot.UsersApplication.executor&quot;: &quot;Run&quot;,
-    &quot;git-widget-placeholder&quot;: &quot;delivery&quot;,
+    &quot;git-widget-placeholder&quot;: &quot;feat/user-display&quot;,
     &quot;node.js.detected.package.eslint&quot;: &quot;true&quot;,
     &quot;node.js.detected.package.tslint&quot;: &quot;true&quot;,
     &quot;node.js.selected.package.eslint&quot;: &quot;(autodetect)&quot;,
@@ -239,6 +247,8 @@
       <workItem from="1747562244148" duration="5934000" />
       <workItem from="1747575449296" duration="6913000" />
       <workItem from="1747996391787" duration="22434000" />
+      <workItem from="1748079750861" duration="9989000" />
+      <workItem from="1748096479077" duration="12866000" />
     </task>
     <servers />
   </component>

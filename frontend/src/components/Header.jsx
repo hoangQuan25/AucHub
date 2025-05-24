@@ -2,7 +2,7 @@
 import React, { useState, useEffect, useRef } from "react"; // Added useState, useEffect, useRef
 import { Link, useNavigate } from "react-router-dom";
 import { useKeycloak } from "@react-keycloak/web";
-import { FaBell, FaHeart } from "react-icons/fa"; // Import bell icon
+import { FaBell, FaHeart, FaShoppingBag } from "react-icons/fa"; // Import bell icon
 import NotificationPanel from "./NotificationPanel"; // Import the panel
 import AllNotificationsModal from "./AllNotificationsModal";
 import { useNotifications } from "../context/NotificationContext"; // Import the context
@@ -10,7 +10,7 @@ import { useNotifications } from "../context/NotificationContext"; // Import the
 function Header() {
   const { keycloak } = useKeycloak();
   const navigate = useNavigate();
-  const { unreadCount } = useNotifications(); 
+  const { unreadCount } = useNotifications();
 
   // State to control notification panel visibility
   const [isPanelOpen, setIsPanelOpen] = useState(false);
@@ -107,6 +107,15 @@ function Header() {
               className="p-2 rounded-full hover:bg-gray-700 text-gray-300 hover:text-white"
             >
               <FaHeart size="1.25em" />
+            </Link>
+
+            {/* My Orders (bag) link */}
+            <Link
+              to="/my-orders"
+              className="p-2 rounded-full hover:bg-gray-700 text-gray-300 hover:text-white"
+              title="My Orders"
+            >
+              <FaShoppingBag size="1.25em" />
             </Link>
 
             {/* User Menu/Avatar Section */}

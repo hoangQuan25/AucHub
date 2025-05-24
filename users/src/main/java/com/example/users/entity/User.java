@@ -37,8 +37,14 @@ public class User {
     @Column(name = "phone_number")
     private String phoneNumber;
 
+    @Column(name = "avatar_url", length = 512)
+    private String avatarUrl;
+
     @Column(name = "is_seller", nullable = false)
     private boolean isSeller = false;
+
+    @Column(name = "seller_description", length = 1000) // Or TEXT type if longer
+    private String sellerDescription;
 
     // --- Single Address Fields (Keep as is for now for simplicity) ---
     // These are important for default shipping/billing if no other address is specified for an order.

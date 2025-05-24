@@ -18,6 +18,11 @@
      private String currency; // "VND"
      private List<OrderItemSummaryDto> items;
 
+     private String eligibleSecondBidderId;
+     private BigDecimal eligibleSecondBidAmount;
+     private String eligibleThirdBidderId;
+     private BigDecimal eligibleThirdBidAmount;
+
      @Data
      @Builder
      public static class OrderItemSummaryDto { // Nested for simplicity

@@ -10,6 +10,7 @@ public class UserBasicInfoDto {
     private String id;
     private String username;
     private String email;
+    private String avatarUrl; // <-- NEW FIELD
     private String phoneNumber; // Included
 
     // Full Address fields (for DeliveriesService and others)
