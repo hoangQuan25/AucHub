@@ -25,10 +25,8 @@ public interface OrderRepository extends JpaRepository<Order, UUID>, JpaSpecific
 
     // Find orders by current bidder ID and status
     Page<Order> findByCurrentBidderIdAndOrderStatus(String currentBidderId, OrderStatus orderStatus, Pageable pageable);
-
-    // Find orders with a payment deadline before a certain time and a specific status
-    // (e.g., for a background job to find timed-out payments if the delayed message approach isn't the only check)
-    List<Order> findByPaymentDeadlineBeforeAndOrderStatusIn(LocalDateTime dateTime, List<OrderStatus> statuses);
+    Page<Order> findByCurrentBidderIdAndOrderStatusIn(String currentBidderId, List<OrderStatus> statuses, Pageable pageable);
+    Page<Order> findBySellerIdAndOrderStatusIn(String sellerId, List<OrderStatus> statuses, Pageable pageable);
 
     Optional<Order> findByAuctionId(UUID auctionId);
 

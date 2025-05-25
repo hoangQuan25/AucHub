@@ -29,6 +29,7 @@ public class RabbitMqConfig {
     public static final String HAMMER_ROUTING_KEY = "auction.command.hammer";
     public static final String CANCEL_ROUTING_KEY = "auction.command.cancel";
     public static final String AUCTION_LIVE_ENDED_ROUTING_KEY = "auction.live.ended";
+    public static final String AUCTION_LIVE_REOPENED_ORDER_CREATED_ROUTING_KEY = "auction.live.reopened_order.created";
 
 
     public static final String UPDATE_ROUTING_KEY_PREFIX = "auction.update."; // e.g., auction.update.uuid

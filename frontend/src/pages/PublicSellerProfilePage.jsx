@@ -96,8 +96,10 @@ function PublicSellerProfilePage() {
   const [isLoadingProducts, setIsLoadingProducts] = useState(false);
   const [productsError, setProductsError] = useState("");
 
-  const [isProductDetailModalOpen, setIsProductDetailModalOpen] = useState(false);
-  const [selectedProductForDetail, setSelectedProductForDetail] = useState(null);
+  const [isProductDetailModalOpen, setIsProductDetailModalOpen] =
+    useState(false);
+  const [selectedProductForDetail, setSelectedProductForDetail] =
+    useState(null);
 
   const [isAddEditModalOpen, setIsAddEditModalOpen] = useState(false);
   const [editingProduct, setEditingProduct] = useState(null); // null for 'Add', product for 'Edit'
@@ -107,8 +109,10 @@ function PublicSellerProfilePage() {
   const [isDeleting, setIsDeleting] = useState(false);
   const [deleteError, setDeleteError] = useState("");
 
-  const [isAuctionConfirmModalOpen, setIsAuctionConfirmModalOpen] = useState(false);
-  const [productForAuctionConfirmation, setProductForAuctionConfirmation] = useState(null);
+  const [isAuctionConfirmModalOpen, setIsAuctionConfirmModalOpen] =
+    useState(false);
+  const [productForAuctionConfirmation, setProductForAuctionConfirmation] =
+    useState(null);
 
   const [isStartAuctionModalOpen, setIsStartAuctionModalOpen] = useState(false);
   const [productToAuction, setProductToAuction] = useState(null);
@@ -527,7 +531,9 @@ function PublicSellerProfilePage() {
       fetchSellerProducts(0); // Refetch from first page or current page
       // Optionally show a success toast/notification
     } catch (err) {
-      setDeleteError(err.response?.data?.message || "Could not delete product.");
+      setDeleteError(
+        err.response?.data?.message || "Could not delete product."
+      );
     } finally {
       setIsDeleting(false);
     }
@@ -552,15 +558,59 @@ function PublicSellerProfilePage() {
   // On Start Auction Submit Success (from StartAuctionModal)
   const handleStartAuctionSubmit = (createdAuctionDto) => {
     setIsStartAuctionModalOpen(false);
+    const reopenedProductInfo = productToAuction;
     setProductToAuction(null);
     // IMPORTANT: After starting an auction, the item is no longer a "product for sale".
     // You might need to refetch products AND auctions.
     fetchSellerProducts(0); // Or current page
     // Potentially navigate to the auction or refresh auction list
     if (activeTab === "listings") {
-         fetchAllSellerAuctions(0,0); // Refresh auctions if on listings tab
+      fetchAllSellerAuctions(0, 0); // Refresh auctions if on listings tab
     }
-    // Optionally show a success toast/notification
+
+    if (
+      selectedOrderForDecision &&
+      selectedOrderForDecision.productId === reopenedProductInfo?.id
+    ) {
+      const originalOrderId = selectedOrderForDecision.id;
+      log.info(
+        `Attempting to update original order ${originalOrderId} as superseded by new auction.`
+      );
+      try {
+        // OPTION 1: Call a NEW dedicated backend endpoint to finalize the old order
+        // await apiClient.post(`/orders/${originalOrderId}/mark-as-reopened`);
+        // This endpoint would set its status to something like ORDER_CLOSED_AUCTION_REOPENED
+        // without the strict check for AWAITING_SELLER_DECISION.
+
+        // OPTION 2: If the Order service listens to an event from Auction service (e.g., "NewAuctionCreated")
+        // that includes originalOrderId (if applicable), then no direct call from frontend is needed here.
+
+        // OPTION 3 (Minimal Change / Temporary): If you *must* use the existing /seller-decision
+        // endpoint, and you've modified it on the backend to accept a special decision type
+        // like "FINALIZE_REOPEN" which bypasses the status check:
+        // await apiClient.post(`/orders/${originalOrderId}/seller-decision`, {
+        //   decisionType: "ORDER_CLOSED_AUCTION_REOPENED", // Or a specific type the backend expects
+        // });
+        // This option is less clean if `processSellerDecision` remains restrictive.
+
+        // For now, let's assume the backend will handle the original order's finalization
+        // based on an event from the new auction's creation, or you'll add a dedicated endpoint.
+        // If not, the original order will remain 'AWAITING_SELLER_DECISION' in the DB.
+        // This is a backend task to resolve the original order.
+
+        console.log(
+          `Frontend: New auction started for product from order ${originalOrderId}. Original order should be finalized on backend.`
+        );
+      } catch (error) {
+        log.error(
+          `Error trying to update original order ${originalOrderId} after reopening:`,
+          error
+        );
+        // Notify user or log, but the new auction is already live.
+      } finally {
+        setSelectedOrderForDecision(null); // Clear the original order from state
+      }
+    }
   };
 
   const handleViewProductDetails = useCallback((product) => {
@@ -572,34 +622,6 @@ function PublicSellerProfilePage() {
     setIsProductDetailModalOpen(false);
     setSelectedProductForDetail(null);
   }, []);
-
-  const handleTriggerEditProduct = useCallback((e, product) => {
-    // e.stopPropagation(); // Modal usually stops propagation on its content
-    console.log("Trigger Edit for product:", product.title);
-    alert(`Owner action: Edit Product ${product.title}. (Implement actual edit modal opening)`);
-    // Example: Open your AddEditProductModal
-    // setEditingProduct(product); // Need state for this
-    // setIsAddEditModalOpen(true); // Need state for this
-    handleCloseProductDetailModal(); // Close detail modal after initiating action
-  }, [handleCloseProductDetailModal]);
-
-  const handleTriggerDeleteProduct = useCallback((e, product) => {
-    console.log("Trigger Delete for product:", product.title);
-    alert(`Owner action: Delete Product ${product.title}. (Implement actual confirmation modal)`);
-    // Example: Open your ConfirmationModal for delete
-    // setProductToDelete(product); // Need state
-    // setIsDeleteConfirmModalOpen(true); // Need state
-    handleCloseProductDetailModal();
-  }, [handleCloseProductDetailModal]);
-
-  const handleTriggerStartAuction = useCallback((e, product) => {
-    console.log("Trigger Start Auction for product:", product.title);
-    alert(`Owner action: Start Auction for ${product.title}. (Implement actual start auction modal)`);
-    // Example: Open your StartAuctionModal
-    // setProductToStartAuction(product); // Need state
-    // setIsStartAuctionModalOpen(true); // Need state
-    handleCloseProductDetailModal();
-  }, [handleCloseProductDetailModal]);
 
   const handleReviewPageChange = (newPage) => {
     setReviewPage(newPage);
@@ -622,12 +644,7 @@ function PublicSellerProfilePage() {
     },
     [navigate]
   );
-  const handleEditProduct = (product) =>
-    isOwner && alert(`Owner action: Edit Product ${product.id}`);
-  const handleDeleteProduct = (product) =>
-    isOwner && alert(`Owner action: Delete Product ${product.id}`);
-  const handleStartAuctionForProduct = (product) =>
-    isOwner && alert(`Owner action: Start Auction for ${product.id}`);
+
   const handleAuctionFilterChange = useCallback(() => {
     setLivePagination((p) => ({ ...p, page: 0, totalPages: 0 })); // Reset totalPages too
     setTimedPagination((p) => ({ ...p, page: 0, totalPages: 0 }));
@@ -646,6 +663,72 @@ function PublicSellerProfilePage() {
     if (activeTab === "my-sales" && isOwner) {
       fetchSalesOrders();
     }
+  };
+
+  const handleInitiateReopenAuctionFromDecision = (orderFromDecisionModal) => {
+    console.log("--- handleInitiateReopenAuctionFromDecision ---");
+    console.log(
+      "Received orderFromDecisionModal:",
+      JSON.stringify(orderFromDecisionModal, null, 2)
+    );
+
+    setIsDecisionModalOpen(false);
+    // setSelectedOrderForDecision(null); // Already handled or will be by onClose
+
+    // --- MODIFIED PART ---
+    let productIdForReopen = null;
+    let productTitleForReopen = "Product (Details Missing)"; // Fallback title
+    let productImageUrlForReopen = null;
+
+    if (
+      orderFromDecisionModal.items &&
+      orderFromDecisionModal.items.length > 0
+    ) {
+      const firstItem = orderFromDecisionModal.items[0];
+      productIdForReopen = firstItem.productId;
+      productTitleForReopen = firstItem.title; // Assuming items[0].title is the productTitleSnapshot
+      productImageUrlForReopen = firstItem.imageUrl; // Assuming items[0].imageUrl is productImageUrlSnapshot
+    } else {
+      console.warn(
+        "OrderSummaryDto is missing items or items array is empty. Cannot get product details for reopen.",
+        orderFromDecisionModal
+      );
+      // You might want to show an error to the user here or prevent reopening if essential product info is missing.
+      // For now, we'll proceed with null/fallback values, which will likely cause issues downstream if not handled.
+    }
+
+    console.log(
+      "Extracted for reopen: productId =",
+      productIdForReopen,
+      ", title =",
+      productTitleForReopen
+    );
+
+    const productForReopen = {
+      id: productIdForReopen, // Use extracted productId
+      title: productTitleForReopen, // Use extracted title
+      imageUrls: productImageUrlForReopen ? [productImageUrlForReopen] : [], // Use extracted imageUrl
+      originalOrderId: orderFromDecisionModal.id, // This is the OrderSummaryDto's ID (the order ID)
+    };
+
+    console.log(
+      "Constructed productForReopen:",
+      JSON.stringify(productForReopen, null, 2)
+    );
+
+    if (!productIdForReopen) {
+      console.error(
+        "Cannot proceed to reopen auction: Product ID is missing from order summary items."
+      );
+      // Optionally, display an error to the user in the UI
+      alert(
+        "Error: Product details are missing from the order summary, cannot reopen auction."
+      );
+      return; // Prevent opening StartAuctionModal if productId is missing
+    }
+
+    setProductToAuction(productForReopen);
+    setIsStartAuctionModalOpen(true);
   };
 
   const renderTabContent = () => {
@@ -675,7 +758,7 @@ function PublicSellerProfilePage() {
               // Wire up the new handlers
               onAddNewProduct={handleOpenAddProductModal}
               onEditProduct={handleOpenEditProductModal} // For card's edit action
-              onDeleteProduct={promptDeleteProduct}     // For card's delete action
+              onDeleteProduct={promptDeleteProduct} // For card's delete action
               onStartAuctionForProduct={promptStartAuction} // For card's start auction action
               onViewDetails={handleViewProductDetails}
             />
@@ -831,7 +914,7 @@ function PublicSellerProfilePage() {
             onSuccess={handleSaveProductSuccess}
             editingProduct={editingProduct}
             // Pass allCategories if your AddProductModal needs them for a selector
-            // categories={allCategories} 
+            // categories={allCategories}
           />
 
           <ConfirmationModal
@@ -898,7 +981,13 @@ function PublicSellerProfilePage() {
         <SellerDecisionModal
           order={selectedOrderForDecision}
           isOpen={isDecisionModalOpen}
-          onClose={handleCloseDecisionModal} // Pass the new handler
+          onClose={() => {
+            // Standard close for "Cancel" or non-reopen decisions
+            setIsDecisionModalOpen(false);
+            setSelectedOrderForDecision(null);
+            if (activeTab === "my-sales") fetchSalesOrders(); // Refetch if it was a decision like "Offer to next"
+          }}
+          onInitiateReopenAuction={handleInitiateReopenAuctionFromDecision}
         />
       )}
     </div>

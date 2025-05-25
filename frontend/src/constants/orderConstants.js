@@ -1,56 +1,61 @@
 // src/constants/orderConstants.js
 
-// This remains your master map for display purposes (e.g., on OrderDetailPage)
+// Master map for ALL statuses and their display names.
+// This should be the single source of truth for how a status key is displayed.
 export const orderStatusMap = {
-  ALL: 'Tất Cả',
-  AWAITING_WINNER_PAYMENT: 'Chờ Thanh Toán (Winner)',
-  PAYMENT_WINDOW_EXPIRED_WINNER: 'Winner Quá Hạn TT',
-  AWAITING_SELLER_DECISION: 'Chờ Quyết Định Bán',
-  AWAITING_NEXT_BIDDER_PAYMENT: 'Chờ Thanh Toán (Next Bidder)',
-  PAYMENT_WINDOW_EXPIRED_NEXT_BIDDER: 'Next Bidder Quá Hạn TT',
-  PAYMENT_SUCCESSFUL: 'Thanh Toán Thành Công',
-  AWAITING_SHIPMENT: 'Chờ Giao Hàng',
-  // ORDER_SHIPPED: 'Đã Giao Hàng', // To be handled by Delivery Service/Tab
-  // ORDER_DELIVERED: 'Đã Nhận Hàng', // To be handled by Delivery Service/Tab
-  ORDER_CANCELLED_NO_PAYMENT_FINAL: 'Huỷ (Không Thanh Toán)',
-  ORDER_CANCELLED_BY_SELLER: 'Huỷ (Người Bán)',
-  ORDER_CANCELLED_SYSTEM: 'Huỷ (Hệ Thống)',
-  AUCTION_REOPEN_INITIATED: 'Y/C Mở Lại Đấu Giá',
-  PENDING_PAYMENT: 'Chờ Thanh Toán', // General term, useful for display if needed
-  COMPLETED: 'Hoàn Thành', // General term for orders that went through delivery
-  CANCELLED: 'Đã Huỷ', // General term
-  // DELIVERING: 'Đang Giao', // This should be part of a separate delivery status map
+  // --- Buyer & Seller Viewable & Filterable ---
+  AWAITING_WINNER_PAYMENT: 'Chờ Thanh Toán (Winner)', // Buyer: Chờ Thanh Toán (Bạn) | Seller: Chờ Khách TT
+  AWAITING_NEXT_BIDDER_PAYMENT: 'Chờ Thanh Toán (Next Bidder)', // Buyer: Chờ Thanh Toán (Bạn) | Seller: Chờ Khách (Sau) TT
+  PAYMENT_SUCCESSFUL: 'Thanh Toán Thành Công', // Buyer & Seller: Đã Thanh Toán
+  AWAITING_FULFILLMENT_CONFIRMATION: 'Chờ Xác Nhận Giao Hàng', // Seller: Chờ Xác Nhận | Buyer: Đã TT, Chờ Shop Xác Nhận
+  AWAITING_SHIPMENT: 'Chờ Giao Hàng', // Buyer: Chờ Giao | Seller: Chờ Giao Đi
+  COMPLETED: 'Hoàn Thành', // Buyer & Seller
+
+  // --- Seller Specific States (primarily for seller's view/action) ---
+  AWAITING_SELLER_DECISION: 'Cần Quyết Định Bán', // Seller view
+
+  // --- Cancellation States (viewable by both) ---
+  ORDER_CANCELLED_NO_PAYMENT_FINAL: 'Huỷ (Không Thanh Toán)', // Buyer & Seller
+  ORDER_CANCELLED_BY_SELLER: 'Huỷ (Người Bán)',          // Buyer & Seller
+  ORDER_CANCELLED_SYSTEM: 'Huỷ (Hệ Thống)',           // Buyer & Seller
+
+  // --- States related to Reopening (primarily for seller, buyer might see final state) ---
+  // AUCTION_REOPEN_INITIATED: 'Y/C Mở Lại Đấu Giá', // Keep for audit/log if backend still sets it, but maybe not for filtering
+  ORDER_SUPERSEDED_BY_REOPEN: 'Đã Mở Lại Đấu Giá', // NEW: For the original order after new auction is up
+
+  // --- Internal/Less Used for Filtering (but good for display completeness) ---
+  PAYMENT_WINDOW_EXPIRED_WINNER: 'Winner Quá Hạn Thanh Toán',
+  PAYMENT_WINDOW_EXPIRED_NEXT_BIDDER: 'Next Bidder Quá Hạn Thanh Toán',
+
+  // --- Generic terms if needed (can be overridden by more specific ones) ---
+  PENDING_PAYMENT: 'Chờ Thanh Toán', // General for buyer if status is AWAITING_..._PAYMENT
+  CANCELLED: 'Đã Huỷ', // General if a specific cancellation reason isn't shown
 };
 
+// Filter options for the BUYER'S "My Orders" page
 export const buyerOrderStatusFilters = {
-  ALL:     'Tất Cả',
-  AWAITING_WINNER_PAYMENT:      'Chờ Thanh Toán (Bạn)',
-  AWAITING_NEXT_BIDDER_PAYMENT: 'Chờ Thanh Toán (Bạn)',
-  PAYMENT_SUCCESSFUL:           'Đã Thanh Toán',
-  AWAITING_SHIPMENT:            'Chờ Giao Hàng',
-  ORDER_CANCELLED_BY_SELLER:    'Huỷ (Người Bán)',
-  ORDER_CANCELLED_NO_PAYMENT_FINAL: 'Huỷ (Không Thanh Toán)',
-  ORDER_CANCELLED_SYSTEM:       'Huỷ (Hệ Thống)',
+  ALL: 'Tất Cả',
+  PENDING_PAYMENT: 'Chờ Thanh Toán', // This will cover AWAITING_WINNER_PAYMENT, AWAITING_NEXT_BIDDER_PAYMENT
+  PAYMENT_SUCCESSFUL: 'Đã Thanh Toán',
+  AWAITING_SHIPMENT: 'Chờ Giao Hàng', // This covers AWAITING_FULFILLMENT_CONFIRMATION and AWAITING_SHIPMENT
+  COMPLETED: 'Hoàn Thành',
+  CANCELLED: 'Đã Huỷ', // This can cover all ORDER_CANCELLED_... types
 };
 
-// --- NEW: Statuses for "My Sales" Page (Seller's Perspective) ---
+// Filter options for the SELLER'S "My Sales" page
 export const sellerOrderStatusFilters = {
   ALL: 'Tất Cả',
-  AWAITING_WINNER_PAYMENT: 'Chờ Khách Thanh Toán',
-  // PAYMENT_WINDOW_EXPIRED_WINNER: 'Winner Quá Hạn TT', // Often leads to AWAITING_SELLER_DECISION
+  AWAITING_PAYMENT: 'Chờ Khách Thanh Toán', // Covers AWAITING_WINNER_PAYMENT, AWAITING_NEXT_BIDDER_PAYMENT
   AWAITING_SELLER_DECISION: 'Cần Quyết Định',
-  AWAITING_NEXT_BIDDER_PAYMENT: 'Chờ Khách (Sau) TT',
-  PAYMENT_SUCCESSFUL: 'Đã Thanh Toán', // Or 'Khách Đã Thanh Toán'
-  AWAITING_SHIPMENT: 'Chờ Giao Đi',
-  // Seller might see 'Đã Giao Hàng' (after they mark as shipped) in a delivery tab/flow
-  ORDER_CANCELLED_BY_SELLER: 'Bạn Đã Huỷ',
-  ORDER_CANCELLED_NO_PAYMENT_FINAL: 'Huỷ (Khách Không TT)',
-  ORDER_CANCELLED_SYSTEM: 'Huỷ (Hệ Thống)',
-  AUCTION_REOPEN_INITIATED: 'Y/C Mở Lại Đấu Giá',
+  PAYMENT_SUCCESSFUL: 'Khách Đã Thanh Toán',
+  AWAITING_SHIPMENT: 'Chờ Giao Đi', // Covers AWAITING_FULFILLMENT_CONFIRMATION and AWAITING_SHIPMENT
+  COMPLETED: 'Hoàn Thành',
+  ORDER_SUPERSEDED_BY_REOPEN: 'Đã Mở Lại Đấu Giá', // Seller might want to see these
+  CANCELLED: 'Đã Huỷ', // Covers all ORDER_CANCELLED_... types
+  // AUCTION_REOPEN_INITIATED can be removed as a filter if it's transient and leads to SUPERSEDED
 };
 
-
-// For SellerDecisionModal (this remains the same)
+// API values for seller decision (remains good)
 export const SELLER_DECISION_TYPES = {
   OFFER_TO_NEXT_BIDDER: 'Offer to Next Eligible Bidder',
   REOPEN_AUCTION: 'Re-open Auction',

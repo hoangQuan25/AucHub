@@ -10,6 +10,7 @@ import com.example.timedauctions.commands.AuctionLifecycleCommands; // Create th
 import com.example.timedauctions.config.AuctionTimingProperties;
 import com.example.timedauctions.config.RabbitMqConfig;
 import com.example.timedauctions.dto.*;
+import com.example.timedauctions.dto.event.NewTimedAuctionFromReopenedOrderEventDto;
 import com.example.timedauctions.entity.*;
 import com.example.timedauctions.event.NotificationEvents;
 import com.example.timedauctions.exception.*; // Create custom exceptions
@@ -134,6 +135,33 @@ public class TimedAuctionServiceImpl implements TimedAuctionService {
             auctionSchedulingService.scheduleAuctionEnd(savedAuction);
             // Potentially publish an 'AuctionStarted' internal event
             publishInternalEvent(savedAuction, "STARTED");
+        }
+
+        if (createDto.getOriginalOrderId() != null) {
+            NewTimedAuctionFromReopenedOrderEventDto reopenEvent = NewTimedAuctionFromReopenedOrderEventDto.builder()
+                    .eventId(UUID.randomUUID())
+                    // eventTimestamp is defaulted in DTO
+                    .newTimedAuctionId(savedAuction.getId())
+                    .productId(savedAuction.getProductId())
+                    .sellerId(savedAuction.getSellerId())
+                    .originalOrderId(createDto.getOriginalOrderId())
+                    .build();
+            try {
+                // Use a dedicated exchange for inter-service domain events or a shared one
+                // Let's assume TD_AUCTION_EVENTS_EXCHANGE is suitable for now
+                rabbitTemplate.convertAndSend(
+                        RabbitMqConfig.TD_AUCTION_EVENTS_EXCHANGE, // Or a more generic "DOMAIN_EVENTS_EXCHANGE"
+                        RabbitMqConfig.AUCTION_TIMED_REOPENED_ORDER_CREATED_ROUTING_KEY,   // New routing key
+                        reopenEvent
+                );
+                log.info("Published NewTimedAuctionFromReopenedOrderEvent for original order ID: {}, new timed auction ID: {}",
+                        createDto.getOriginalOrderId(), savedAuction.getId());
+            } catch (Exception e) {
+                log.error("Failed to publish NewTimedAuctionFromReopenedOrderEvent for original order ID {}: {}",
+                        createDto.getOriginalOrderId(), e.getMessage(), e);
+                // Decide on error handling: should this cause the transaction to roll back?
+                // Usually, event publishing failures are handled asynchronously or logged for retry.
+            }
         }
 
         // 8. Map to Details DTO and Return
@@ -844,5 +872,59 @@ public class TimedAuctionServiceImpl implements TimedAuctionService {
         return auctions.stream()
                 .map(auctionMapper::mapToTimedAuctionSummaryDto) // Ensure mapper exists
                 .collect(Collectors.toList());
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public Page<TimedAuctionSummaryDto> searchAuctions(
+            String queryText,
+            Set<Long> categoryIds,
+            AuctionStatus status, // This will be ACTIVE or SCHEDULED if 'ended' is not true
+            Boolean ended,
+            LocalDateTime from,
+            Pageable pageable) {
+
+        log.debug("Service searching timed auctions: query='{}', categories={}, status={}, ended={}, from={}, pageable={}",
+                queryText, categoryIds, status, ended, from, pageable);
+
+        Specification<TimedAuction> spec = (root, jpaQuery, cb) -> {
+            List<Predicate> predicates = new ArrayList<>();
+
+            // Text Search Predicate
+            if (queryText != null && !queryText.isBlank()) {
+                String lowercaseQuery = "%" + queryText.toLowerCase().trim() + "%";
+                predicates.add(cb.like(cb.lower(root.get("productTitleSnapshot")), lowercaseQuery));
+                // Add cb.or(...) for more text fields if needed
+            }
+
+            // Handle status and ended flag
+            if (Boolean.TRUE.equals(ended)) {
+                // If frontend filter is "Ended", query for all terminal states
+                predicates.add(root.get("status").in(
+                        AuctionStatus.SOLD,
+                        AuctionStatus.RESERVE_NOT_MET,
+                        AuctionStatus.CANCELLED
+                ));
+                // If 'ended' is true, any 'status' parameter for ACTIVE/SCHEDULED is ignored
+            } else if (status != null) {
+                // If a specific non-terminal status (ACTIVE, SCHEDULED) is provided
+                predicates.add(cb.equal(root.get("status"), status));
+            }
+
+            if (from != null) {
+                predicates.add(cb.greaterThanOrEqualTo(root.get("startTime"), from));
+            }
+
+            if (categoryIds != null && !categoryIds.isEmpty()) {
+                SetJoin<TimedAuction, Long> categoryJoin = root.joinSet("productCategoryIdsSnapshot", JoinType.INNER);
+                predicates.add(categoryJoin.in(categoryIds));
+                jpaQuery.distinct(true);
+            }
+
+            return cb.and(predicates.toArray(new Predicate[0]));
+        };
+
+        Page<TimedAuction> auctionPage = timedAuctionRepository.findAll(spec, pageable);
+        return auctionPage.map(auctionMapper::mapToTimedAuctionSummaryDto);
     }
 }

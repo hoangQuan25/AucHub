@@ -56,6 +56,11 @@ public interface TimedAuctionService {
      */
     List<CommentDto> getComments(UUID auctionId);
 
+    /**
+     * Retrieves a paginated list of active timed auctions.
+     * @param pageable Pagination information.
+     * @return A page of TimedAuctionSummaryDto objects representing active auctions.
+     */
     Page<TimedAuctionSummaryDto> getActiveAuctions(Pageable pageable);
 
     /**
@@ -73,6 +78,17 @@ public interface TimedAuctionService {
      */
     void endAuctionEarly(UUID auctionId, String sellerId);
 
+    /**
+     * Retrieves a paginated list of auctions for a specific seller.
+     * Supports filtering by auction status and ended state.
+     * @param sellerId The ID of the seller whose auctions to retrieve.
+     * @param status Optional filter for auction status (e.g., ACTIVE, SOLD, etc.).
+     * @param ended Optional flag to filter by ended state (true for all ended types).
+     * @param categoryIds Optional set of category IDs to filter auctions by categories.
+     * @param from Optional start date-time to filter auctions created after this time.
+     * @param pageable Pagination information.
+     * @return A page of TimedAuctionSummaryDto objects representing the seller's auctions.
+     */
     Page<TimedAuctionSummaryDto> getSellerAuctions(
             String sellerId,
             AuctionStatus status, // Explicit status filter
@@ -88,5 +104,25 @@ public interface TimedAuctionService {
      * @return List of TimedAuctionSummaryDto objects for the specified auction IDs.
      */
     List<TimedAuctionSummaryDto> getAuctionSummariesByIds(Set<UUID> auctionIds);
+
+    /**
+     * Searches for timed auctions based on various filters.
+     * Supports searching by query string, category IDs, auction status, ended state, and date range.
+     * @param query Search query string (e.g., product name or description).
+     * @param categoryIds Set of category IDs to filter auctions by categories.
+     * @param status Optional filter for auction status (e.g., ACTIVE, SOLD, etc.).
+     * @param ended Optional flag to filter by ended state (true for all ended types).
+     * @param from Optional start date-time to filter auctions created after this time.
+     * @param pageable Pagination information.
+     * @return A page of TimedAuctionSummaryDto objects matching the search criteria.
+     */
+    Page<TimedAuctionSummaryDto> searchAuctions(
+            String query,
+            Set<Long> categoryIds,
+            AuctionStatus status,
+            Boolean ended,
+            LocalDateTime from,
+            Pageable pageable
+    );
 
 }

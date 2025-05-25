@@ -130,6 +130,25 @@ public class TimedAuctionController {
         return ResponseEntity.ok(page);
     }
 
+    @GetMapping("/search") // Maps to GET /api/timed-auctions/search (via Gateway)
+    public ResponseEntity<Page<TimedAuctionSummaryDto>> searchTimedAuctions(
+            @RequestParam(value = "query", required = false) String query,
+            @RequestParam(value = "categoryIds", required = false) Set<Long> categoryIds,
+            @RequestParam(value = "status", required = false) AuctionStatus status,
+            @RequestParam(value = "ended", required = false) Boolean ended, // To specifically get ended auctions
+            @RequestParam(value = "from", required = false)
+            @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime from,
+            @PageableDefault(size = 12, sort = "startTime", direction = Sort.Direction.DESC) Pageable pageable // Default sort, adjust as needed
+    ) {
+        log.info("Searching timed auctions with query='{}', categories={}, status={}, ended={}, from={}, page={}",
+                query, categoryIds, status, ended, from, pageable);
+
+        Page<TimedAuctionSummaryDto> auctionPage = timedAuctionService.searchAuctions(
+                query, categoryIds, status, ended, from, pageable
+        );
+        return ResponseEntity.ok(auctionPage);
+    }
+
     @GetMapping("/{auctionId}")
     public ResponseEntity<TimedAuctionDetailsDto> getAuctionDetails(
             @PathVariable UUID auctionId) {

@@ -19,6 +19,7 @@ import MySalesPage from "./pages/MySalesPage";
 import OrderDetailPage from "./pages/OrderDetailPage";
 import MockStripePage from "./pages/MockStripePage";
 import PublicSellerProfilePage from "./pages/PublicSellerProfilePage";
+import AuctionSearchPage from "./pages/AuctionSearchPage";
 // PrivateRoute now just checks auth, Layout handles UI structure
 const PrivateRoute = ({ children }) => {
   const { keycloak } = useKeycloak();
@@ -97,6 +98,7 @@ function App() {
           <Route path="/mock-stripe" element={<MockStripePage />} />
           <Route path="/my-orders" element={<MyOrdersPage />} />
           <Route path="/orders/:orderId" element={<OrderDetailPage />} />
+          <Route path="/search" element={<AuctionSearchPage />} />
           <Route path="/seller/:identifier" element={<PublicSellerProfilePage />} />
           {/* Seller-specific Route */}
           <Route

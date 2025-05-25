@@ -27,5 +27,7 @@ public enum OrderStatus {
     ORDER_CANCELLED_SYSTEM, // e.g., no eligible next bidders
 
     // If seller chooses to reopen auction
-    AUCTION_REOPEN_INITIATED // Order is effectively terminated from here, auction service takes over
+    AUCTION_REOPEN_INITIATED, // Order is effectively terminated from here, auction service takes over
+
+    ORDER_SUPERSEDED_BY_REOPEN
 }

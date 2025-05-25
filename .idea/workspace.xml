@@ -5,53 +5,36 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="3a162283-5be8-46d0-949d-517f55ab3cb9" name="Changes" comment="">
-      <change afterPath="$PROJECT_DIR$/users/src/main/java/com/example/users/config/RabbitMqConfig.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/users/src/main/java/com/example/users/dto/AvatarUpdateRequestDto.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/users/src/main/java/com/example/users/dto/CreateReviewDto.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/users/src/main/java/com/example/users/dto/PublicSellerProfileDto.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/users/src/main/java/com/example/users/dto/ReviewDto.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/users/src/main/java/com/example/users/dto/event/DeliveryCompletionEventPayload.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/users/src/main/java/com/example/users/entity/ReviewEligibility.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/users/src/main/java/com/example/users/entity/SellerReview.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/users/src/main/java/com/example/users/exception/OperationNotAllowedException.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/users/src/main/java/com/example/users/exception/ResourceNotFoundException.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/users/src/main/java/com/example/users/listener/DeliveryCompletionListener.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/users/src/main/java/com/example/users/mapper/SellerReviewMapper.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/users/src/main/java/com/example/users/repository/ReviewEligibilityRepository.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/users/src/main/java/com/example/users/repository/SellerReviewRepository.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/users/src/main/java/com/example/users/service/SellerReviewService.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/users/src/main/java/com/example/users/service/impl/SellerReviewServiceImpl.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/liveauctions/src/main/java/com/example/liveauctions/dto/event/NewLiveAuctionFromReopenedOrderEventDto.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/orders/src/main/java/com/example/orders/dto/event/NewLiveAuctionFromReopenedOrderEventDto.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/orders/src/main/java/com/example/orders/dto/event/NewTimedAuctionFromReopenedOrderEventDto.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/orders/src/main/java/com/example/orders/listener/FinalizeReopenedOrderListener.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/timedauctions/src/main/java/com/example/timedauctions/dto/event/NewTimedAuctionFromReopenedOrderEventDto.java" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/frontend/src/App.jsx" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/App.jsx" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/frontend/src/components/CategorySelector.jsx" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/components/CategorySelector.jsx" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/frontend/src/components/EditProfileModal.jsx" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/components/EditProfileModal.jsx" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/frontend/src/components/Header.jsx" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/components/Header.jsx" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/frontend/src/components/ProductDetailModal.jsx" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/components/ProductDetailModal.jsx" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/frontend/src/components/SellerDecisionModal.jsx" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/components/SellerDecisionModal.jsx" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/frontend/src/components/Sidebar.jsx" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/components/Sidebar.jsx" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/frontend/src/pages/MySalesPage.jsx" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/pages/MySalesPage.jsx" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/frontend/src/pages/OrderDetailPage.jsx" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/pages/OrderDetailPage.jsx" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/frontend/src/pages/UserInfoPage.jsx" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/pages/UserInfoPage.jsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/frontend/src/components/StartAuctionModal.jsx" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/components/StartAuctionModal.jsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/frontend/src/components/seller/tab/MySalesTab.jsx" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/components/seller/tab/MySalesTab.jsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/frontend/src/constants/orderConstants.js" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/constants/orderConstants.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/frontend/src/pages/MyOrdersPage.jsx" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/pages/MyOrdersPage.jsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/frontend/src/pages/PublicSellerProfilePage.jsx" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/pages/PublicSellerProfilePage.jsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/liveauctions/src/main/java/com/example/liveauctions/config/RabbitMqConfig.java" beforeDir="false" afterPath="$PROJECT_DIR$/liveauctions/src/main/java/com/example/liveauctions/config/RabbitMqConfig.java" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/liveauctions/src/main/java/com/example/liveauctions/controller/LiveAuctionController.java" beforeDir="false" afterPath="$PROJECT_DIR$/liveauctions/src/main/java/com/example/liveauctions/controller/LiveAuctionController.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/orders/src/main/java/com/example/orders/dto/response/OrderSummaryDto.java" beforeDir="false" afterPath="$PROJECT_DIR$/orders/src/main/java/com/example/orders/dto/response/OrderSummaryDto.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/orders/src/main/java/com/example/orders/mapper/OrderMapper.java" beforeDir="false" afterPath="$PROJECT_DIR$/orders/src/main/java/com/example/orders/mapper/OrderMapper.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/liveauctions/src/main/java/com/example/liveauctions/dto/CreateLiveAuctionDto.java" beforeDir="false" afterPath="$PROJECT_DIR$/liveauctions/src/main/java/com/example/liveauctions/dto/CreateLiveAuctionDto.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/liveauctions/src/main/java/com/example/liveauctions/repository/LiveAuctionRepository.java" beforeDir="false" afterPath="$PROJECT_DIR$/liveauctions/src/main/java/com/example/liveauctions/repository/LiveAuctionRepository.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/liveauctions/src/main/java/com/example/liveauctions/service/LiveAuctionService.java" beforeDir="false" afterPath="$PROJECT_DIR$/liveauctions/src/main/java/com/example/liveauctions/service/LiveAuctionService.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/liveauctions/src/main/java/com/example/liveauctions/service/impl/LiveAuctionServiceImpl.java" beforeDir="false" afterPath="$PROJECT_DIR$/liveauctions/src/main/java/com/example/liveauctions/service/impl/LiveAuctionServiceImpl.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/orders/src/main/java/com/example/orders/config/RabbitMqConfig.java" beforeDir="false" afterPath="$PROJECT_DIR$/orders/src/main/java/com/example/orders/config/RabbitMqConfig.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/orders/src/main/java/com/example/orders/entity/OrderStatus.java" beforeDir="false" afterPath="$PROJECT_DIR$/orders/src/main/java/com/example/orders/entity/OrderStatus.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/orders/src/main/java/com/example/orders/repository/OrderRepository.java" beforeDir="false" afterPath="$PROJECT_DIR$/orders/src/main/java/com/example/orders/repository/OrderRepository.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/orders/src/main/java/com/example/orders/service/impl/OrderServiceImpl.java" beforeDir="false" afterPath="$PROJECT_DIR$/orders/src/main/java/com/example/orders/service/impl/OrderServiceImpl.java" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/payments/src/main/resources/application.yml" beforeDir="false" afterPath="$PROJECT_DIR$/payments/src/main/resources/application.yml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/products/src/main/java/com/example/products/controller/ProductController.java" beforeDir="false" afterPath="$PROJECT_DIR$/products/src/main/java/com/example/products/controller/ProductController.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/products/src/main/java/com/example/products/repository/ProductRepository.java" beforeDir="false" afterPath="$PROJECT_DIR$/products/src/main/java/com/example/products/repository/ProductRepository.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/products/src/main/java/com/example/products/service/ProductService.java" beforeDir="false" afterPath="$PROJECT_DIR$/products/src/main/java/com/example/products/service/ProductService.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/products/src/main/java/com/example/products/service/impl/ProductServiceImpl.java" beforeDir="false" afterPath="$PROJECT_DIR$/products/src/main/java/com/example/products/service/impl/ProductServiceImpl.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/timedauctions/src/main/java/com/example/timedauctions/config/RabbitMqConfig.java" beforeDir="false" afterPath="$PROJECT_DIR$/timedauctions/src/main/java/com/example/timedauctions/config/RabbitMqConfig.java" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/timedauctions/src/main/java/com/example/timedauctions/controller/TimedAuctionController.java" beforeDir="false" afterPath="$PROJECT_DIR$/timedauctions/src/main/java/com/example/timedauctions/controller/TimedAuctionController.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/users/pom.xml" beforeDir="false" afterPath="$PROJECT_DIR$/users/pom.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/users/src/main/java/com/example/users/controller/UserController.java" beforeDir="false" afterPath="$PROJECT_DIR$/users/src/main/java/com/example/users/controller/UserController.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/users/src/main/java/com/example/users/dto/UpdateUserDto.java" beforeDir="false" afterPath="$PROJECT_DIR$/users/src/main/java/com/example/users/dto/UpdateUserDto.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/users/src/main/java/com/example/users/dto/UserBasicInfoDto.java" beforeDir="false" afterPath="$PROJECT_DIR$/users/src/main/java/com/example/users/dto/UserBasicInfoDto.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/users/src/main/java/com/example/users/dto/UserDto.java" beforeDir="false" afterPath="$PROJECT_DIR$/users/src/main/java/com/example/users/dto/UserDto.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/users/src/main/java/com/example/users/entity/User.java" beforeDir="false" afterPath="$PROJECT_DIR$/users/src/main/java/com/example/users/entity/User.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/users/src/main/java/com/example/users/mapper/UserMapper.java" beforeDir="false" afterPath="$PROJECT_DIR$/users/src/main/java/com/example/users/mapper/UserMapper.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/users/src/main/java/com/example/users/mapper/impl/UserMapperImpl.java" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/users/src/main/java/com/example/users/repository/UserRepository.java" beforeDir="false" afterPath="$PROJECT_DIR$/users/src/main/java/com/example/users/repository/UserRepository.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/users/src/main/java/com/example/users/service/UserService.java" beforeDir="false" afterPath="$PROJECT_DIR$/users/src/main/java/com/example/users/service/UserService.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/users/src/main/java/com/example/users/service/impl/UserServiceImpl.java" beforeDir="false" afterPath="$PROJECT_DIR$/users/src/main/java/com/example/users/service/impl/UserServiceImpl.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/timedauctions/src/main/java/com/example/timedauctions/dto/CreateTimedAuctionDto.java" beforeDir="false" afterPath="$PROJECT_DIR$/timedauctions/src/main/java/com/example/timedauctions/dto/CreateTimedAuctionDto.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/timedauctions/src/main/java/com/example/timedauctions/service/TimedAuctionService.java" beforeDir="false" afterPath="$PROJECT_DIR$/timedauctions/src/main/java/com/example/timedauctions/service/TimedAuctionService.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/timedauctions/src/main/java/com/example/timedauctions/service/impl/TimedAuctionServiceImpl.java" beforeDir="false" afterPath="$PROJECT_DIR$/timedauctions/src/main/java/com/example/timedauctions/service/impl/TimedAuctionServiceImpl.java" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -103,7 +86,7 @@
     &quot;Spring Boot.ProductsApplication.executor&quot;: &quot;Run&quot;,
     &quot;Spring Boot.TimedAuctionsApplication.executor&quot;: &quot;Run&quot;,
     &quot;Spring Boot.UsersApplication.executor&quot;: &quot;Run&quot;,
-    &quot;git-widget-placeholder&quot;: &quot;feat/user-display&quot;,
+    &quot;git-widget-placeholder&quot;: &quot;hotfix&quot;,
     &quot;node.js.detected.package.eslint&quot;: &quot;true&quot;,
     &quot;node.js.detected.package.tslint&quot;: &quot;true&quot;,
     &quot;node.js.selected.package.eslint&quot;: &quot;(autodetect)&quot;,
@@ -249,6 +232,9 @@
       <workItem from="1747996391787" duration="22434000" />
       <workItem from="1748079750861" duration="9989000" />
       <workItem from="1748096479077" duration="12866000" />
+      <workItem from="1748174520522" duration="1512000" />
+      <workItem from="1748182627823" duration="8174000" />
+      <workItem from="1748193978355" duration="1620000" />
     </task>
     <servers />
   </component>

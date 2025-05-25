@@ -6,6 +6,7 @@ import lombok.Data;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.util.UUID;
 
 @Data
 @Builder
@@ -26,6 +27,8 @@ public class CreateTimedAuctionDto {
 
     @NotNull(message = "End time is required")
     private LocalDateTime endTime;
+
+    private UUID originalOrderId;
 
     // Use start time for scheduling, duration for end time calculation
     @AssertTrue(message = "End time must be at least 24 hours after the effective start time")

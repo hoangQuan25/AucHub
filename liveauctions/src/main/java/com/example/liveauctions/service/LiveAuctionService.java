@@ -30,6 +30,15 @@ public interface LiveAuctionService {
 
     void cancelAuction(UUID auctionId, String sellerId);
 
+    Page<LiveAuctionSummaryDto> searchAuctions(
+            String query,
+            Set<Long> categoryIds,
+            AuctionStatus status,
+            Boolean ended, // --- ADD THIS ---
+            LocalDateTime from,
+            Pageable pageable
+    );
+
     /** Fetches summary details for a list of auction IDs. */
     List<LiveAuctionSummaryDto> getAuctionSummariesByIds(Set<UUID> auctionIds);
 

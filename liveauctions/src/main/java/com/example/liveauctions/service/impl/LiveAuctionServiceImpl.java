@@ -9,6 +9,7 @@ import com.example.liveauctions.commands.AuctionLifecycleCommands;
 import com.example.liveauctions.config.AuctionTimingProperties;
 import com.example.liveauctions.config.RabbitMqConfig; // Constants for RabbitMQ
 import com.example.liveauctions.dto.*;
+import com.example.liveauctions.dto.event.NewLiveAuctionFromReopenedOrderEventDto;
 import com.example.liveauctions.entity.AuctionStatus;
 import com.example.liveauctions.entity.Bid;
 import com.example.liveauctions.entity.LiveAuction;
@@ -18,6 +19,9 @@ import com.example.liveauctions.repository.BidRepository;
 import com.example.liveauctions.repository.LiveAuctionRepository;
 import com.example.liveauctions.service.LiveAuctionService;
 import com.example.liveauctions.service.WebSocketEventPublisher; // For WebSocket events
+import jakarta.persistence.criteria.JoinType;
+import jakarta.persistence.criteria.Predicate;
+import jakarta.persistence.criteria.SetJoin;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.redisson.api.RLock;
@@ -27,6 +31,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
+import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional; // Import Transactional
 
@@ -111,6 +116,30 @@ public class LiveAuctionServiceImpl implements LiveAuctionService {
             webSocketEventPublisher.publishAuctionStateUpdate(savedAuction, null); // Use publisher directly
         }
         // --- End MODIFICATION ---
+        if (createDto.getOriginalOrderId() != null) {
+            NewLiveAuctionFromReopenedOrderEventDto reopenEvent = NewLiveAuctionFromReopenedOrderEventDto.builder()
+                    .eventId(UUID.randomUUID())
+                    // eventTimestamp is defaulted in DTO
+                    .newLiveAuctionId(savedAuction.getId())
+                    .productId(savedAuction.getProductId())
+                    .sellerId(savedAuction.getSellerId())
+                    .originalOrderId(createDto.getOriginalOrderId())
+                    .build();
+            try {
+                // Use the existing AUCTION_EVENTS_EXCHANGE (TopicExchange)
+                rabbitTemplate.convertAndSend(
+                        RabbitMqConfig.AUCTION_EVENTS_EXCHANGE,
+                        RabbitMqConfig.AUCTION_LIVE_REOPENED_ORDER_CREATED_ROUTING_KEY,   // New, distinct routing key for live auction reopen
+                        reopenEvent
+                );
+                log.info("Published NewLiveAuctionFromReopenedOrderEvent for original order ID: {}, new live auction ID: {}",
+                        createDto.getOriginalOrderId(), savedAuction.getId());
+            } catch (Exception e) {
+                log.error("Failed to publish NewLiveAuctionFromReopenedOrderEvent for original order ID {}: {}",
+                        createDto.getOriginalOrderId(), e.getMessage(), e);
+                // Consider error handling strategy for event publishing failure
+            }
+        }
 
         // 8. Map to Details DTO and Return (No change)
         return auctionMapper.mapToLiveAuctionDetailsDto( savedAuction, product, Collections.emptyList(),
@@ -426,6 +455,63 @@ public class LiveAuctionServiceImpl implements LiveAuctionService {
                 new AuctionLifecycleCommands.CancelAuctionCommand(auctionId, sellerId));
         log.info("CancelAuctionCommand sent for auction {}", auctionId);
     }
+
+    // src/main/java/com/example/liveauctions/service/impl/LiveAuctionServiceImpl.java
+// ... (imports and other code)
+
+    @Override
+    @Transactional(readOnly = true)
+    public Page<LiveAuctionSummaryDto> searchAuctions(
+            String queryText,
+            Set<Long> categoryIds,
+            AuctionStatus status, // This will be ACTIVE or SCHEDULED if 'ended' is not true
+            Boolean ended,        // --- ADD THIS parameter ---
+            LocalDateTime from,
+            Pageable pageable) {
+
+        log.debug("Service searching live auctions: query='{}', categories={}, status={}, ended={}, from={}, pageable={}",
+                queryText, categoryIds, status, ended, from, pageable);
+
+        Specification<LiveAuction> spec = (root, jpaQuery, cb) -> {
+            List<Predicate> predicates = new ArrayList<>();
+
+            // Text Search Predicate
+            if (queryText != null && !queryText.isBlank()) {
+                String lowercaseQuery = "%" + queryText.toLowerCase().trim() + "%";
+                predicates.add(cb.like(cb.lower(root.get("productTitleSnapshot")), lowercaseQuery));
+            }
+
+            // Handle status and ended flag
+            if (Boolean.TRUE.equals(ended)) {
+                // If frontend filter is "Ended", query for terminal states for Live Auctions
+                predicates.add(root.get("status").in(
+                        AuctionStatus.SOLD,
+                        AuctionStatus.CANCELLED,
+                        AuctionStatus.RESERVE_NOT_MET
+                ));
+                // If 'ended' is true, any 'status' parameter for ACTIVE/SCHEDULED is ignored
+            } else if (status != null) {
+                // If a specific non-terminal status (ACTIVE, SCHEDULED) is provided
+                predicates.add(cb.equal(root.get("status"), status));
+            }
+
+            if (from != null) {
+                predicates.add(cb.greaterThanOrEqualTo(root.get("startTime"), from));
+            }
+
+            if (categoryIds != null && !categoryIds.isEmpty()) {
+                SetJoin<LiveAuction, Long> categoryJoin = root.joinSet("productCategoryIdsSnapshot", JoinType.INNER);
+                predicates.add(categoryJoin.in(categoryIds));
+                jpaQuery.distinct(true);
+            }
+
+            return cb.and(predicates.toArray(new Predicate[0]));
+        };
+
+        Page<LiveAuction> auctionPage = liveAuctionRepository.findAll(spec, pageable);
+        return auctionPage.map(auctionMapper::mapToLiveAuctionSummaryDto);
+    }
+
 
     /**
      * Fetches summary details for a list of auction IDs.

@@ -4,6 +4,7 @@ import com.example.liveauctions.entity.AuctionStatus;
 import com.example.liveauctions.entity.LiveAuction;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.jpa.domain.Specification;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Lock; // For Pessimistic Lock option
 import org.springframework.data.jpa.repository.Query; // If complex queries needed
@@ -54,4 +55,6 @@ public interface LiveAuctionRepository extends JpaRepository<LiveAuction, UUID> 
                                                    Pageable pageable);
 
     boolean existsByIdAndSellerId(UUID id, String sellerId);
+
+    Page<LiveAuction> findAll(Specification<LiveAuction> spec, Pageable pageable);
 }

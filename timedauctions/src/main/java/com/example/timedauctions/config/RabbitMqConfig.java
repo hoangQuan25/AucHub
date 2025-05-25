@@ -39,6 +39,7 @@ public class RabbitMqConfig {
     public static final String AUCTION_ENDED_ROUTING_KEY = "auction.timed.ended";
     public static final String AUCTION_OUTBID_ROUTING_KEY = "auction.timed.outbid";
     public static final String COMMENT_REPLIED_ROUTING_KEY = "comment.timed.replied";
+    public static final String AUCTION_TIMED_REOPENED_ORDER_CREATED_ROUTING_KEY = "auction.timed.reopened_order.created";
 
     public static final String AUCTION_ENDED_ROUTING_KEY_PREFIX = "auction.";
     public static final String AUCTION_STARTED_ROUTING_KEY_PREFIX = "auction.";

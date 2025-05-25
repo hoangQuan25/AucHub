@@ -118,6 +118,24 @@ public class LiveAuctionController {
         return ResponseEntity.ok(page);
     }
 
+    @GetMapping("/search")
+    public ResponseEntity<Page<LiveAuctionSummaryDto>> searchLiveAuctions(
+            @RequestParam(value = "query", required = false) String query,
+            @RequestParam(value = "categoryIds", required = false) Set<Long> categoryIds,
+            @RequestParam(value = "status", required = false) AuctionStatus status, // For ACTIVE, SCHEDULED
+            @RequestParam(value = "ended", required = false) Boolean ended,         // --- ADD THIS ---
+            @RequestParam(value = "from", required = false)
+            @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime from,
+            @PageableDefault(size = 12, sort = "startTime", direction = Sort.Direction.DESC) Pageable pageable) {
+        log.info("Searching live auctions with query='{}', categories={}, status={}, ended={}, from={}, page={}",
+                query, categoryIds, status, ended, from, pageable);
+
+        Page<LiveAuctionSummaryDto> auctionPage = liveAuctionService.searchAuctions(
+                query, categoryIds, status, ended, from, pageable // Pass 'ended'
+        );
+        return ResponseEntity.ok(auctionPage);
+    }
+
     @PostMapping("/{auctionId}/hammer")
     public ResponseEntity<Void> hammerDown(
             @RequestHeader(USER_ID_HEADER) String sellerId,
