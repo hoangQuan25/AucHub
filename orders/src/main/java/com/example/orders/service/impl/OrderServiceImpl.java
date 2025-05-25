@@ -496,31 +496,57 @@ public class OrderServiceImpl implements OrderService {
      */
     @Override
     @Transactional(readOnly = true)
-    public Page<OrderSummaryDto> getMyOrders(String userId, String statusFilter, Pageable pageable) {
-        log.debug("Fetching orders for user: {} with status filter: {}", userId, statusFilter);
-        // Logic: Find orders where userId is either initialWinnerId or currentBidderId
-        // AND optionally filter by status.
-        // This query might become complex. For now, let's assume a simpler query by currentBidderId.
-        // Or, if you want to show all orders a user is involved in (as seller or potential buyer),
-        // the query in OrderRepository would need to be more sophisticated.
-        // For "my orders as buyer", currentBidderId is a good start.
+    public Page<OrderSummaryDto> getMyOrders(String userId, String statusFilterString, Pageable pageable) {
+        log.debug("Fetching orders for user: {} with status filter string: {}", userId, statusFilterString);
         Page<Order> ordersPage;
-        if (statusFilter != null && !statusFilter.equalsIgnoreCase("ALL") && !statusFilter.isEmpty()) {
-            try {
-                OrderStatus status = OrderStatus.valueOf(statusFilter.toUpperCase());
-                ordersPage = orderRepository.findByCurrentBidderIdAndOrderStatus(userId, status, pageable);
-                // log all orders fetched
-                log.info("Fetching orders for user {} with status {}. Total orders: {}", userId, status, ordersPage.getTotalElements());
-            } catch (IllegalArgumentException e) {
-                log.warn("Invalid status filter provided: {}. Fetching all for user.", statusFilter);
-                ordersPage = orderRepository.findByCurrentBidderId(userId, pageable); // Needs this method in repo
+
+        if (statusFilterString != null && !statusFilterString.equalsIgnoreCase("ALL") && !statusFilterString.isEmpty()) {
+            List<OrderStatus> targetStatuses = new ArrayList<>();
+            String filterKey = statusFilterString.toUpperCase(); // Match against uppercase keys
+
+            switch (filterKey) {
+                case "PENDING_PAYMENT": // Key from buyerOrderStatusFilters
+                    targetStatuses.add(OrderStatus.AWAITING_WINNER_PAYMENT);
+                    targetStatuses.add(OrderStatus.AWAITING_NEXT_BIDDER_PAYMENT);
+                    break;
+                case "PAYMENT_SUCCESSFUL":
+                    targetStatuses.add(OrderStatus.PAYMENT_SUCCESSFUL);
+                    break;
+                case "AWAITING_SHIPMENT": // Key from buyerOrderStatusFilters
+                    targetStatuses.add(OrderStatus.AWAITING_FULFILLMENT_CONFIRMATION);
+                    targetStatuses.add(OrderStatus.AWAITING_SHIPMENT);
+                    break;
+                case "COMPLETED":
+                    targetStatuses.add(OrderStatus.COMPLETED);
+                    break;
+                case "CANCELLED": // Key from buyerOrderStatusFilters
+                    targetStatuses.add(OrderStatus.ORDER_CANCELLED_BY_SELLER);
+                    targetStatuses.add(OrderStatus.ORDER_CANCELLED_NO_PAYMENT_FINAL);
+                    targetStatuses.add(OrderStatus.ORDER_CANCELLED_SYSTEM);
+                    break;
+                default:
+                    // If it's not one of the special keys, try to parse as a direct OrderStatus enum
+                    try {
+                        targetStatuses.add(OrderStatus.valueOf(filterKey));
+                    } catch (IllegalArgumentException e) {
+                        log.warn("Invalid or unhandled status filter for getMyOrders: '{}'. Fetching all orders for user.", statusFilterString);
+                        ordersPage = orderRepository.findByCurrentBidderId(userId, pageable);
+                        return ordersPage.map(orderMapper::toOrderSummaryDto);
+                    }
             }
-        } else {
-            ordersPage = orderRepository.findByCurrentBidderId(userId, pageable); // Needs this method in repo
-            // log all orders fetched for me
-            log.info("Fetching all orders for user {}. Total orders: {}", userId, ordersPage.getTotalElements());
+
+            if (!targetStatuses.isEmpty()) {
+                ordersPage = orderRepository.findByCurrentBidderIdAndOrderStatusIn(userId, targetStatuses, pageable);
+            } else {
+                // This case should ideally not be reached if default in switch handles unknown values
+                log.warn("No target statuses determined for filter: '{}'. Fetching all orders for user.", statusFilterString);
+                ordersPage = orderRepository.findByCurrentBidderId(userId, pageable);
+            }
+        } else { // "ALL" or empty filter
+            ordersPage = orderRepository.findByCurrentBidderId(userId, pageable);
         }
-        return ordersPage.map(orderMapper::toOrderSummaryDto); // Use your mapper
+        log.info("Fetched {} orders for user {} with filter '{}'", ordersPage.getTotalElements(), userId, statusFilterString);
+        return ordersPage.map(orderMapper::toOrderSummaryDto);
     }
 
     /**
@@ -642,22 +668,68 @@ public class OrderServiceImpl implements OrderService {
      */
     @Override
     @Transactional(readOnly = true)
-    public Page<OrderSummaryDto> getMySales(String sellerId, String statusFilter, Pageable pageable) {
-        log.debug("Fetching sales for seller: {} with status filter: {}", sellerId, statusFilter);
+    public Page<OrderSummaryDto> getMySales(String sellerId, String statusFilterString, Pageable pageable) {
+        log.debug("Fetching sales for seller: {} with status filter string: {}", sellerId, statusFilterString);
         Page<Order> salesPage;
-        if (statusFilter != null && !statusFilter.equalsIgnoreCase("ALL") && !statusFilter.isEmpty()) {
-            try {
-                OrderStatus status = OrderStatus.valueOf(statusFilter.toUpperCase());
-                salesPage = orderRepository.findBySellerIdAndOrderStatus(sellerId, status, pageable);
-            } catch (IllegalArgumentException e) {
-                log.warn("Invalid status filter provided for getMySales: {}. Fetching all for seller.", statusFilter);
+
+        if (statusFilterString != null && !statusFilterString.equalsIgnoreCase("ALL") && !statusFilterString.isEmpty()) {
+            List<OrderStatus> targetStatuses = new ArrayList<>();
+            String filterKey = statusFilterString.toUpperCase(); // Match against uppercase keys
+
+            switch (filterKey) {
+                case "AWAITING_PAYMENT": // Key from sellerOrderStatusFilters
+                    targetStatuses.add(OrderStatus.AWAITING_WINNER_PAYMENT);
+                    targetStatuses.add(OrderStatus.AWAITING_NEXT_BIDDER_PAYMENT);
+                    break;
+                case "AWAITING_SELLER_DECISION":
+                    targetStatuses.add(OrderStatus.AWAITING_SELLER_DECISION);
+                    break;
+                case "PAYMENT_SUCCESSFUL": // Seller sees as "Khách Đã Thanh Toán"
+                    targetStatuses.add(OrderStatus.PAYMENT_SUCCESSFUL);
+                    break;
+                case "AWAITING_SHIPMENT": // Seller sees as "Chờ Giao Đi"
+                    targetStatuses.add(OrderStatus.AWAITING_FULFILLMENT_CONFIRMATION);
+                    targetStatuses.add(OrderStatus.AWAITING_SHIPMENT);
+                    break;
+                case "COMPLETED":
+                    targetStatuses.add(OrderStatus.COMPLETED);
+                    break;
+                case "ORDER_SUPERSEDED_BY_REOPEN": // Filter for this new status
+                    targetStatuses.add(OrderStatus.ORDER_SUPERSEDED_BY_REOPEN);
+                    break;
+                case "CANCELLED": // Key from sellerOrderStatusFilters
+                    targetStatuses.add(OrderStatus.ORDER_CANCELLED_BY_SELLER);
+                    targetStatuses.add(OrderStatus.ORDER_CANCELLED_NO_PAYMENT_FINAL);
+                    targetStatuses.add(OrderStatus.ORDER_CANCELLED_SYSTEM);
+                    break;
+                // Note: AUCTION_REOPEN_INITIATED is likely transient and might not need a direct filter
+                // if it quickly moves to ORDER_SUPERSEDED_BY_REOPEN.
+                // If you still want to filter by it:
+                // case "AUCTION_REOPEN_INITIATED":
+                //     targetStatuses.add(OrderStatus.AUCTION_REOPEN_INITIATED);
+                //     break;
+                default:
+                    try {
+                        targetStatuses.add(OrderStatus.valueOf(filterKey));
+                    } catch (IllegalArgumentException e) {
+                        log.warn("Invalid or unhandled status filter for getMySales: '{}'. Fetching all sales for seller.", statusFilterString);
+                        salesPage = orderRepository.findBySellerId(sellerId, pageable);
+                        return salesPage.map(orderMapper::toOrderSummaryDto);
+                    }
+            }
+            if (!targetStatuses.isEmpty()) {
+                salesPage = orderRepository.findBySellerIdAndOrderStatusIn(sellerId, targetStatuses, pageable);
+            } else {
+                log.warn("No target statuses determined for filter: '{}'. Fetching all sales for seller.", statusFilterString);
                 salesPage = orderRepository.findBySellerId(sellerId, pageable);
             }
-        } else {
+        } else { // "ALL" or empty filter
             salesPage = orderRepository.findBySellerId(sellerId, pageable);
         }
+        log.info("Fetched {} sales for seller {} with filter '{}'", salesPage.getTotalElements(), sellerId, statusFilterString);
         return salesPage.map(orderMapper::toOrderSummaryDto);
     }
+
 
     @Override
     @Transactional

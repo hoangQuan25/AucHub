@@ -23,6 +23,8 @@ public class RabbitMqConfig {
     public static final String NOTIFICATIONS_EXCHANGE_NAME = "notifications_exchange";
     public static final String PAYMENTS_EVENTS_EXCHANGE_NAME = "payments_events_exchange";
     public static final String DELIVERIES_EVENTS_EXCHANGE = "deliveries_events_exchange";
+    public static final String TIMED_AUCTIONS_EVENTS_EXCHANGE_NAME = "td_auction_events_exchange";
+    public static final String LIVE_AUCTIONS_EVENTS_EXCHANGE_NAME = "auction_events_exchange";
 
 
     // === Queues ===
@@ -32,7 +34,8 @@ public class RabbitMqConfig {
     public static final String ORDERS_PAYMENT_SUCCEEDED_QUEUE = "orders_payment_succeeded_queue";
     public static final String ORDERS_PAYMENT_FAILED_QUEUE = "orders_payment_failed_queue";
     public static final String ORDERS_DELIVERY_RECEIPT_CONFIRMED_QUEUE = "orders_delivery_receipt_confirmed_queue";
-
+    public static final String ORDERS_FINALIZE_REOPENED_TIMED_AUCTION_QUEUE = "orders_finalize_reopened_timed_auction_queue";
+    public static final String ORDERS_FINALIZE_REOPENED_LIVE_AUCTION_QUEUE = "orders_finalize_reopened_live_auction_queue";
     // === Routing Keys ===
     // For commands/messages to the schedule exchange
     public static final String ORDER_PAYMENT_TIMEOUT_SCHEDULE_ROUTING_KEY = "order.schedule.check-payment-timeout";
@@ -52,6 +55,8 @@ public class RabbitMqConfig {
     public static final String PAYMENT_FAILED_ROUTING_KEY = "payment.event.failed";
     public static final String AUCTION_ENDED_ROUTING_KEY_PATTERN = "auction.*.ended";
     public static final String DELIVERY_EVENT_RECEIPT_CONFIRMED_ROUTING_KEY = "delivery.event.receipt.confirmed";
+    public static final String TIMED_AUCTION_REOPENED_ORDER_CREATED_ROUTING_KEY = "auction.timed.reopened_order.created";
+    public static final String LIVE_AUCTION_REOPENED_ORDER_CREATED_ROUTING_KEY = "auction.live.reopened_order.created";
 
 
     // === Exchanges ===
@@ -110,6 +115,17 @@ public class RabbitMqConfig {
         return new TopicExchange(DELIVERIES_EVENTS_EXCHANGE, true, false);
     }
 
+    @Bean
+    TopicExchange timedAuctionsEventsExchange() {
+        return new TopicExchange(TIMED_AUCTIONS_EVENTS_EXCHANGE_NAME, true, false);
+    }
+
+    @Bean
+    TopicExchange liveAuctionsEventsExchange() {
+        return new TopicExchange(LIVE_AUCTIONS_EVENTS_EXCHANGE_NAME, true, false);
+    }
+
+
 
     // === Queues ===
 
@@ -146,6 +162,17 @@ public class RabbitMqConfig {
                 // .withArgument("x-dead-letter-routing-key", "dlx.orders.delivery_receipt_confirmed")
                 .build();
     }
+
+    @Bean
+    Queue ordersFinalizeReopenedTimedAuctionQueue() {
+        return QueueBuilder.durable(ORDERS_FINALIZE_REOPENED_TIMED_AUCTION_QUEUE).build();
+    }
+
+    @Bean
+    Queue ordersFinalizeReopenedLiveAuctionQueue() {
+        return QueueBuilder.durable(ORDERS_FINALIZE_REOPENED_LIVE_AUCTION_QUEUE).build();
+    }
+
     // === Bindings ===
 
     @Bean
@@ -188,6 +215,27 @@ public class RabbitMqConfig {
                 .to(deliveriesEventsExchange)
                 .with(DELIVERY_EVENT_RECEIPT_CONFIRMED_ROUTING_KEY);
     }
+
+    @Bean
+    Binding ordersFinalizeReopenedTimedAuctionBinding(
+            Queue ordersFinalizeReopenedTimedAuctionQueue,
+            TopicExchange timedAuctionsEventsExchange) { // Use the correctly named exchange bean
+        return BindingBuilder
+                .bind(ordersFinalizeReopenedTimedAuctionQueue)
+                .to(timedAuctionsEventsExchange)
+                .with(TIMED_AUCTION_REOPENED_ORDER_CREATED_ROUTING_KEY);
+    }
+
+    @Bean
+    Binding ordersFinalizeReopenedLiveAuctionBinding(
+            Queue ordersFinalizeReopenedLiveAuctionQueue,
+            TopicExchange liveAuctionsEventsExchange) { // Use the correctly named exchange bean
+        return BindingBuilder
+                .bind(ordersFinalizeReopenedLiveAuctionQueue)
+                .to(liveAuctionsEventsExchange)
+                .with(LIVE_AUCTION_REOPENED_ORDER_CREATED_ROUTING_KEY);
+    }
+
 
     @Bean
     public MessageConverter jsonMessageConverter() {

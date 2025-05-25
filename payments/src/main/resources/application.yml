@@ -47,10 +47,10 @@ stripe:
   api:
     # IMPORTANT: Load these from environment variables or a secure config server.
     # DO NOT hardcode your actual secret keys here in a committed file.
-    secret-key: ${STRIPE_SECRET_KEY_TEST:plc} # Example placeholder
+    secret-key: ${STRIPE_SECRET_KEY_TEST:} # Example placeholder
   webhook:
     # IMPORTANT: This is the signing secret for your webhook endpoint.
-    signing-secret: ${STRIPE_WEBHOOK_SIGNING_SECRET_TEST:plc} # Example placeholder
+    signing-secret: ${STRIPE_WEBHOOK_SIGNING_SECRET_TEST:} # Example placeholder
 
 # === Management & Actuator ===
 management:

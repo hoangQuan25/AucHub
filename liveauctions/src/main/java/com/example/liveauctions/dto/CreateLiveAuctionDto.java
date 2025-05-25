@@ -4,6 +4,7 @@ import jakarta.validation.constraints.*;
 import lombok.Data; // Or @Value for immutability, @Getter/@Setter etc.
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.util.UUID;
 
 @Data // Includes @Getter, @Setter, @ToString, @EqualsAndHashCode, @RequiredArgsConstructor
 public class CreateLiveAuctionDto {
@@ -25,4 +26,6 @@ public class CreateLiveAuctionDto {
     // Optional: If null, auction starts immediately. If present, must be in the future.
     @Future(message = "Scheduled start time must be in the future")
     private LocalDateTime startTime; // Represents the 'datetime-local' input from frontend
+
+    private UUID originalOrderId;
 }

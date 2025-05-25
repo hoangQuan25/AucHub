@@ -160,16 +160,14 @@ function StartAuctionModal({ isOpen, onClose, product, onStartAuctionSubmit }) {
       productId: product.id,
       startPrice: startPriceNum,
       reservePrice: reservePriceNum,
-      startTime:
-        startTimeOption === "NOW"
-          ? null
-          : scheduledStartTime,
+      startTime: startTimeOption === "NOW" ? null : scheduledStartTime,
       // Type & EndTime/Duration
       auctionType: auctionType,
       // Send EITHER endTime OR durationMinutes, backend needs adaptation
       endTime: auctionType === "TIMED" ? finalEndTime : null, // Only for TIMED
       durationMinutes:
         auctionType === "LIVE" ? parseInt(durationMinutes, 10) : null, // Only for LIVE
+      originalOrderId: product.originalOrderId,
 
       // Formatted values for display
       formatted: {
@@ -208,31 +206,29 @@ function StartAuctionModal({ isOpen, onClose, product, onStartAuctionSubmit }) {
 
     let apiUrl = "";
     let payload = {};
+    let basePayload = { // Define base payload properties
+        productId: auctionDataToConfirm.productId,
+        startPrice: auctionDataToConfirm.startPrice,
+        reservePrice: auctionDataToConfirm.reservePrice,
+        ...(auctionDataToConfirm.startTime && { startTime: `${auctionDataToConfirm.startTime}:00` })
+    };
 
-    // --- Prepare API URL and Payload based on Type ---
+    // Conditionally add originalOrderId if it exists
+    if (auctionDataToConfirm.originalOrderId) {
+        basePayload.originalOrderId = auctionDataToConfirm.originalOrderId;
+    }
+
     if (auctionDataToConfirm.auctionType === "LIVE") {
       apiUrl = "/liveauctions/new-auction"; // Live auction endpoint
       payload = {
-        productId: auctionDataToConfirm.productId,
-        durationMinutes: auctionDataToConfirm.durationMinutes, // Send duration
-        startPrice: auctionDataToConfirm.startPrice,
-        reservePrice: auctionDataToConfirm.reservePrice,
-        ...(auctionDataToConfirm.startTime && {
-          startTime: `${auctionDataToConfirm.startTime}:00`
-        }),
+        ...basePayload, // Spread base payload
+        durationMinutes: auctionDataToConfirm.durationMinutes,
       };
-    } else {
-      // TIMED auction
+    } else { // TIMED auction
       apiUrl = "/timedauctions/timed-auctions"; // Timed auction endpoint
-      // **BACKEND DTO CHANGE NEEDED**: Send endTime, not duration
       payload = {
-        productId: auctionDataToConfirm.productId,
-        endTime: auctionDataToConfirm.endTime, // Send selected end time
-        startPrice: auctionDataToConfirm.startPrice,
-        reservePrice: auctionDataToConfirm.reservePrice,
-        ...(auctionDataToConfirm.startTime && {
-          startTime: `${auctionDataToConfirm.startTime}:00`
-        }),
+        ...basePayload, // Spread base payload
+        endTime: auctionDataToConfirm.endTime,
       };
     }
 

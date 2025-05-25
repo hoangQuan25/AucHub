@@ -4,7 +4,7 @@ import apiClient from '../api/apiClient'; // Your configured Axios instance
 // Assuming SELLER_DECISION_TYPES is correctly imported from your constants
 import { SELLER_DECISION_TYPES } from '../constants/orderConstants';
 
-const SellerDecisionModal = ({ order, isOpen, onClose }) => {
+const SellerDecisionModal = ({ order, isOpen, onClose, onInitiateReopenAuction }) => {
   const [selectedDecision, setSelectedDecision] = useState('');
   const [isProcessing, setIsProcessing] = useState(false);
   const [error, setError] = useState(null);
@@ -40,20 +40,44 @@ const SellerDecisionModal = ({ order, isOpen, onClose }) => {
     }
 
     setIsProcessing(true);
-    setError(null);
-    try {
-      await apiClient.post(`/orders/${order.id}/seller-decision`, {
-        decisionType: selectedDecision,
-      });
-      // alert("Decision submitted successfully!"); // Consider a more integrated notification
-      onClose(); // Close modal and trigger refetch in parent
-    } catch (err) {
-      console.error("Failed to submit seller decision:", err);
-      setError(err.response?.data?.message || "Could not submit decision.");
-    } finally {
-      setIsProcessing(false);
+    if (selectedDecision === 'REOPEN_AUCTION' && onInitiateReopenAuction) {
+      // For REOPEN_AUCTION:
+      // 1. Directly call the handler passed from the parent page.
+      //    This handler will close this modal and open the StartAuctionModal.
+      onInitiateReopenAuction(order);
+      // setIsProcessing(false); // isProcessing will be reset by useEffect on isOpen when modal closes
+    } else {
+      // For OTHER decisions (OFFER_TO_NEXT_BIDDER, CANCEL_SALE):
+      // Proceed with the API call to update the order status.
+      setError(null);
+      try {
+        await apiClient.post(`/orders/${order.id}/seller-decision`, {
+          decisionType: selectedDecision,
+        });
+        onClose(); // Close modal and trigger refetch in parent
+      } catch (err) {
+        console.error("Failed to submit seller decision:", err);
+        setError(err.response?.data?.message || "Could not submit decision.");
+      } finally {
+        setIsProcessing(false); // Reset processing for non-reopen cases
+      }
     }
   };
+
+  useEffect(() => {
+    if (isOpen) {
+        // Reset state when modal opens
+        setSelectedDecision('');
+        setError(null);
+        setIsProcessing(false);
+
+        // Optionally, pre-select a default if only one option is available or a preferred one
+        // For example, if availableDecisionTypes has REOPEN_AUCTION and it's a common path:
+        // if (availableDecisionTypes.some(([key]) => key === 'REOPEN_AUCTION')) {
+        //    setSelectedDecision('REOPEN_AUCTION');
+        // }
+    }
+  }, [isOpen, order]); 
 
   // Effect to clear selectedDecision if it becomes unavailable
   // (e.g., if the order data somehow changed while modal was open, though unlikely for this specific field)
