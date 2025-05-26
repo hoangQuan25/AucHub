@@ -1,15 +1,16 @@
 // src/components/ProductDetailModal.jsx
 import React from 'react';
-import { FaEdit, FaTrashAlt, FaRocket, FaTimes } from 'react-icons/fa';
+// Make sure FaCheckCircle is imported if you use the prominent SOLD badge near the title
+import { FaEdit, FaTrashAlt, FaRocket, FaTimes, FaCheckCircle } from 'react-icons/fa';
 
 function ProductDetailModal({
   isOpen,
   onClose,
   product,
   isOwner,
-  onEdit,       // Expects onEdit(product)
-  onDelete,     // Expects onDelete(product)
-  onStartAuction // Expects onStartAuction(product)
+  onEdit,
+  onDelete,
+  onStartAuction
 }) {
   if (!isOpen || !product) return null;
 
@@ -36,9 +37,17 @@ function ProductDetailModal({
           <FaTimes size="1.5em" />
         </button>
 
-        <h2 className="text-2xl sm:text-3xl font-bold mb-4 border-b pb-3 pr-10">{product.title}</h2>
+        <h2 className="text-2xl sm:text-3xl font-bold mb-4 border-b pb-3 pr-10">
+          {product.title}
+          {/* Prominent SOLD badge near title for all viewers if product is sold */}
+          {product.isSold && (
+            <span className="ml-3 text-sm font-bold bg-green-600 text-white px-2.5 py-1 rounded-md align-middle inline-flex items-center">
+              <FaCheckCircle className="mr-1.5" /> SOLD
+            </span>
+          )}
+        </h2>
 
-        {/* Image Gallery Section ... */}
+        {/* Image Gallery Section (no changes) */}
         <div className="mb-5">
           <h3 className="text-lg font-semibold mb-2 text-gray-700">Images</h3>
           {product.imageUrls && product.imageUrls.length > 0 ? (
@@ -59,7 +68,7 @@ function ProductDetailModal({
           )}
         </div>
 
-        {/* Description Section ... */}
+        {/* Description Section (no changes) */}
         <div className="mb-5">
           <h3 className="text-lg font-semibold mb-1 text-gray-700">Description</h3>
           <p className="text-sm text-gray-700 whitespace-pre-wrap leading-relaxed">
@@ -67,7 +76,7 @@ function ProductDetailModal({
           </p>
         </div>
 
-        {/* Condition Section ... */}
+        {/* Condition Section (no changes) */}
         <div className="mb-5">
           <h3 className="text-lg font-semibold mb-1 text-gray-700">Condition</h3>
           <p className="text-sm text-gray-700">
@@ -75,7 +84,7 @@ function ProductDetailModal({
           </p>
         </div>
 
-        {/* Categories Section ... */}
+        {/* Categories Section (no changes) */}
         <div className="mb-6">
           <h3 className="text-lg font-semibold mb-2 text-gray-700">Categories</h3>
           {product.categories && product.categories.length > 0 ? (
@@ -95,16 +104,17 @@ function ProductDetailModal({
         </div>
 
 
-        {/* Action Buttons - Updated onClick handlers */}
+        {/* Action Buttons - MODIFIED LOGIC */}
         <div className="mt-8 pt-5 border-t border-gray-200 flex flex-col sm:flex-row justify-end items-center space-y-3 sm:space-y-0 sm:space-x-3">
-          {isOwner && (
+          {/* Owner-specific action buttons ONLY if product is NOT sold */}
+          {isOwner && !product.isSold && (
             <>
               {onEdit && (
                 <button
                   onClick={(e) => {
-                    e.stopPropagation(); // Optional: if needed, though modal content click handles outer propagation
+                    e.stopPropagation();
                     onClose();
-                    onEdit(product); // Call with product ONLY
+                    onEdit(product);
                   }}
                   title="Edit Product"
                   className="w-full sm:w-auto flex items-center justify-center text-sm px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded-md shadow-sm transition-colors"
@@ -117,7 +127,7 @@ function ProductDetailModal({
                   onClick={(e) => {
                     e.stopPropagation();
                     onClose();
-                    onDelete(product); // Call with product ONLY
+                    onDelete(product);
                   }}
                   title="Delete Product"
                   className="w-full sm:w-auto flex items-center justify-center text-sm px-4 py-2 bg-red-500 hover:bg-red-600 text-white rounded-md shadow-sm transition-colors"
@@ -130,7 +140,7 @@ function ProductDetailModal({
                   onClick={(e) => {
                     e.stopPropagation();
                     onClose();
-                    onStartAuction(product); // Call with product ONLY
+                    onStartAuction(product);
                   }}
                   className="w-full sm:w-auto flex items-center justify-center text-sm bg-purple-600 hover:bg-purple-700 text-white font-semibold py-2 px-4 rounded-md shadow-sm transition-colors"
                 >
@@ -139,11 +149,10 @@ function ProductDetailModal({
               )}
             </>
           )}
-          {!isOwner && product.isAuctionable && !product.activeAuctionId && (
-             <button /* ... More Info button ... */ > More Info </button>
-          )}
+
+          {/* Close button is always visible */}
            <button
-            onClick={onClose} // This one is fine as is
+            onClick={onClose}
             className="w-full sm:w-auto text-sm px-4 py-2 bg-gray-200 text-gray-700 hover:bg-gray-300 rounded-md transition-colors"
             aria-label="Close details"
           >

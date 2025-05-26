@@ -12,5 +12,6 @@ import lombok.NoArgsConstructor;
 public class UserBasicInfoDto {
     private String id;
     private String username;
+    private String avatarUrl;
     // Add other basic fields if needed (e.g., avatarUrl)
 }

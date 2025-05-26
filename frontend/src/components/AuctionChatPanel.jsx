@@ -3,71 +3,102 @@ import SockJS from "sockjs-client/dist/sockjs";
 import { Client } from "@stomp/stompjs";
 import apiClient from "../api/apiClient";
 import { useKeycloak } from "@react-keycloak/web";
+import { FaPaperPlane } from 'react-icons/fa'; // Using an icon for send button
 
 const AuctionChatPanel = ({ auctionId }) => {
-  const { keycloak } = useKeycloak();
+  const { keycloak, initialized } = useKeycloak();
   const [msgs, setMsgs] = useState([]);
   const [input, setInput] = useState("");
   const bottomRef = useRef(null);
   const stompRef = useRef(null);
-  const lastHistoryTimestampRef = useRef(0);
+  // lastHistoryTimestampRef removed as it wasn't being used for message filtering
 
-  /* preload last 100 */
+  // Preload chat history
   useEffect(() => {
-    apiClient.get(`/liveauctions/${auctionId}/chat?limit=100`).then((res) => {
-      const historyMsgs = res.data || [];
-      setMsgs(historyMsgs);
-      // --- NEW: Store the latest timestamp ---
-      if (historyMsgs.length > 0) {
-        // Assuming timestamps are comparable numbers (like epoch ms)
-        // Or convert dates to comparable numbers if necessary
-        const latestTimestamp = new Date(
-          historyMsgs[historyMsgs.length - 1].timestamp
-        ).getTime();
-        lastHistoryTimestampRef.current = latestTimestamp;
-        console.log("Last history timestamp:", latestTimestamp); // For debugging
-      } else {
-        lastHistoryTimestampRef.current = 0; // Reset if history is empty
-      }
-      // --- End NEW ---
-    });
+    if (auctionId) {
+      apiClient.get(`/liveauctions/${auctionId}/chat?limit=100`).then((res) => {
+        setMsgs(res.data || []);
+      }).catch(err => {
+        console.error("Failed to load chat history:", err);
+      });
+    }
   }, [auctionId]);
 
-  /* connect STOMP */
+  // Connect STOMP
   useEffect(() => {
-    if (!keycloak.authenticated) return;
-    const userId = keycloak.tokenParsed.sub;
+    if (!auctionId || !initialized || !keycloak.authenticated) return;
+    
+    const userId = keycloak.subject;
 
     const client = new Client({
-      webSocketFactory: () =>
-        new SockJS(
-          `${
-            window.location.protocol
-          }//localhost:8072/ws?uid=${encodeURIComponent(userId)}`
-        ),
+      webSocketFactory: () => {
+        // CORRECTED: Revert to using http/https for SockJS initial connection URL
+        // This uses the current page's protocol (http or https)
+        const sockJsUrl = `${window.location.protocol}//localhost:8072/ws?uid=${encodeURIComponent(userId)}`;
+        console.log("Attempting to connect SockJS to:", sockJsUrl); // For debugging
+        return new SockJS(sockJsUrl);
+      },
+      connectHeaders: {
+        // If your STOMP broker over WS requires an Authorization header for the WebSocket connection itself
+        // (often STOMP auth is handled differently, e.g. via connect frame or session from HTTP handshake)
+        // Authorization: `Bearer ${keycloak.token}`
+      },
       reconnectDelay: 5000,
+      debug: (str) => { 
+        console.log('STOMP DEBUG: ' + str); 
+      },
     });
-    client.onConnect = () => {
+
+    client.onConnect = (frame) => {
+      console.log("STOMP Connected:", frame);
+      stompRef.current = client; // Set stompRef here after successful connection
       client.subscribe(`/topic/chat.${auctionId}`, (m) => {
-        setMsgs((prev) => [...prev, JSON.parse(m.body)]);
+        try {
+            const newMsg = JSON.parse(m.body);
+            setMsgs((prevMsgs) => [...prevMsgs, newMsg]);
+        } catch (e) {
+            console.error("Error parsing incoming STOMP message:", e, m.body);
+        }
       });
     };
-    client.activate();
-    stompRef.current = client;
-    return () => client.deactivate();
-  }, [auctionId, keycloak.authenticated]);
 
-  /* auto-scroll */
-  useEffect(
-    () => bottomRef.current?.scrollIntoView({ behavior: "smooth" }),
-    [msgs]
-  );
+    client.onStompError = (frame) => {
+      console.error('STOMP Error:', frame.headers['message']);
+      console.error('Details:', frame.body);
+    };
+    
+    client.onWebSocketError = (error) => {
+        console.error('WebSocket Error:', error);
+    };
+    
+    client.onWebSocketClose = (event) => { // Added event parameter for more details
+        console.log('WebSocket Closed:', event);
+    };
+
+    client.activate();
+    stompRef.current = client; // Store client in ref for cleanup
+
+    return () => {
+      if (stompRef.current && stompRef.current.active) {
+        console.log("Deactivating STOMP client");
+        stompRef.current.deactivate();
+      }
+    };
+  }, [auctionId, initialized, keycloak.authenticated, keycloak.subject, keycloak.token]);
+
+  // Auto-scroll
+  useEffect(() => {
+    if (bottomRef.current) {
+      bottomRef.current.scrollIntoView({ behavior: "smooth" });
+    }
+  }, [msgs]);
 
   const send = () => {
-    if (!input.trim()) return;
-    const payload = {
-      text: input.trim(),
-    };
+    if (!input.trim() || !stompRef.current || !stompRef.current.active) {
+      console.warn("STOMP client not connected or active, or input empty. Cannot send message.");
+      return;
+    }
+    const payload = { text: input.trim() };
     stompRef.current.publish({
       destination: `/app/chat.send.${auctionId}`,
       body: JSON.stringify(payload),
@@ -75,67 +106,102 @@ const AuctionChatPanel = ({ auctionId }) => {
     setInput("");
   };
 
+  const loggedInUsername = keycloak.tokenParsed?.preferred_username;
+
   return (
-    <div className="flex flex-col h-full overflow-hidden">
+    <div className="flex flex-col h-full overflow-hidden border border-gray-200 rounded-lg shadow"> {/* Main panel style */}
       {/* Chat messages */}
-      <div className="flex-1 overflow-y-auto p-4 space-y-2 text-sm bg-gray-50">
+      <div className="flex-1 overflow-y-auto p-4 space-y-3 text-sm bg-gray-50"> {/* Light background for messages */}
         {msgs.map((m, i) => {
-          const isSelf =
-            keycloak.tokenParsed?.preferred_username === m.username;
+          const isSelf = loggedInUsername === m.username;
           const isSeller = m.seller;
+          const showAvatar = m.avatarUrl || m.username; // Condition to show avatar placeholder
 
           return (
             <div
-              key={i}
-              className={`flex ${isSelf ? "justify-end" : "justify-start"}`}
+              key={m.id || i} // Prefer message ID if available
+              className={`flex items-end gap-2 ${isSelf ? "justify-end" : "justify-start"}`}
             >
+              {/* Avatar for OTHERS (appears on the left of the bubble) */}
+              {!isSelf && showAvatar && (
+                <img
+                  src={m.avatarUrl || `https://ui-avatars.com/api/?name=${encodeURIComponent(m.username || 'A')}&background=random&size=32&font-size=0.5&length=1`}
+                  alt={m.username}
+                  className="w-6 h-6 rounded-full object-cover flex-shrink-0 mb-1" // Adjusted size and margin
+                  title={m.username}
+                />
+              )}
+
+              {/* Message Bubble (Your Original Styling) */}
               <div
-                className={`max-w-xs px-3 py-2 rounded-lg shadow-sm ${
+                className={`max-w-[70%] sm:max-w-[65%] px-3.5 py-2 rounded-xl shadow-sm ${ // Slightly more padding, rounded-xl
                   isSelf
-                    ? "bg-indigo-100 text-indigo-900"
+                    ? "bg-indigo-500 text-white" // Self message style (kept distinct)
                     : isSeller
-                    ? "bg-yellow-50 border border-yellow-300 text-yellow-900"
-                    : "bg-white text-gray-800 border"
+                    ? "bg-yellow-50 border border-yellow-300 text-yellow-800" // Seller message style
+                    : "bg-white text-gray-800 border border-gray-200" // Other's message style
                 }`}
               >
-                <div className="font-semibold text-xs mb-0.5">
-                  {m.username}
-                  {isSeller && (
-                    <span className="ml-1 text-[10px] px-1.5 py-0.5 bg-yellow-200 text-yellow-800 rounded-full">
-                      seller
-                    </span>
-                  )}
-                </div>
-                <div className="break-words whitespace-pre-wrap">{m.text}</div>
-                <div className="text-[10px] text-right text-gray-400 mt-1">
-                  {new Date(m.timestamp).toLocaleTimeString()}
+                {/* Username (only for non-self messages, or if self is also seller) */}
+                {(!isSelf || (isSelf && isSeller)) && (
+                    <div className={`font-semibold text-xs mb-0.5 ${
+                        isSelf ? (isSeller ? 'text-indigo-100' : 'hidden') : /* Don't show own username unless seller */
+                        isSeller ? 'text-yellow-700' : 'text-gray-600'
+                    }`}>
+                        {m.username}
+                        {isSeller && (
+                            <span className="ml-1 text-[9px] px-1.5 py-0.5 bg-yellow-400 text-yellow-900 rounded-sm font-medium leading-none align-middle">
+                            SELLER
+                            </span>
+                        )}
+                    </div>
+                )}
+                <div className="break-words whitespace-pre-wrap text-sm">{m.text}</div>
+                <div className={`text-[10px] mt-1 ${isSelf ? 'text-indigo-200' : 'text-gray-400'} ${isSelf ? 'text-left' : 'text-right'}`}> {/* Timestamp aligned based on self/other */}
+                  {new Date(m.timestamp).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit', hour12: true })}
                 </div>
               </div>
+
+              {/* Avatar for SELF (appears on the right of the bubble) */}
+              {isSelf && showAvatar && (
+                <img
+                  src={m.avatarUrl || `https://ui-avatars.com/api/?name=${encodeURIComponent(m.username || 'U')}&background=random&size=32&font-size=0.5&length=1`}
+                  alt={m.username}
+                  className="w-6 h-6 rounded-full object-cover flex-shrink-0 mb-1"
+                  title={m.username}
+                />
+              )}
             </div>
           );
         })}
-
         <div ref={bottomRef}></div>
       </div>
 
       {/* Input field */}
-      <div className="border-t p-3 flex items-center gap-2 bg-white">
-        <input
-          className="flex-1 border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring focus:border-indigo-500"
-          value={input}
-          maxLength={140}
-          onChange={(e) => setInput(e.target.value)}
-          onKeyDown={(e) => e.key === "Enter" && send()}
-          placeholder="Type a message…"
-        />
-        <button
-          onClick={send}
-          className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-sm transition disabled:opacity-50"
-          disabled={!input.trim()}
-        >
-          Send
-        </button>
-      </div>
+      {keycloak.authenticated ? (
+        <div className="border-t border-gray-200 p-3 flex items-center gap-2 bg-white">
+          <input
+            className="flex-1 border border-gray-300 rounded-full px-4 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500"
+            value={input}
+            maxLength={150} // Adjusted max length slightly
+            onChange={(e) => setInput(e.target.value)}
+            onKeyDown={(e) => e.key === "Enter" && send()}
+            placeholder="Type a message…"
+          />
+          <button
+            onClick={send}
+            className="p-2.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-full transition-colors duration-150 disabled:opacity-50 disabled:hover:bg-indigo-600"
+            disabled={!input.trim() || !stompRef.current?.active}
+            aria-label="Send message"
+          >
+            <FaPaperPlane size="1em"/>
+          </button>
+        </div>
+      ) : (
+         <div className="border-t border-gray-200 p-3 text-center text-sm text-gray-500 bg-gray-50">
+            Please <button onClick={() => keycloak.login()} className="text-indigo-600 hover:underline font-semibold">log in</button> to chat.
+        </div>
+      )}
     </div>
   );
 };

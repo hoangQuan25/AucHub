@@ -157,6 +157,15 @@ public class TimedAuctionController {
         return ResponseEntity.ok(details);
     }
 
+    @GetMapping("/{auctionId}/my-max-bid")
+    public ResponseEntity<MyMaxBidDto> getMyMaxBid(
+            @PathVariable UUID auctionId,
+            @RequestHeader(USER_ID_HEADER) String bidderId) { // Authenticated user's ID
+        log.info("Received request for user {}'s max bid on auction {}", bidderId, auctionId);
+        MyMaxBidDto myMaxBidDto = timedAuctionService.getMyMaxBidForAuction(auctionId, bidderId);
+        return ResponseEntity.ok(myMaxBidDto);
+    }
+
     @PostMapping("/{auctionId}/cancel") // Maps to POST /api/timed-auctions/{auctionId}/cancel
     public ResponseEntity<Void> cancelAuction(
             @PathVariable UUID auctionId,
