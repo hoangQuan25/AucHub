@@ -303,6 +303,8 @@ public class LiveAuctionServiceImpl implements LiveAuctionService {
             Bid newBid = bidRepository.save(Bid.builder().liveAuctionId(auctionId).bidderId(bidderId)
                     .bidderUsernameSnapshot(bidderUsername).amount(bidDto.getAmount()).build());
 
+            auction.setBidCount(auction.getBidCount() + 1);
+
             // 3. Update auction financials (No change)
             auction.setCurrentBid(bidDto.getAmount());
             auction.setHighestBidderId(bidderId);

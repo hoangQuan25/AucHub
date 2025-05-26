@@ -154,6 +154,8 @@ function PublicSellerProfilePage() {
     useState(null);
   const [isDecisionModalOpen, setIsDecisionModalOpen] = useState(false);
 
+  const [currentProductFilter, setCurrentProductFilter] = useState("ALL");
+
   useEffect(() => {
     if (initialized && keycloak.authenticated && sellerProfile?.id) {
       setIsOwner(keycloak.subject === sellerProfile.id);
@@ -248,7 +250,7 @@ function PublicSellerProfilePage() {
   );
 
   const fetchSellerProducts = useCallback(
-    async (page = 0) => {
+    async (page = 0, filter = "ALL") => {
       // This function remains, but its trigger might change if listings tab has unified auction filters
       if (!sellerProfile?.id) return;
       setIsLoadingProducts(true);
@@ -263,6 +265,13 @@ function PublicSellerProfilePage() {
           // Apply category filter to products if selected
           params.categoryIds = Array.from(selectedCatIds).join(",");
         }
+
+        if (filter === "FOR_SALE") {
+          params.isSold = false;
+        } else if (filter === "SOLD") {
+          params.isSold = true;
+        }
+
         const response = await apiClient.get(
           `/products/seller/${sellerProfile.id}/products`,
           { params }
@@ -279,7 +288,7 @@ function PublicSellerProfilePage() {
         setIsLoadingProducts(false);
       }
     },
-    [sellerProfile?.id, selectedCatIds]
+    [sellerProfile?.id, selectedCatIds, LISTING_PAGE_SIZE]
   ); // Add selectedCatIds dependency
 
   // --- NEW: Unified Auction Fetching for Seller Profile ---
@@ -452,7 +461,7 @@ function PublicSellerProfilePage() {
       if (activeTab === "reviews") {
         fetchSellerReviews(reviewPage);
       } else if (activeTab === "listings") {
-        fetchSellerProducts(productPage);
+        fetchSellerProducts(productPage, currentProductFilter);
         // fetchAllSellerAuctions is now triggered by its own specific useEffect
       } else if (activeTab === "my-sales") {
         if (isOwner) {
@@ -472,6 +481,7 @@ function PublicSellerProfilePage() {
     reviewPage,
     fetchSellerProducts,
     productPage,
+    currentProductFilter, // currentProductFilter will trigger refetch if it changes
     fetchSalesOrders, // fetchSalesOrders dependency will trigger refetch if activeSalesFilter changes
   ]);
 
@@ -731,6 +741,11 @@ function PublicSellerProfilePage() {
     setIsStartAuctionModalOpen(true);
   };
 
+  const handleProductFilterChange = useCallback((newFilter) => {
+    setCurrentProductFilter(newFilter);
+    setProductPage(0); // Reset to the first page when filter changes
+  }, []);
+
   const renderTabContent = () => {
     // ... (Loading states for profile) ...
     if (!sellerProfile)
@@ -755,12 +770,13 @@ function PublicSellerProfilePage() {
               listingPageSize={LISTING_PAGE_SIZE}
               onProductPageChange={handleProductPageChange} // Use the actual handler
               isOwner={isOwner}
-              // Wire up the new handlers
               onAddNewProduct={handleOpenAddProductModal}
               onEditProduct={handleOpenEditProductModal} // For card's edit action
               onDeleteProduct={promptDeleteProduct} // For card's delete action
               onStartAuctionForProduct={promptStartAuction} // For card's start auction action
               onViewDetails={handleViewProductDetails}
+              currentProductFilter={currentProductFilter}
+              onProductFilterChange={handleProductFilterChange}
             />
 
             <AuctionFilters

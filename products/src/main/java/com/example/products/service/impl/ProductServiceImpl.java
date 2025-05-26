@@ -17,9 +17,11 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
@@ -153,6 +155,22 @@ public class ProductServiceImpl implements ProductService {
     }
 
     @Override
+    @Transactional
+    public ProductDto markProductAsSold(Long productId) {
+        log.info("Marking product ID: {} as SOLD", productId);
+        Product product = productRepository.findById(productId)
+                .orElseThrow(() -> new ProductNotFoundException("Product not found: " + productId));
+        if (product.isSold()) {
+            log.warn("Product ID: {} is already marked as SOLD.", productId);
+            return productMapper.toProductDto(product); // Or handle as appropriate
+        }
+        product.setSold(true); // Set the boolean flag
+        Product savedProduct = productRepository.save(product);
+        log.info("Product ID: {} successfully marked as SOLD.", savedProduct.getId());
+        return productMapper.toProductDto(savedProduct);
+    }
+
+    @Override
     @Transactional(readOnly = true)
     public List<ProductDto> getProductsBySeller(String sellerId) {
         log.debug("Fetching products for seller ID: {}", sellerId);
@@ -169,12 +187,25 @@ public class ProductServiceImpl implements ProductService {
         return categoryMapper.toCategoryDtoList(categories);
     }
 
+    // In ProductServiceImpl.java
     @Override
     @Transactional(readOnly = true)
-    public Page<ProductDto> getProductsBySeller(String sellerId, Pageable pageable) {
-        log.debug("Fetching products for seller ID: {} with pagination: {}", sellerId, pageable);
-        Page<Product> productsPage = productRepository.findBySellerId(sellerId, pageable);
-        // Map Page<Product> to Page<ProductDto>
+    public Page<ProductDto> getProductsBySellerAndStatus(String sellerId, Boolean isSold, Pageable pageable) {
+        log.debug("Fetching products for seller ID: {} with isSold: {} and pagination: {}", sellerId, isSold, pageable);
+
+        Specification<Product> spec = (root, query, criteriaBuilder) -> {
+            List<jakarta.persistence.criteria.Predicate> predicates = new ArrayList<>();
+            predicates.add(criteriaBuilder.equal(root.get("sellerId"), sellerId));
+
+            if (isSold != null) {
+                predicates.add(criteriaBuilder.equal(root.get("isSold"), isSold));
+            }
+            // if isSold is null, it fetches all (sold and not sold)
+
+            return criteriaBuilder.and(predicates.toArray(new jakarta.persistence.criteria.Predicate[0]));
+        };
+
+        Page<Product> productsPage = productRepository.findAll(spec, pageable);
         return productsPage.map(productMapper::toProductDto);
     }
 }

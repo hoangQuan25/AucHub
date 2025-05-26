@@ -364,18 +364,6 @@ public class OrderServiceImpl implements OrderService {
             // For now, we'll proceed but this is a point of validation.
         }
 
-        // Validate current order status - should be in a state that can be completed
-        // e.g., AWAITING_SHIPMENT, or perhaps a state that reflects it's been handed to delivery.
-        // For simplicity, if DeliveriesService confirms delivery was confirmed by buyer, we trust it.
-        // More robust check:
-        /*
-        if (order.getOrderStatus() != OrderStatus.AWAITING_SHIPMENT &&
-            order.getOrderStatus() != SomeOtherPostShipmentStatusIfNotUsingDeliveryStatusDirectly) {
-            log.warn("Order {} is in status {} and cannot be marked COMPLETED by buyer confirmation at this stage.",
-                    orderId, order.getOrderStatus());
-            throw new IllegalStateException("Order cannot be completed from its current status: " + order.getOrderStatus());
-        }
-        */
 
         if (order.getOrderStatus() == OrderStatus.COMPLETED) {
             log.warn("Order {} is already COMPLETED. Ignoring duplicate completion event.", orderId);
@@ -391,12 +379,7 @@ public class OrderServiceImpl implements OrderService {
         Order savedOrder = orderRepository.save(order);
         log.info("Order {} status updated to COMPLETED.", savedOrder.getId());
 
-        // Optional: Publish an OrderCompletedEvent if other services need to react
-        // publishOrderCompletedEvent(savedOrder, "BUYER_CONFIRMED");
-
-        // Here, you might also trigger logic for seller payout if that's managed by OrdersService
-        // or publish an event that PaymentsService listens to for payout.
-        // For now, just updating the status.
+        publishOrderCompletedEvent(savedOrder, "BUYER_CONFIRMED_RECEIPT");
     }
 
     /**
@@ -1057,6 +1040,34 @@ public class OrderServiceImpl implements OrderService {
                     event);
         } catch (Exception e) {
             log.error("Error publishing OrderCancelledEvent for order {}: {}", order.getId(), e.getMessage(), e);
+        }
+    }
+
+    private void publishOrderCompletedEvent(Order order, String completionReason) { // Added reason for context
+        if (order.getProductId() == null) {
+            log.error("Cannot publish OrderCompletedEvent for order {}: productId is null.", order.getId());
+            return; // Or handle error appropriately
+        }
+
+        OrderCompletedEventDto event = OrderCompletedEventDto.builder()
+                .eventId(UUID.randomUUID())
+                .eventTimestamp(LocalDateTime.now())
+                .orderId(order.getId())
+                .productId(order.getProductId())
+                .sellerId(order.getSellerId())
+                .buyerId(order.getCurrentBidderId()) // Current bidder is the one who completed
+                .build();
+
+        log.info("Publishing OrderCompletedEvent for order ID: {}, productId: {}, Reason: {}",
+                order.getId(), order.getProductId(), completionReason);
+        try {
+            rabbitTemplate.convertAndSend(
+                    RabbitMqConfig.ORDERS_EVENTS_EXCHANGE,
+                    RabbitMqConfig.ORDER_EVENT_COMPLETED_ROUTING_KEY, // Use the new routing key
+                    event
+            );
+        } catch (Exception e) {
+            log.error("Error publishing OrderCompletedEvent for order {}: {}", order.getId(), e.getMessage(), e);
         }
     }
 

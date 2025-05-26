@@ -14,8 +14,9 @@ public interface ProductService {
     ProductDto createProduct(String sellerId, CreateProductDto dto);
     List<ProductDto> getProductsBySeller(String sellerId);
     List<CategoryDto> getAllCategories();
-    Page<ProductDto> getProductsBySeller(String sellerId, Pageable pageable);
+    Page<ProductDto> getProductsBySellerAndStatus(String sellerId, Boolean isSold, Pageable pageable);
     ProductDto updateProduct(String sellerId, Long productId, UpdateProductDto dto);
     void deleteProduct(String sellerId, Long productId);
     ProductDto getProductById(Long productId);
+    ProductDto markProductAsSold(Long productId);
 }

@@ -29,12 +29,13 @@ function Sidebar() {
 
           <li>
             <NavLink
-              to="/all-auctions"
+              to="/auction-rules-guide"
+              end
               className={({ isActive }) =>
                 `${linkStyle} ${isActive ? activeLinkStyle : ""}`
               }
             >
-              All Active Auctions
+              Auction rules
             </NavLink>
           </li>
 
@@ -49,7 +50,7 @@ function Sidebar() {
                       `${linkStyle} ${isActive ? activeLinkStyle : ""}`
                     }
                   >
-                    My Public Shop
+                    My shop
                   </NavLink>
                 </li>
               )}

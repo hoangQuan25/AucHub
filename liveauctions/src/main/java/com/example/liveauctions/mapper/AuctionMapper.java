@@ -54,6 +54,7 @@ public class AuctionMapper {
                 .productImageUrlSnapshot(auction.getProductImageUrlSnapshot())
                 .currentBid(displayBid) // Show current bid if available, else start price
                 .endTime(auction.getEndTime())
+                .bidCount(auction.getBidCount())
                 .status(auction.getStatus())
                 .categoryIds(auction.getProductCategoryIdsSnapshot() != null ? new HashSet<>(auction.getProductCategoryIdsSnapshot()) : Collections.emptySet())
                 .build();
@@ -92,7 +93,8 @@ public class AuctionMapper {
                 .highestBidderId(auction.getHighestBidderId())
                 .highestBidderUsernameSnapshot(auction.getHighestBidderUsernameSnapshot())
                 .winnerId(auction.getWinnerId())
-                .winningBid(auction.getWinningBid());
+                .winningBid(auction.getWinningBid())
+                .bidCount(auction.getBidCount());
 
         // Map enriched fields from ProductDto *if available*
         if (productDto != null) {
@@ -118,25 +120,5 @@ public class AuctionMapper {
 
         return builder.build();
     }
-
-    // If CategoryDto mapping was needed (assuming ProductDto has different structure):
-    /*
-    private CategoryDto mapToCategoryDto(SourceCategoryDto sourceCategory) {
-        if (sourceCategory == null) return null;
-        return CategoryDto.builder()
-            .id(sourceCategory.getId())
-            .name(sourceCategory.getName())
-            .build();
-    }
-
-    private Set<CategoryDto> mapToCategoryDtoSet(Set<SourceCategoryDto> sourceCategories) {
-        if (sourceCategories == null || sourceCategories.isEmpty()) {
-             return Collections.emptySet();
-         }
-         return sourceCategories.stream()
-                 .map(this::mapToCategoryDto)
-                 .collect(Collectors.toSet());
-    }
-    */
 
 }

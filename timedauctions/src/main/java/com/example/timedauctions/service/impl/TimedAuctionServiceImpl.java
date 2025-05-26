@@ -503,6 +503,8 @@ public class TimedAuctionServiceImpl implements TimedAuctionService {
             bidRepository.save(visibleBid);
             log.debug("Saved new visible bid record for auction {}", auction.getId());
 
+            auction.setBidCount(auction.getBidCount() + 1);
+
             // Update the main Auction entity
             auction.setCurrentBid(newVisiblePrice);
             auction.setHighestBidderId(winnerProxy.getBidderId());

@@ -86,7 +86,9 @@ public class TimedAuction {
 
     @Column(precision = 19, scale = 2)
     private BigDecimal winningBid;
-    // ---
+
+    @Column(nullable = false)
+    private int bidCount = 0; // Total number of bids placed
 
     // Flag for timed auction specific behaviour if needed (e.g., different rules)
     // private String auctionType = "TIMED"; // Or dedicated field

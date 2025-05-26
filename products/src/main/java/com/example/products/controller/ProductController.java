@@ -64,12 +64,11 @@ public class ProductController {
     @GetMapping("/seller/{sellerId}/products") // e.g., /api/products/seller/{sellerId}/products
     public ResponseEntity<Page<ProductDto>> getPublicProductsBySeller(
             @PathVariable String sellerId,
-            // TODO: Add filters like status (e.g., AVAILABLE, SOLD_OUT) if your Product entity has them
-            // @RequestParam(value = "status", required = false) ProductStatus status,
+            @RequestParam(name = "isSold", required = false) Boolean isSold,
             @PageableDefault(size = 12, sort = "createdAt", direction = Sort.Direction.DESC) Pageable pageable) {
         log.info("Fetching public products for sellerId: {} with pagination {}", sellerId, pageable);
         // Optionally, add filtering by product status if applicable (e.g., only "AVAILABLE" products)
-        Page<ProductDto> products = productService.getProductsBySeller(sellerId, pageable);
+        Page<ProductDto> products = productService.getProductsBySellerAndStatus(sellerId, isSold, pageable);
         log.info("Found {} products for sellerId: {}", products.getTotalElements(), sellerId);
         return ResponseEntity.ok(products);
     }

@@ -50,6 +50,7 @@ public class TimedAuctionMapper {
                 .productImageUrlSnapshot(auction.getProductImageUrlSnapshot())
                 .currentBid(displayBid)
                 .endTime(auction.getEndTime())
+                .bidCount(auction.getBidCount())
                 .status(auction.getStatus())
                 .categoryIds(auction.getProductCategoryIdsSnapshot() != null ? new HashSet<>(auction.getProductCategoryIdsSnapshot()) : Collections.emptySet())
                 .build();
@@ -87,7 +88,8 @@ public class TimedAuctionMapper {
                 .highestBidderId(auction.getHighestBidderId())
                 .highestBidderUsernameSnapshot(auction.getHighestBidderUsernameSnapshot())
                 .winnerId(auction.getWinnerId())
-                .winningBid(auction.getWinningBid());
+                .winningBid(auction.getWinningBid())
+                .bidCount(auction.getBidCount());
 
         // --- Map enriched Product Details ---
         if (productDto != null) {

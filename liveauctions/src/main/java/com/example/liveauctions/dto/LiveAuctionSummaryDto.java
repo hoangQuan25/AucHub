@@ -18,5 +18,6 @@ public class LiveAuctionSummaryDto {
     BigDecimal currentBid; // Or startPrice if no bids yet? Service logic decides.
     LocalDateTime endTime; // Useful for displaying end time or calculating time left on FE
     AuctionStatus status; // Good to know if it's ACTIVE or SCHEDULED
+    int bidCount;
     Set<Long> categoryIds;
 }

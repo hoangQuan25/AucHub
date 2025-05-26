@@ -54,8 +54,11 @@ public class Product {
     )
     private Set<Category> categories = new HashSet<>();
 
+    @Column(nullable = false)
+    private boolean isSold = false; // Flag to indicate if the product is sold
+
     @CreationTimestamp
-    @Column(nullable = false, updatable = false)
+    @Column(nullable = false)
     private LocalDateTime createdAt;
 
     @UpdateTimestamp
