@@ -130,12 +130,23 @@ public class OrderServiceImpl implements OrderService {
                     return new NoSuchElementException("Order not found: " + orderId);
                 });
 
-        if (order.getOrderStatus() == OrderStatus.PAYMENT_SUCCESSFUL ||
-                order.getOrderStatus() == OrderStatus.AWAITING_SHIPMENT ||
-                order.getOrderStatus().name().startsWith("ORDER_CANCELLED")) {
-            log.info("Payment for order {} was already processed (status: {}) or order cancelled. No action needed for timeout.",
+        Set<OrderStatus> finalOrNonTimeoutableStatuses = Set.of(
+                OrderStatus.PAYMENT_SUCCESSFUL,
+                OrderStatus.AWAITING_FULFILLMENT_CONFIRMATION, // Payment is done
+                OrderStatus.AWAITING_SHIPMENT,              // Payment is done, ready to ship
+                OrderStatus.COMPLETED,                      // Order is fully completed
+                OrderStatus.ORDER_CANCELLED_BY_SELLER,
+                OrderStatus.ORDER_CANCELLED_NO_PAYMENT_FINAL,
+                OrderStatus.ORDER_CANCELLED_SYSTEM,
+                OrderStatus.AUCTION_REOPEN_INITIATED,       // Order flow is being reset
+                OrderStatus.ORDER_SUPERSEDED_BY_REOPEN     // This order instance is finalized due to reopen
+                // Add any other statuses where payment timeout logic should absolutely not run
+        );
+
+        if (finalOrNonTimeoutableStatuses.contains(order.getOrderStatus())) {
+            log.info("Order {} is in a final or non-timeoutable state ({}). Payment timeout check is obsolete. No action needed.",
                     orderId, order.getOrderStatus());
-            return;
+            return; // Exit: Do not proceed with timeout logic
         }
 
         if (order.getPaymentOfferAttempt() != paymentOfferAttempt) {

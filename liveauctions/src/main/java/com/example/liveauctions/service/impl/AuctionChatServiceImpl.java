@@ -49,6 +49,8 @@ public class AuctionChatServiceImpl implements AuctionChatService {
                             ? info.getUsername()
                             : "Unknown"
             );
+
+            payload.setAvatarUrl(info != null ? info.getAvatarUrl() : null);
         } else {
             payload.setUsername("Anonymous");
         }

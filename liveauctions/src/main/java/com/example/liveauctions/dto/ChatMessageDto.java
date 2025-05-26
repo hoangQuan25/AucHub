@@ -15,6 +15,8 @@ public class ChatMessageDto {
     private String text;
     private LocalDateTime timestamp;
     private String username;
+    private String avatarUrl;
+
 }
 
 

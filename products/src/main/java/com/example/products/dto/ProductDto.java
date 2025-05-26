@@ -13,6 +13,7 @@ public class ProductDto {
     private String description;
     private String sellerId;
     private ProductCondition condition; // Add condition
+    private Boolean isSold;
     private List<String> imageUrls;
     private Set<CategoryDto> categories;
     private LocalDateTime createdAt;

@@ -1,24 +1,37 @@
 // src/components/ProductCard.jsx
 import React from 'react';
 // Link is removed as we don't want general card click to navigate in THIS context
-import { FaEdit, FaTrashAlt, FaRocket } from 'react-icons/fa';
+import { FaEdit, FaTrash, FaGavel, FaCheckCircle } from 'react-icons/fa';
 
-// Props:
-// - product: The product object to display
-// - isOwner: Boolean, true if the current user is the seller of this product
-// - onEdit: Function to call when edit is clicked
-// - onDelete: Function to call when delete is clicked
-// - onStartAuction: Function to call when start auction is clicked
-// - onClick: Function for general card click (to open the modal) <--- ADDED THIS TO PROPS
 function ProductCard({ product, isOwner, onEdit, onDelete, onStartAuction, onClick }) {
+
+  console.log("ProductCard Details:", { 
+    title: product?.title, 
+    isSold: product?.isSold, 
+    isOwner: isOwner 
+  });
+  
   if (!product) return null;
 
-  // This helper is good for action buttons to stop propagation
-  // It ensures that clicking an action button doesn't also trigger the card's main onClick
-  const handleOwnerAction = (e, actionCallback) => {
-    e.stopPropagation(); // Prevent card's main onClick from firing
-    if (actionCallback) {
-      actionCallback(product); // Pass the product to the callback
+ 
+  const handleStartAuctionClick = (e) => {
+    e.stopPropagation(); // Prevent card click if button is clicked
+    if (onStartAuction && !product.isSold) { // Ensure not sold before starting
+      onStartAuction(product);
+    }
+  };
+
+  const handleEditClick = (e) => {
+    e.stopPropagation();
+    if (onEdit) {
+      onEdit(product);
+    }
+  };
+
+  const handleDeleteClick = (e) => {
+    e.stopPropagation();
+    if (onDelete) {
+      onDelete(product);
     }
   };
 
@@ -53,44 +66,44 @@ function ProductCard({ product, isOwner, onEdit, onDelete, onStartAuction, onCli
           Condition: {product.condition?.replace(/_/g, " ") || "N/A"}
         </p>
 
-        {product.price && (
-           <p className="text-lg font-bold text-green-600 mb-3">
-             {/* Ensure product.price is a number for toLocaleString */}
-             {typeof product.price === 'number' ? product.price.toLocaleString('vi-VN') : product.price} VNĐ
-           </p>
-        )}
 
         {/* Conditional Actions for Owner */}
         {isOwner && (
-          <div className="mt-auto pt-3 border-t">
-            <div className="flex justify-around items-center mb-2 text-xs text-gray-500">
-              <span>Owner Actions:</span>
-            </div>
-            <div className="flex justify-center items-center space-x-3 mb-2">
-              <button
-                onClick={(e) => handleOwnerAction(e, onEdit)}
-                title="Edit Product"
-                className="text-gray-600 hover:text-blue-600 p-1 transition-colors"
-                aria-label="Edit Product"
-              >
-                <FaEdit size="1.2em" />
-              </button>
-              <button
-                onClick={(e) => handleOwnerAction(e, onDelete)}
-                title="Delete Product"
-                className="text-gray-600 hover:text-red-600 p-1 transition-colors"
-                aria-label="Delete Product"
-              >
-                <FaTrashAlt size="1.2em" />
-              </button>
-            </div>
-            <button
-              onClick={(e) => handleOwnerAction(e, onStartAuction)}
-              className="w-full text-sm bg-purple-600 hover:bg-purple-700 text-white font-semibold py-2 px-3 rounded flex items-center justify-center transition-colors"
-              aria-label="Start Auction for this product"
-            >
-              <FaRocket className="mr-2" /> Start Auction
-            </button>
+          <div className="mt-auto pt-3 border-t border-gray-200 space-y-2">
+            {product.isSold ? (
+              // --- DISPLAY "SOLD" BADGE ---
+              <div className="flex items-center justify-center p-2 bg-green-100 border border-green-300 rounded-md">
+                <FaCheckCircle className="text-green-600 mr-2" />
+                <span className="text-md font-semibold text-green-700">SOLD</span>
+              </div>
+            ) : (
+              // --- DISPLAY ACTION BUTTONS FOR UNSOLD ITEMS ---
+              <div className="flex flex-col sm:flex-row gap-2">
+                <button
+                  onClick={handleStartAuctionClick}
+                  disabled={product.isSold} // Should already be handled by conditional rendering
+                  className="flex-1 whitespace-nowrap inline-flex items-center justify-center px-3 py-2 border border-transparent text-xs font-medium rounded-md shadow-sm text-white bg-purple-600 hover:bg-purple-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-purple-500 disabled:bg-gray-300"
+                >
+                  <FaGavel className="mr-2 h-4 w-4" /> Start Auction
+                </button>
+                <div className="flex gap-2">
+                    <button
+                        onClick={handleEditClick}
+                        className="flex-1 inline-flex items-center justify-center px-3 py-2 border border-gray-300 text-xs font-medium rounded-md shadow-sm text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+                        title="Edit Product"
+                    >
+                        <FaEdit />
+                    </button>
+                    <button
+                        onClick={handleDeleteClick}
+                        className="flex-1 inline-flex items-center justify-center px-3 py-2 border border-gray-300 text-xs font-medium rounded-md shadow-sm text-red-600 bg-white hover:bg-red-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500"
+                        title="Delete Product"
+                    >
+                        <FaTrash />
+                    </button>
+                </div>
+              </div>
+            )}
           </div>
         )}
       </div>

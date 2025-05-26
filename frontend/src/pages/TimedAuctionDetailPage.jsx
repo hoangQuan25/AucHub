@@ -1,6 +1,6 @@
 // src/pages/TimedAuctionDetailPage.jsx
 import React, { useState, useEffect, useRef, useCallback } from "react";
-import { useParams, useNavigate } from "react-router-dom";
+import { useParams, useNavigate, Link } from "react-router-dom";
 import { useKeycloak } from "@react-keycloak/web";
 import apiClient from "../api/apiClient";
 import CountdownTimer from "../components/CountdownTimer";
@@ -9,7 +9,7 @@ import CollapsibleSection from "../components/CollapsibleSection";
 import AuctionRules from "../components/AuctionRules";
 // Import or create a CommentSection component later
 // import CommentSection from '../components/CommentSection';
-import { FaChevronLeft, FaChevronRight, FaCreditCard } from "react-icons/fa";
+import { FaChevronLeft, FaChevronRight, FaCreditCard, FaUserCircle } from "react-icons/fa";
 
 const getBidIncrement = (currentBidValue) => {
   const currentBid = Number(currentBidValue) || 0; // Ensure it's a number
@@ -106,7 +106,8 @@ function TimedAuctionDetailPage() {
   const [isProfileLoading, setIsProfileLoading] = useState(false); // To prevent multiple fetches or show loading
 
   // --- NEW STATE for Payment Method Required Modal ---
-  const [isPaymentMethodModalOpen, setIsPaymentMethodModalOpen] = useState(false);
+  const [isPaymentMethodModalOpen, setIsPaymentMethodModalOpen] =
+    useState(false);
 
   // --- State ---
   const [auctionDetails, setAuctionDetails] = useState(null);
@@ -122,6 +123,10 @@ function TimedAuctionDetailPage() {
   const [maxBidOptions, setMaxBidOptions] = useState([]);
   const [selectedMaxBid, setSelectedMaxBid] = useState("");
   const [bidError, setBidError] = useState("");
+
+  const [myMaxBid, setMyMaxBid] = useState(null);
+  const [isLoadingMyMaxBid, setIsLoadingMyMaxBid] = useState(false);
+  const [errorMyMaxBid, setErrorMyMaxBid] = useState("");
 
   // Comment State
   const [commentInput, setCommentInput] = useState("");
@@ -147,9 +152,26 @@ function TimedAuctionDetailPage() {
   const commentsIntervalRef = useRef(null);
 
   const loggedInUserId = initialized ? keycloak.subject : null;
+  // Derived state for rendering checks
+  const isUserHighestBidder =
+  loggedInUserId && auctionDetails?.highestBidderId === loggedInUserId;
+
+const canBid =
+  initialized && keycloak.authenticated && auctionDetails?.status === "ACTIVE";
+
+const isSeller =
+  loggedInUserId && auctionDetails?.sellerId === loggedInUserId;
+
+const images = auctionDetails?.productImageUrls || [];
 
   const fetchUserProfileForBidding = useCallback(async () => {
-    if (initialized && keycloak.authenticated && !userProfile && !isProfileLoading) { // Fetch only if not already fetched or loading
+    if (
+      initialized &&
+      keycloak.authenticated &&
+      !userProfile &&
+      !isProfileLoading
+    ) {
+      // Fetch only if not already fetched or loading
       setIsProfileLoading(true);
       console.log("Fetching user profile for bidding check...");
       try {
@@ -210,6 +232,40 @@ function TimedAuctionDetailPage() {
     }
     // *** REMOVE isLoadingDetails from dependency array ***
   }, [auctionId, initialized]); // Depends only on auctionId and auth readiness
+  
+
+  const fetchMyMaxBid = useCallback(async () => {
+    if (!auctionId || !initialized || !keycloak.authenticated || isSeller) {
+      // Don't fetch if not logged in, no auctionId, or if user is the seller
+      setMyMaxBid(null); // Clear any previous max bid if conditions aren't met
+      return;
+    }
+    setIsLoadingMyMaxBid(true);
+    setErrorMyMaxBid("");
+    try {
+      console.log(`Workspaceing my max bid for auction ${auctionId}`);
+      const response = await apiClient.get(
+        `/timedauctions/${auctionId}/my-max-bid`
+      );
+      if (response.data && response.data.myMaxBid !== undefined) {
+        // Check for the specific field in response
+        setMyMaxBid(response.data.myMaxBid);
+      } else {
+        setMyMaxBid(null); // User might not have a max bid for this auction
+      }
+    } catch (err) {
+      if (err.response && err.response.status === 404) {
+        setMyMaxBid(null); // No max bid found for this user/auction
+        console.log("No max bid found for current user on this auction.");
+      } else {
+        console.error("Failed to fetch my max bid:", err);
+        // Don't show an aggressive error for this, as it's supplementary info
+        // setErrorMyMaxBid("Could not retrieve your max bid.");
+      }
+    } finally {
+      setIsLoadingMyMaxBid(false);
+    }
+  }, [auctionId, initialized, keycloak.authenticated, isSeller]); // isSeller is derived from loggedInUserId and auctionDetails.sellerId
 
   const fetchComments = useCallback(async () => {
     const isInitialLoad = isLoadingComments; // Capture initial load state
@@ -270,16 +326,19 @@ function TimedAuctionDetailPage() {
       detailsIntervalRef.current = setInterval(fetchAuctionDetails, 15 * 1000);
       commentsIntervalRef.current = setInterval(fetchComments, 30 * 1000);
 
-      if (keycloak.authenticated) { // Only fetch profile if authenticated
+      if (keycloak.authenticated) {
+        // Only fetch profile if authenticated
         fetchUserProfileForBidding();
+        fetchMyMaxBid(); // Fetch max bid for the user
       } else {
         setUserProfile(null); // Clear profile if user logs out
+        setMyMaxBid(null); // Clear max bid if user logs out
       }
-
     } else {
       setIsLoadingDetails(false);
       setIsLoadingComments(false);
       setUserProfile(null); // Clear profile if auctionId or auth changes
+      setMyMaxBid(null);
     }
 
     // Cleanup
@@ -289,7 +348,13 @@ function TimedAuctionDetailPage() {
       clearInterval(commentsIntervalRef.current);
     };
     // Dependencies remain the same, but fetchAuctionDetails/fetchComments are now stable
-  }, [auctionId, initialized, fetchAuctionDetails, fetchComments, fetchUserProfileForBidding]);
+  }, [
+    auctionId,
+    initialized,
+    fetchAuctionDetails,
+    fetchComments,
+    fetchUserProfileForBidding,
+  ]);
 
   useEffect(() => {
     if (auctionDetails?.nextBidAmount != null) {
@@ -323,15 +388,19 @@ function TimedAuctionDetailPage() {
       // If profile is still loading, user might need to click again once loaded.
       // Or disable bid button while profileLoading is true.
       if (isProfileLoading) {
-          setBidError("Verifying payment method status, please wait and try again.");
-          return;
+        setBidError(
+          "Verifying payment method status, please wait and try again."
+        );
+        return;
       }
-      console.log("User has no default payment method. Prompting to update profile.");
+      console.log(
+        "User has no default payment method. Prompting to update profile."
+      );
       setIsPaymentMethodModalOpen(true); // Open the modal
       return; // Stop the bid placement
     }
     // --- END OF NEW CHECK ---
-    
+
     if (
       !auctionDetails ||
       isBidding ||
@@ -514,14 +583,6 @@ function TimedAuctionDetailPage() {
     return <div className="text-center p-10">Auction data not available.</div>;
   }
 
-  // Derived state for rendering checks
-  const isUserHighestBidder =
-    loggedInUserId && auctionDetails.highestBidderId === loggedInUserId;
-  const canBid =
-    initialized && keycloak.authenticated && auctionDetails.status === "ACTIVE"; // Anyone can place a max bid if active
-  const isSeller = loggedInUserId && auctionDetails.sellerId === loggedInUserId;
-  const images = auctionDetails.productImageUrls || [];
-
   return (
     // Use a main container that allows comments section below
     <div className="max-w-7xl mx-auto p-4">
@@ -572,26 +633,71 @@ function TimedAuctionDetailPage() {
           {/* Overview & Rules */}
           <div className="bg-white rounded-xl shadow-sm border divide-y">
             <CollapsibleSection title="Overview" defaultOpen>
-              <div className="text-sm text-gray-700 space-y-2 px-4 pb-4">
-                <p className="whitespace-pre-wrap">
-                  {auctionDetails.productDescription || "No description."}
-                </p>
-                <p>
-                  <strong>Condition:</strong>{" "}
-                  {auctionDetails.productCondition?.replace("_", " ") || "N/A"}
-                </p>
-                <p>
-                  <strong>Categories:</strong>{" "}
-                  {auctionDetails.productCategories
-                    ?.map((c) => c.name)
-                    .join(", ") || "N/A"}
-                </p>
-                <p className="text-xs text-gray-500">
-                  Seller: {auctionDetails.sellerUsernameSnapshot}
-                </p>
+              {/* MODIFIED CONTENT FOR OVERVIEW SECTION */}
+              <div className="px-4 pb-4 pt-3 space-y-4">
+                {/* Seller Information - Prominent and Linked */}
+                {auctionDetails.sellerUsernameSnapshot && (
+                  <div className="mb-4 pb-4 border-b border-gray-200">
+                    <span className="text-xs text-gray-500 block mb-0.5">Item sold by:</span>
+                    <Link
+                      to={`/seller/${auctionDetails.sellerUsernameSnapshot}`} // Link to seller profile
+                      className="text-lg font-semibold text-indigo-700 hover:text-indigo-900 hover:underline flex items-center group transition-colors duration-150"
+                      title={`View profile of ${auctionDetails.sellerUsernameSnapshot}`}
+                    >
+                      <FaUserCircle className="mr-2 text-indigo-500 group-hover:text-indigo-700 transition-colors duration-150" size="1.25em" />
+                      {auctionDetails.sellerUsernameSnapshot}
+                    </Link>
+                  </div>
+                )}
+
+                {/* Description */}
+                {auctionDetails.productDescription && (
+                  <div>
+                    <h4 className="text-sm font-medium text-gray-500 mb-1">Description</h4>
+                    <p className="text-sm text-gray-800 whitespace-pre-wrap leading-relaxed">
+                      {auctionDetails.productDescription}
+                    </p>
+                  </div>
+                )}
+
+                {/* Condition */}
+                {auctionDetails.productCondition && (
+                  <div>
+                    <h4 className="text-sm font-medium text-gray-500 mb-0.5">Condition</h4>
+                    <p className="text-sm text-gray-800 capitalize"> {/* Capitalize for better display e.g. LIKE_NEW -> Like new */}
+                      {auctionDetails.productCondition.replace(/_/g, " ").toLowerCase()}
+                    </p>
+                  </div>
+                )}
+
+                {/* Categories */}
+                {auctionDetails.productCategories && auctionDetails.productCategories.length > 0 && (
+                  <div>
+                    <h4 className="text-sm font-medium text-gray-500 mb-1">Categories</h4>
+                    <div className="flex flex-wrap gap-2">
+                      {auctionDetails.productCategories.map(cat => (
+                        <Link
+                          key={cat.id}
+                          to={`/search?categories=${cat.id}`} // Link to search results for this category
+                          className="bg-gray-100 text-gray-700 hover:bg-indigo-100 hover:text-indigo-700 text-xs font-medium px-3 py-1 rounded-full border border-gray-300 transition-colors duration-150"
+                          title={`More in ${cat.name}`}
+                        >
+                          {cat.name}
+                        </Link>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Fallback if no specific details are present but seller is */}
+                {!auctionDetails.productDescription && !auctionDetails.productCondition && (!auctionDetails.productCategories || auctionDetails.productCategories.length === 0) && auctionDetails.sellerUsernameSnapshot && (
+                    <p className="text-sm text-gray-500 italic">Detailed information will be provided by the seller.</p>
+                )}
+
               </div>
+              {/* END MODIFIED CONTENT FOR OVERVIEW SECTION */}
             </CollapsibleSection>
-            <AuctionRules />
+            <AuctionRules /> {/* This remains the same */}
           </div>
         </div>{" "}
         {/* End Left Column */}
@@ -715,6 +821,24 @@ function TimedAuctionDetailPage() {
                       "N/A"}{" "}
                     VNĐ.
                   </p>
+                  {myMaxBid !== null && !isSeller && keycloak.authenticated && (
+                    <div className="mt-3 pt-3 border-t border-dashed">
+                      <p className="text-sm font-medium text-gray-700">
+                        Your Current Max Bid:
+                        <span className="ml-2 font-bold text-purple-600">
+                          {Number(myMaxBid).toLocaleString("vi-VN")} VNĐ
+                        </span>
+                      </p>
+                      <p className="text-xs text-gray-500">
+                        The system will bid up to this amount for you.
+                      </p>
+                    </div>
+                  )}
+                  {isLoadingMyMaxBid && !isSeller && (
+                    <p className="text-xs text-gray-500 mt-2">
+                      Loading your max bid...
+                    </p>
+                  )}
                 </div>
               )}
 
@@ -953,7 +1077,7 @@ function TimedAuctionDetailPage() {
         isOpen={isPaymentMethodModalOpen}
         onClose={() => setIsPaymentMethodModalOpen(false)}
         onConfirm={() => {
-          navigate('/profile'); // Navigate to user profile page
+          navigate("/profile"); // Navigate to user profile page
           setIsPaymentMethodModalOpen(false);
         }}
         title="Payment Method Required"

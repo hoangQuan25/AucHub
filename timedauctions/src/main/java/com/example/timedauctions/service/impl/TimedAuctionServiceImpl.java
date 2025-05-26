@@ -260,6 +260,28 @@ public class TimedAuctionServiceImpl implements TimedAuctionService {
         log.info("CancelAuctionCommand sent for auction {}", auctionId);
     }
 
+    @Override
+    @Transactional(readOnly = true)
+    public MyMaxBidDto getMyMaxBidForAuction(UUID auctionId, String bidderId) {
+        log.debug("Fetching max bid for user {} on auction {}", bidderId, auctionId);
+
+        // First, ensure the auction itself exists to give a relevant error if not
+        if (!timedAuctionRepository.existsById(auctionId)) {
+            throw new AuctionNotFoundException("Auction not found with ID: " + auctionId);
+        }
+
+        Optional<AuctionProxyBid> proxyBidOptional = auctionProxyBidRepository
+                .findByTimedAuctionIdAndBidderId(auctionId, bidderId);
+
+        if (proxyBidOptional.isPresent()) {
+            return MyMaxBidDto.builder()
+                    .myMaxBid(proxyBidOptional.get().getMaxBid())
+                    .build();
+        } else {
+            return MyMaxBidDto.builder().myMaxBid(null).build();
+        }
+    }
+
     /**
      * Initiates an early end ("hammer down") for a timed auction by the seller.
      * Requires bids to be present. Reserve price status might not be strictly required.

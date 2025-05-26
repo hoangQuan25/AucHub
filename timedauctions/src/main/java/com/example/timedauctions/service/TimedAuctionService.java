@@ -71,6 +71,14 @@ public interface TimedAuctionService {
     void cancelAuction(UUID auctionId, String sellerId);
 
     /**
+     * Retrieves the maximum bid placed by a specific user on a given auction.
+     * @param auctionId The ID of the auction to check.
+     * @param bidderId The ID of the user whose maximum bid is being retrieved.
+     * @return MyMaxBidDto containing the maximum bid details for the user on the specified auction.
+     */
+    MyMaxBidDto getMyMaxBidForAuction(UUID auctionId, String bidderId);
+
+    /**
      * Initiates an early end ("hammer down") for a timed auction by the seller.
      * Requires bids to be present. Reserve price status might not be strictly required.
      * @param auctionId The ID of the auction to end early.
