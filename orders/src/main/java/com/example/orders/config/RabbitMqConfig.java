@@ -57,6 +57,7 @@ public class RabbitMqConfig {
     public static final String DELIVERY_EVENT_RECEIPT_CONFIRMED_ROUTING_KEY = "delivery.event.receipt.confirmed";
     public static final String TIMED_AUCTION_REOPENED_ORDER_CREATED_ROUTING_KEY = "auction.timed.reopened_order.created";
     public static final String LIVE_AUCTION_REOPENED_ORDER_CREATED_ROUTING_KEY = "auction.live.reopened_order.created";
+    public static final String ORDER_EVENT_COMPLETED_ROUTING_KEY = "order.event.completed";
 
 
     // === Exchanges ===

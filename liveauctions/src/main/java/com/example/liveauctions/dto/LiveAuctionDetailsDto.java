@@ -34,6 +34,7 @@ public class LiveAuctionDetailsDto {
     long timeLeftMs; // Calculated
     String winnerId;
     BigDecimal winningBid;
+    int bidCount; // Total number of bids placed
 
     // --- Product Info (Partially snapshot, partially fetched via Feign) ---
     Long productId;

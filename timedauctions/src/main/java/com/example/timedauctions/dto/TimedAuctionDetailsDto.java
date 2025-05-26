@@ -45,6 +45,8 @@ public class TimedAuctionDetailsDto {
     private String highestBidderUsernameSnapshot;
     private BigDecimal nextBidAmount; // Calculated minimum next manual bid needed
 
+    private int bidCount; // Total number of bids placed
+
     // --- Timing ---
     private long timeLeftMs; // Calculated time remaining
 

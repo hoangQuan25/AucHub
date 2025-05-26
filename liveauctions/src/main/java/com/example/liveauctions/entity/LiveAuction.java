@@ -81,7 +81,9 @@ public class LiveAuction {
 
     @Column(precision = 19, scale = 2) // Nullable
     private BigDecimal winningBid; // Final selling price
-    // ---
+
+    @Column(nullable = false)
+    private int bidCount = 0;
 
     @CreationTimestamp
     @Column(nullable = false, updatable = false)

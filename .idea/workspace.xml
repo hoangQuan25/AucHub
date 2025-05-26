@@ -5,35 +5,35 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="3a162283-5be8-46d0-949d-517f55ab3cb9" name="Changes" comment="">
-      <change afterPath="$PROJECT_DIR$/liveauctions/src/main/java/com/example/liveauctions/dto/event/NewLiveAuctionFromReopenedOrderEventDto.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/orders/src/main/java/com/example/orders/dto/event/NewLiveAuctionFromReopenedOrderEventDto.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/orders/src/main/java/com/example/orders/dto/event/NewTimedAuctionFromReopenedOrderEventDto.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/orders/src/main/java/com/example/orders/listener/FinalizeReopenedOrderListener.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/timedauctions/src/main/java/com/example/timedauctions/dto/event/NewTimedAuctionFromReopenedOrderEventDto.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/orders/src/main/java/com/example/orders/dto/event/OrderCompletedEventDto.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/products/src/main/java/com/example/products/config/RabbitMqConfig.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/products/src/main/java/com/example/products/dto/event/OrderCompletedEventDto.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/products/src/main/java/com/example/products/listener/OrderEventListener.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/compiler.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/compiler.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/frontend/src/App.jsx" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/App.jsx" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/frontend/src/components/Header.jsx" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/components/Header.jsx" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/frontend/src/components/SellerDecisionModal.jsx" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/components/SellerDecisionModal.jsx" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/frontend/src/components/StartAuctionModal.jsx" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/components/StartAuctionModal.jsx" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/frontend/src/components/seller/tab/MySalesTab.jsx" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/components/seller/tab/MySalesTab.jsx" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/frontend/src/constants/orderConstants.js" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/constants/orderConstants.js" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/frontend/src/pages/MyOrdersPage.jsx" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/pages/MyOrdersPage.jsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/frontend/src/components/Sidebar.jsx" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/components/Sidebar.jsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/frontend/src/components/seller/tab/listing/SellerProductsSection.jsx" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/components/seller/tab/listing/SellerProductsSection.jsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/frontend/src/pages/HomePage.jsx" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/pages/HomePage.jsx" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/frontend/src/pages/PublicSellerProfilePage.jsx" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/pages/PublicSellerProfilePage.jsx" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/liveauctions/src/main/java/com/example/liveauctions/config/RabbitMqConfig.java" beforeDir="false" afterPath="$PROJECT_DIR$/liveauctions/src/main/java/com/example/liveauctions/config/RabbitMqConfig.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/liveauctions/src/main/java/com/example/liveauctions/controller/LiveAuctionController.java" beforeDir="false" afterPath="$PROJECT_DIR$/liveauctions/src/main/java/com/example/liveauctions/controller/LiveAuctionController.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/liveauctions/src/main/java/com/example/liveauctions/dto/CreateLiveAuctionDto.java" beforeDir="false" afterPath="$PROJECT_DIR$/liveauctions/src/main/java/com/example/liveauctions/dto/CreateLiveAuctionDto.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/liveauctions/src/main/java/com/example/liveauctions/repository/LiveAuctionRepository.java" beforeDir="false" afterPath="$PROJECT_DIR$/liveauctions/src/main/java/com/example/liveauctions/repository/LiveAuctionRepository.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/liveauctions/src/main/java/com/example/liveauctions/service/LiveAuctionService.java" beforeDir="false" afterPath="$PROJECT_DIR$/liveauctions/src/main/java/com/example/liveauctions/service/LiveAuctionService.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/liveauctions/src/main/java/com/example/liveauctions/dto/LiveAuctionDetailsDto.java" beforeDir="false" afterPath="$PROJECT_DIR$/liveauctions/src/main/java/com/example/liveauctions/dto/LiveAuctionDetailsDto.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/liveauctions/src/main/java/com/example/liveauctions/dto/LiveAuctionSummaryDto.java" beforeDir="false" afterPath="$PROJECT_DIR$/liveauctions/src/main/java/com/example/liveauctions/dto/LiveAuctionSummaryDto.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/liveauctions/src/main/java/com/example/liveauctions/entity/LiveAuction.java" beforeDir="false" afterPath="$PROJECT_DIR$/liveauctions/src/main/java/com/example/liveauctions/entity/LiveAuction.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/liveauctions/src/main/java/com/example/liveauctions/mapper/AuctionMapper.java" beforeDir="false" afterPath="$PROJECT_DIR$/liveauctions/src/main/java/com/example/liveauctions/mapper/AuctionMapper.java" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/liveauctions/src/main/java/com/example/liveauctions/service/impl/LiveAuctionServiceImpl.java" beforeDir="false" afterPath="$PROJECT_DIR$/liveauctions/src/main/java/com/example/liveauctions/service/impl/LiveAuctionServiceImpl.java" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/orders/src/main/java/com/example/orders/config/RabbitMqConfig.java" beforeDir="false" afterPath="$PROJECT_DIR$/orders/src/main/java/com/example/orders/config/RabbitMqConfig.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/orders/src/main/java/com/example/orders/entity/OrderStatus.java" beforeDir="false" afterPath="$PROJECT_DIR$/orders/src/main/java/com/example/orders/entity/OrderStatus.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/orders/src/main/java/com/example/orders/repository/OrderRepository.java" beforeDir="false" afterPath="$PROJECT_DIR$/orders/src/main/java/com/example/orders/repository/OrderRepository.java" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/orders/src/main/java/com/example/orders/service/impl/OrderServiceImpl.java" beforeDir="false" afterPath="$PROJECT_DIR$/orders/src/main/java/com/example/orders/service/impl/OrderServiceImpl.java" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/payments/src/main/resources/application.yml" beforeDir="false" afterPath="$PROJECT_DIR$/payments/src/main/resources/application.yml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/timedauctions/src/main/java/com/example/timedauctions/config/RabbitMqConfig.java" beforeDir="false" afterPath="$PROJECT_DIR$/timedauctions/src/main/java/com/example/timedauctions/config/RabbitMqConfig.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/timedauctions/src/main/java/com/example/timedauctions/controller/TimedAuctionController.java" beforeDir="false" afterPath="$PROJECT_DIR$/timedauctions/src/main/java/com/example/timedauctions/controller/TimedAuctionController.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/timedauctions/src/main/java/com/example/timedauctions/dto/CreateTimedAuctionDto.java" beforeDir="false" afterPath="$PROJECT_DIR$/timedauctions/src/main/java/com/example/timedauctions/dto/CreateTimedAuctionDto.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/timedauctions/src/main/java/com/example/timedauctions/service/TimedAuctionService.java" beforeDir="false" afterPath="$PROJECT_DIR$/timedauctions/src/main/java/com/example/timedauctions/service/TimedAuctionService.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/products/pom.xml" beforeDir="false" afterPath="$PROJECT_DIR$/products/pom.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/products/src/main/java/com/example/products/controller/ProductController.java" beforeDir="false" afterPath="$PROJECT_DIR$/products/src/main/java/com/example/products/controller/ProductController.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/products/src/main/java/com/example/products/entity/Product.java" beforeDir="false" afterPath="$PROJECT_DIR$/products/src/main/java/com/example/products/entity/Product.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/products/src/main/java/com/example/products/repository/ProductRepository.java" beforeDir="false" afterPath="$PROJECT_DIR$/products/src/main/java/com/example/products/repository/ProductRepository.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/products/src/main/java/com/example/products/service/ProductService.java" beforeDir="false" afterPath="$PROJECT_DIR$/products/src/main/java/com/example/products/service/ProductService.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/products/src/main/java/com/example/products/service/impl/ProductServiceImpl.java" beforeDir="false" afterPath="$PROJECT_DIR$/products/src/main/java/com/example/products/service/impl/ProductServiceImpl.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/timedauctions/src/main/java/com/example/timedauctions/dto/TimedAuctionDetailsDto.java" beforeDir="false" afterPath="$PROJECT_DIR$/timedauctions/src/main/java/com/example/timedauctions/dto/TimedAuctionDetailsDto.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/timedauctions/src/main/java/com/example/timedauctions/dto/TimedAuctionSummaryDto.java" beforeDir="false" afterPath="$PROJECT_DIR$/timedauctions/src/main/java/com/example/timedauctions/dto/TimedAuctionSummaryDto.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/timedauctions/src/main/java/com/example/timedauctions/entity/TimedAuction.java" beforeDir="false" afterPath="$PROJECT_DIR$/timedauctions/src/main/java/com/example/timedauctions/entity/TimedAuction.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/timedauctions/src/main/java/com/example/timedauctions/mapper/TimedAuctionMapper.java" beforeDir="false" afterPath="$PROJECT_DIR$/timedauctions/src/main/java/com/example/timedauctions/mapper/TimedAuctionMapper.java" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/timedauctions/src/main/java/com/example/timedauctions/service/impl/TimedAuctionServiceImpl.java" beforeDir="false" afterPath="$PROJECT_DIR$/timedauctions/src/main/java/com/example/timedauctions/service/impl/TimedAuctionServiceImpl.java" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
@@ -65,40 +65,40 @@
     <option name="hideEmptyMiddlePackages" value="true" />
     <option name="showLibraryContents" value="true" />
   </component>
-  <component name="PropertiesComponent">{
-  &quot;keyToString&quot;: {
-    &quot;ModuleVcsDetector.initialDetectionPerformed&quot;: &quot;true&quot;,
-    &quot;RequestMappingsPanelOrder0&quot;: &quot;0&quot;,
-    &quot;RequestMappingsPanelOrder1&quot;: &quot;1&quot;,
-    &quot;RequestMappingsPanelWidth0&quot;: &quot;75&quot;,
-    &quot;RequestMappingsPanelWidth1&quot;: &quot;75&quot;,
-    &quot;RunOnceActivity.ShowReadmeOnStart&quot;: &quot;true&quot;,
-    &quot;RunOnceActivity.git.unshallow&quot;: &quot;true&quot;,
-    &quot;SHARE_PROJECT_CONFIGURATION_FILES&quot;: &quot;true&quot;,
-    &quot;Spring Boot.ConfigserverApplication.executor&quot;: &quot;Run&quot;,
-    &quot;Spring Boot.DeliveriesApplication.executor&quot;: &quot;Run&quot;,
-    &quot;Spring Boot.EurekaserverApplication.executor&quot;: &quot;Run&quot;,
-    &quot;Spring Boot.GatewayserverApplication.executor&quot;: &quot;Run&quot;,
-    &quot;Spring Boot.LiveAuctionsApplication.executor&quot;: &quot;Run&quot;,
-    &quot;Spring Boot.NotificationsApplication.executor&quot;: &quot;Run&quot;,
-    &quot;Spring Boot.OrdersApplication.executor&quot;: &quot;Run&quot;,
-    &quot;Spring Boot.PaymentsApplication.executor&quot;: &quot;Run&quot;,
-    &quot;Spring Boot.ProductsApplication.executor&quot;: &quot;Run&quot;,
-    &quot;Spring Boot.TimedAuctionsApplication.executor&quot;: &quot;Run&quot;,
-    &quot;Spring Boot.UsersApplication.executor&quot;: &quot;Run&quot;,
-    &quot;git-widget-placeholder&quot;: &quot;hotfix&quot;,
-    &quot;node.js.detected.package.eslint&quot;: &quot;true&quot;,
-    &quot;node.js.detected.package.tslint&quot;: &quot;true&quot;,
-    &quot;node.js.selected.package.eslint&quot;: &quot;(autodetect)&quot;,
-    &quot;node.js.selected.package.tslint&quot;: &quot;(autodetect)&quot;,
-    &quot;nodejs_package_manager_path&quot;: &quot;npm&quot;,
-    &quot;project.structure.last.edited&quot;: &quot;Modules&quot;,
-    &quot;project.structure.proportion&quot;: &quot;0.0&quot;,
-    &quot;project.structure.side.proportion&quot;: &quot;0.0&quot;,
-    &quot;run.configurations.included.in.services&quot;: &quot;true&quot;,
-    &quot;vue.rearranger.settings.migration&quot;: &quot;true&quot;
+  <component name="PropertiesComponent"><![CDATA[{
+  "keyToString": {
+    "ModuleVcsDetector.initialDetectionPerformed": "true",
+    "RequestMappingsPanelOrder0": "0",
+    "RequestMappingsPanelOrder1": "1",
+    "RequestMappingsPanelWidth0": "75",
+    "RequestMappingsPanelWidth1": "75",
+    "RunOnceActivity.ShowReadmeOnStart": "true",
+    "RunOnceActivity.git.unshallow": "true",
+    "SHARE_PROJECT_CONFIGURATION_FILES": "true",
+    "Spring Boot.ConfigserverApplication.executor": "Run",
+    "Spring Boot.DeliveriesApplication.executor": "Run",
+    "Spring Boot.EurekaserverApplication.executor": "Run",
+    "Spring Boot.GatewayserverApplication.executor": "Run",
+    "Spring Boot.LiveAuctionsApplication.executor": "Run",
+    "Spring Boot.NotificationsApplication.executor": "Run",
+    "Spring Boot.OrdersApplication.executor": "Run",
+    "Spring Boot.PaymentsApplication.executor": "Run",
+    "Spring Boot.ProductsApplication.executor": "Run",
+    "Spring Boot.TimedAuctionsApplication.executor": "Run",
+    "Spring Boot.UsersApplication.executor": "Run",
+    "git-widget-placeholder": "homepage",
+    "node.js.detected.package.eslint": "true",
+    "node.js.detected.package.tslint": "true",
+    "node.js.selected.package.eslint": "(autodetect)",
+    "node.js.selected.package.tslint": "(autodetect)",
+    "nodejs_package_manager_path": "npm",
+    "project.structure.last.edited": "Modules",
+    "project.structure.proportion": "0.0",
+    "project.structure.side.proportion": "0.0",
+    "run.configurations.included.in.services": "true",
+    "vue.rearranger.settings.migration": "true"
   }
-}</component>
+}]]></component>
   <component name="RunDashboard">
     <option name="configurationTypes">
       <set>
@@ -203,9 +203,9 @@
       <item itemvalue="Spring Boot.GatewayserverApplication" />
       <item itemvalue="Spring Boot.LiveAuctionsApplication" />
       <item itemvalue="Spring Boot.NotificationsApplication" />
-      <item itemvalue="Spring Boot.OrdersApplication" />
       <item itemvalue="Spring Boot.DeliveriesApplication" />
       <item itemvalue="Spring Boot.PaymentsApplication" />
+      <item itemvalue="Spring Boot.OrdersApplication" />
       <item itemvalue="Spring Boot.ProductsApplication" />
       <item itemvalue="Spring Boot.TimedAuctionsApplication" />
       <item itemvalue="Spring Boot.UsersApplication" />
@@ -235,6 +235,7 @@
       <workItem from="1748174520522" duration="1512000" />
       <workItem from="1748182627823" duration="8174000" />
       <workItem from="1748193978355" duration="1620000" />
+      <workItem from="1748267201134" duration="13090000" />
     </task>
     <servers />
   </component>
