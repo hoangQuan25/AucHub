@@ -9,7 +9,12 @@ import CollapsibleSection from "../components/CollapsibleSection";
 import AuctionRules from "../components/AuctionRules";
 // Import or create a CommentSection component later
 // import CommentSection from '../components/CommentSection';
-import { FaChevronLeft, FaChevronRight, FaCreditCard, FaUserCircle } from "react-icons/fa";
+import {
+  FaChevronLeft,
+  FaChevronRight,
+  FaCreditCard,
+  FaUserCircle,
+} from "react-icons/fa";
 
 const getBidIncrement = (currentBidValue) => {
   const currentBid = Number(currentBidValue) || 0; // Ensure it's a number
@@ -154,15 +159,21 @@ function TimedAuctionDetailPage() {
   const loggedInUserId = initialized ? keycloak.subject : null;
   // Derived state for rendering checks
   const isUserHighestBidder =
-  loggedInUserId && auctionDetails?.highestBidderId === loggedInUserId;
+    loggedInUserId && auctionDetails?.highestBidderId === loggedInUserId;
 
-const canBid =
-  initialized && keycloak.authenticated && auctionDetails?.status === "ACTIVE";
+  const canBid =
+    initialized &&
+    keycloak.authenticated &&
+    auctionDetails?.status === "ACTIVE";
 
-const isSeller =
-  loggedInUserId && auctionDetails?.sellerId === loggedInUserId;
+  const isSeller =
+    loggedInUserId && auctionDetails?.sellerId === loggedInUserId;
 
-const images = auctionDetails?.productImageUrls || [];
+  const images = auctionDetails?.productImageUrls || [];
+
+  const isAuctionActive = auctionDetails?.status === "ACTIVE";
+  const isAuctionScheduled = auctionDetails?.status === "SCHEDULED"; // <<< NEW
+  const isAuctionSold = auctionDetails?.status === "SOLD";
 
   const fetchUserProfileForBidding = useCallback(async () => {
     if (
@@ -232,7 +243,6 @@ const images = auctionDetails?.productImageUrls || [];
     }
     // *** REMOVE isLoadingDetails from dependency array ***
   }, [auctionId, initialized]); // Depends only on auctionId and auth readiness
-  
 
   const fetchMyMaxBid = useCallback(async () => {
     if (!auctionId || !initialized || !keycloak.authenticated || isSeller) {
@@ -638,13 +648,18 @@ const images = auctionDetails?.productImageUrls || [];
                 {/* Seller Information - Prominent and Linked */}
                 {auctionDetails.sellerUsernameSnapshot && (
                   <div className="mb-4 pb-4 border-b border-gray-200">
-                    <span className="text-xs text-gray-500 block mb-0.5">Item sold by:</span>
+                    <span className="text-xs text-gray-500 block mb-0.5">
+                      Item sold by:
+                    </span>
                     <Link
                       to={`/seller/${auctionDetails.sellerUsernameSnapshot}`} // Link to seller profile
                       className="text-lg font-semibold text-indigo-700 hover:text-indigo-900 hover:underline flex items-center group transition-colors duration-150"
                       title={`View profile of ${auctionDetails.sellerUsernameSnapshot}`}
                     >
-                      <FaUserCircle className="mr-2 text-indigo-500 group-hover:text-indigo-700 transition-colors duration-150" size="1.25em" />
+                      <FaUserCircle
+                        className="mr-2 text-indigo-500 group-hover:text-indigo-700 transition-colors duration-150"
+                        size="1.25em"
+                      />
                       {auctionDetails.sellerUsernameSnapshot}
                     </Link>
                   </div>
@@ -653,7 +668,9 @@ const images = auctionDetails?.productImageUrls || [];
                 {/* Description */}
                 {auctionDetails.productDescription && (
                   <div>
-                    <h4 className="text-sm font-medium text-gray-500 mb-1">Description</h4>
+                    <h4 className="text-sm font-medium text-gray-500 mb-1">
+                      Description
+                    </h4>
                     <p className="text-sm text-gray-800 whitespace-pre-wrap leading-relaxed">
                       {auctionDetails.productDescription}
                     </p>
@@ -663,37 +680,51 @@ const images = auctionDetails?.productImageUrls || [];
                 {/* Condition */}
                 {auctionDetails.productCondition && (
                   <div>
-                    <h4 className="text-sm font-medium text-gray-500 mb-0.5">Condition</h4>
-                    <p className="text-sm text-gray-800 capitalize"> {/* Capitalize for better display e.g. LIKE_NEW -> Like new */}
-                      {auctionDetails.productCondition.replace(/_/g, " ").toLowerCase()}
+                    <h4 className="text-sm font-medium text-gray-500 mb-0.5">
+                      Condition
+                    </h4>
+                    <p className="text-sm text-gray-800 capitalize">
+                      {" "}
+                      {/* Capitalize for better display e.g. LIKE_NEW -> Like new */}
+                      {auctionDetails.productCondition
+                        .replace(/_/g, " ")
+                        .toLowerCase()}
                     </p>
                   </div>
                 )}
 
                 {/* Categories */}
-                {auctionDetails.productCategories && auctionDetails.productCategories.length > 0 && (
-                  <div>
-                    <h4 className="text-sm font-medium text-gray-500 mb-1">Categories</h4>
-                    <div className="flex flex-wrap gap-2">
-                      {auctionDetails.productCategories.map(cat => (
-                        <Link
-                          key={cat.id}
-                          to={`/search?categories=${cat.id}`} // Link to search results for this category
-                          className="bg-gray-100 text-gray-700 hover:bg-indigo-100 hover:text-indigo-700 text-xs font-medium px-3 py-1 rounded-full border border-gray-300 transition-colors duration-150"
-                          title={`More in ${cat.name}`}
-                        >
-                          {cat.name}
-                        </Link>
-                      ))}
+                {auctionDetails.productCategories &&
+                  auctionDetails.productCategories.length > 0 && (
+                    <div>
+                      <h4 className="text-sm font-medium text-gray-500 mb-1">
+                        Categories
+                      </h4>
+                      <div className="flex flex-wrap gap-2">
+                        {auctionDetails.productCategories.map((cat) => (
+                          <Link
+                            key={cat.id}
+                            to={`/search?categories=${cat.id}`} // Link to search results for this category
+                            className="bg-gray-100 text-gray-700 hover:bg-indigo-100 hover:text-indigo-700 text-xs font-medium px-3 py-1 rounded-full border border-gray-300 transition-colors duration-150"
+                            title={`More in ${cat.name}`}
+                          >
+                            {cat.name}
+                          </Link>
+                        ))}
+                      </div>
                     </div>
-                  </div>
-                )}
+                  )}
 
                 {/* Fallback if no specific details are present but seller is */}
-                {!auctionDetails.productDescription && !auctionDetails.productCondition && (!auctionDetails.productCategories || auctionDetails.productCategories.length === 0) && auctionDetails.sellerUsernameSnapshot && (
-                    <p className="text-sm text-gray-500 italic">Detailed information will be provided by the seller.</p>
-                )}
-
+                {!auctionDetails.productDescription &&
+                  !auctionDetails.productCondition &&
+                  (!auctionDetails.productCategories ||
+                    auctionDetails.productCategories.length === 0) &&
+                  auctionDetails.sellerUsernameSnapshot && (
+                    <p className="text-sm text-gray-500 italic">
+                      Detailed information will be provided by the seller.
+                    </p>
+                  )}
               </div>
               {/* END MODIFIED CONTENT FOR OVERVIEW SECTION */}
             </CollapsibleSection>
@@ -724,49 +755,91 @@ const images = auctionDetails?.productImageUrls || [];
               </span>
               <div className="text-right">
                 <div className="text-xs text-gray-500">
-                  {auctionDetails.status !== "ACTIVE"
-                    ? "Auction Ended"
-                    : "Time Remaining"}
-                </div>
-                {/* Use updated CountdownTimer */}
-                <CountdownTimer
-                  endTimeMillis={new Date(auctionDetails.endTime).getTime()}
-                  endedText={
-                    auctionDetails.status === "SOLD"
-                      ? "SOLD"
-                      : auctionDetails.status === "RESERVE_NOT_MET"
-                      ? "Not Sold"
-                      : auctionDetails.status === "CANCELLED"
-                      ? "Cancelled"
-                      : "Ended"
+                  {
+                    isAuctionActive
+                      ? "Time Remaining"
+                      : isAuctionScheduled
+                      ? "Auction Starts At" // Label for scheduled
+                      : `Auction ${auctionDetails.status
+                          .toLowerCase()
+                          .replace("_", " ")}` // e.g., "Auction cancelled"
                   }
-                />
+                </div>
+
+                {isAuctionActive ? (
+                  <CountdownTimer
+                    endTimeMillis={new Date(auctionDetails.endTime).getTime()}
+                    endedText={
+                      auctionDetails.status === "SOLD"
+                        ? "SOLD"
+                        : auctionDetails.status === "RESERVE_NOT_MET"
+                        ? "Not Sold"
+                        : auctionDetails.status === "CANCELLED"
+                        ? "Cancelled"
+                        : "Ended"
+                    }
+                  />
+                ) : isAuctionScheduled ? (
+                  // For scheduled, show the actual start time, not a countdown to end time
+                  <span className="font-semibold text-lg text-gray-700">
+                    {new Date(auctionDetails.startTime).toLocaleTimeString([], {
+                      day: "2-digit",
+                      month: "short",
+                      hour: "2-digit",
+                      minute: "2-digit",
+                    })}
+                  </span>
+                ) : (
+                  // For CANCELLED, SOLD, RESERVE_NOT_MET, ENDED etc.
+                  <span
+                    className={`font-semibold text-lg ${
+                      auctionDetails.status === "SOLD"
+                        ? "text-green-600"
+                        : auctionDetails.status === "CANCELLED"
+                        ? "text-red-600"
+                        : "text-gray-700"
+                    }`}
+                  >
+                    {auctionDetails.status.replace("_", " ")}
+                  </span>
+                )}
               </div>
+              {/* --- END MODIFIED TOP-RIGHT TIMER DISPLAY --- */}
             </div>
 
             {/* Current Bid Info */}
-            <div className="text-center my-4">
-              <p className="text-sm text-gray-600 mb-1">Current Bid</p>
-              <p className="text-4xl font-bold text-indigo-700">
-                {(auctionDetails.status === "SOLD"
-                  ? auctionDetails.winningBid
-                  : auctionDetails.currentBid ?? auctionDetails.startPrice ?? 0
-                ).toLocaleString("vi-VN")}{" "}
-                VNĐ
-              </p>
-              <p className="text-xs text-gray-500">
-                Leading:{" "}
-                {auctionDetails.highestBidderUsernameSnapshot ? (
-                  isUserHighestBidder ? (
-                    <span className="text-green-600 font-semibold">You</span>
-                  ) : (
-                    auctionDetails.highestBidderUsernameSnapshot
-                  )
-                ) : (
-                  "No bids yet"
-                )}
-              </p>
-            </div>
+            {(isAuctionActive ||
+              auctionDetails.status === "SOLD" ||
+              auctionDetails.status === "RESERVE_NOT_MET" ||
+              auctionDetails.status === "CANCELLED") &&
+              !isAuctionScheduled && (
+                <div className="text-center my-4">
+                  <p className="text-sm text-gray-600 mb-1">Current Bid</p>
+                  <p className="text-4xl font-bold text-indigo-700">
+                    {(auctionDetails.status === "SOLD"
+                      ? auctionDetails.winningBid
+                      : auctionDetails.currentBid ??
+                        auctionDetails.startPrice ??
+                        0
+                    ).toLocaleString("vi-VN")}{" "}
+                    VNĐ
+                  </p>
+                  <p className="text-xs text-gray-500">
+                    Leading:{" "}
+                    {auctionDetails.highestBidderUsernameSnapshot ? (
+                      isUserHighestBidder ? (
+                        <span className="text-green-600 font-semibold">
+                          You
+                        </span>
+                      ) : (
+                        auctionDetails.highestBidderUsernameSnapshot
+                      )
+                    ) : (
+                      "No bids yet"
+                    )}
+                  </p>
+                </div>
+              )}
 
             {/* Proxy Bidding Input */}
             {auctionDetails.status === "ACTIVE" &&
@@ -843,41 +916,60 @@ const images = auctionDetails?.productImageUrls || [];
               )}
 
             {/* Seller Cancel - Hammer Button */}
-            {isSeller &&
-              (auctionDetails.status === "SCHEDULED" ||
-                auctionDetails.status === "ACTIVE") && (
-                <div className="flex flex-col sm:flex-row justify-between items-center gap-4 mt-4 pt-4 border-t">
-                  {/* Cancel Button */}
-                  <button
-                    onClick={promptCancelAuction}
-                    disabled={isCancelling || isHammering} // Disable if processing either action
-                    className="flex-1 w-full sm:w-auto px-4 py-2 bg-red-600 hover:bg-red-700 text-white font-semibold rounded text-sm disabled:opacity-60 disabled:cursor-not-allowed"
-                  >
-                    {isCancelling ? "Cancelling..." : "Cancel Auction"}
-                  </button>
-                  {/* End Early (Hammer) Button */}
-                  <button
-                    onClick={promptEndAuctionEarly}
-                    // Disable if not ACTIVE, if no bids yet, or if already processing another action
-                    disabled={
-                      auctionDetails.status !== "ACTIVE" ||
-                      !auctionDetails.highestBidderId ||
-                      isCancelling ||
-                      isHammering
-                    }
-                    className="flex-1 w-full sm:w-auto px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded text-sm disabled:opacity-60 disabled:cursor-not-allowed"
-                    title={
-                      !auctionDetails.highestBidderId
-                        ? "Cannot end early without bids"
-                        : auctionDetails.status !== "ACTIVE"
-                        ? "Can only end early when active"
-                        : "End auction now at current bid"
-                    }
-                  >
-                    {isHammering ? "Hammering..." : "Hammer down"}
-                  </button>
-                </div>
-              )}
+
+            {isAuctionScheduled && (
+              <div className="text-center my-8 py-4">
+                <p className="text-lg font-semibold text-gray-700 mb-2">
+                  Auction Starts In:
+                </p>
+                <CountdownTimer
+                  endTimeMillis={new Date(auctionDetails.startTime).getTime()}
+                  // Optional: Add a specific message for when it starts, or let CountdownTimer handle it
+                  // endedText="Starting Soon!"
+                />
+                <p className="text-sm text-gray-500 mt-3">
+                  Starting Price:{" "}
+                  <span className="font-semibold">
+                    {(auctionDetails.startPrice ?? 0).toLocaleString("vi-VN")}{" "}
+                    VNĐ
+                  </span>
+                </p>
+              </div>
+            )}
+
+            {isSeller && (isAuctionActive || isAuctionScheduled) && (
+              <div className="flex flex-col sm:flex-row justify-between items-center gap-4 mt-4 pt-4 border-t">
+                {/* Cancel Button */}
+                <button
+                  onClick={promptCancelAuction}
+                  disabled={isCancelling || isHammering} // Disable if processing either action
+                  className="flex-1 w-full sm:w-auto px-4 py-2 bg-red-600 hover:bg-red-700 text-white font-semibold rounded text-sm disabled:opacity-60 disabled:cursor-not-allowed"
+                >
+                  {isCancelling ? "Cancelling..." : "Cancel Auction"}
+                </button>
+                {/* End Early (Hammer) Button */}
+                <button
+                  onClick={promptEndAuctionEarly}
+                  // Disable if not ACTIVE, if no bids yet, or if already processing another action
+                  disabled={
+                    auctionDetails.status !== "ACTIVE" ||
+                    !auctionDetails.highestBidderId ||
+                    isCancelling ||
+                    isHammering
+                  }
+                  className="flex-1 w-full sm:w-auto px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded text-sm disabled:opacity-60 disabled:cursor-not-allowed"
+                  title={
+                    !auctionDetails.highestBidderId
+                      ? "Cannot end early without bids"
+                      : auctionDetails.status !== "ACTIVE"
+                      ? "Can only end early when active"
+                      : "End auction now at current bid"
+                  }
+                >
+                  {isHammering ? "Hammering..." : "Hammer down"}
+                </button>
+              </div>
+            )}
 
             {/* Winner Display */}
             {auctionDetails.status === "SOLD" && (
