@@ -5,21 +5,8 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="3a162283-5be8-46d0-949d-517f55ab3cb9" name="Changes" comment="">
-      <change afterPath="$PROJECT_DIR$/timedauctions/src/main/java/com/example/timedauctions/dto/MyMaxBidDto.java" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/frontend/src/components/AuctionChatPanel.jsx" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/components/AuctionChatPanel.jsx" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/frontend/src/components/ProductDetailModal.jsx" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/components/ProductDetailModal.jsx" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/frontend/src/components/product/ProductCard.jsx" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/components/product/ProductCard.jsx" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/frontend/src/pages/TimedAuctionDetailPage.jsx" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/pages/TimedAuctionDetailPage.jsx" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/liveauctions/src/main/java/com/example/liveauctions/client/dto/UserBasicInfoDto.java" beforeDir="false" afterPath="$PROJECT_DIR$/liveauctions/src/main/java/com/example/liveauctions/client/dto/UserBasicInfoDto.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/liveauctions/src/main/java/com/example/liveauctions/dto/ChatMessageDto.java" beforeDir="false" afterPath="$PROJECT_DIR$/liveauctions/src/main/java/com/example/liveauctions/dto/ChatMessageDto.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/liveauctions/src/main/java/com/example/liveauctions/service/impl/AuctionChatServiceImpl.java" beforeDir="false" afterPath="$PROJECT_DIR$/liveauctions/src/main/java/com/example/liveauctions/service/impl/AuctionChatServiceImpl.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/orders/src/main/java/com/example/orders/service/impl/OrderServiceImpl.java" beforeDir="false" afterPath="$PROJECT_DIR$/orders/src/main/java/com/example/orders/service/impl/OrderServiceImpl.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/products/src/main/java/com/example/products/dto/ProductDto.java" beforeDir="false" afterPath="$PROJECT_DIR$/products/src/main/java/com/example/products/dto/ProductDto.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/products/src/main/java/com/example/products/mapper/impl/ProductMapperImpl.java" beforeDir="false" afterPath="$PROJECT_DIR$/products/src/main/java/com/example/products/mapper/impl/ProductMapperImpl.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/timedauctions/src/main/java/com/example/timedauctions/controller/TimedAuctionController.java" beforeDir="false" afterPath="$PROJECT_DIR$/timedauctions/src/main/java/com/example/timedauctions/controller/TimedAuctionController.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/timedauctions/src/main/java/com/example/timedauctions/service/TimedAuctionService.java" beforeDir="false" afterPath="$PROJECT_DIR$/timedauctions/src/main/java/com/example/timedauctions/service/TimedAuctionService.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/timedauctions/src/main/java/com/example/timedauctions/service/impl/TimedAuctionServiceImpl.java" beforeDir="false" afterPath="$PROJECT_DIR$/timedauctions/src/main/java/com/example/timedauctions/service/impl/TimedAuctionServiceImpl.java" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -50,40 +37,40 @@
     <option name="hideEmptyMiddlePackages" value="true" />
     <option name="showLibraryContents" value="true" />
   </component>
-  <component name="PropertiesComponent"><![CDATA[{
-  "keyToString": {
-    "ModuleVcsDetector.initialDetectionPerformed": "true",
-    "RequestMappingsPanelOrder0": "0",
-    "RequestMappingsPanelOrder1": "1",
-    "RequestMappingsPanelWidth0": "75",
-    "RequestMappingsPanelWidth1": "75",
-    "RunOnceActivity.ShowReadmeOnStart": "true",
-    "RunOnceActivity.git.unshallow": "true",
-    "SHARE_PROJECT_CONFIGURATION_FILES": "true",
-    "Spring Boot.ConfigserverApplication.executor": "Run",
-    "Spring Boot.DeliveriesApplication.executor": "Run",
-    "Spring Boot.EurekaserverApplication.executor": "Run",
-    "Spring Boot.GatewayserverApplication.executor": "Run",
-    "Spring Boot.LiveAuctionsApplication.executor": "Run",
-    "Spring Boot.NotificationsApplication.executor": "Run",
-    "Spring Boot.OrdersApplication.executor": "Run",
-    "Spring Boot.PaymentsApplication.executor": "Run",
-    "Spring Boot.ProductsApplication.executor": "Run",
-    "Spring Boot.TimedAuctionsApplication.executor": "Run",
-    "Spring Boot.UsersApplication.executor": "Run",
-    "git-widget-placeholder": "bid-history",
-    "node.js.detected.package.eslint": "true",
-    "node.js.detected.package.tslint": "true",
-    "node.js.selected.package.eslint": "(autodetect)",
-    "node.js.selected.package.tslint": "(autodetect)",
-    "nodejs_package_manager_path": "npm",
-    "project.structure.last.edited": "Modules",
-    "project.structure.proportion": "0.0",
-    "project.structure.side.proportion": "0.0",
-    "run.configurations.included.in.services": "true",
-    "vue.rearranger.settings.migration": "true"
+  <component name="PropertiesComponent">{
+  &quot;keyToString&quot;: {
+    &quot;ModuleVcsDetector.initialDetectionPerformed&quot;: &quot;true&quot;,
+    &quot;RequestMappingsPanelOrder0&quot;: &quot;0&quot;,
+    &quot;RequestMappingsPanelOrder1&quot;: &quot;1&quot;,
+    &quot;RequestMappingsPanelWidth0&quot;: &quot;75&quot;,
+    &quot;RequestMappingsPanelWidth1&quot;: &quot;75&quot;,
+    &quot;RunOnceActivity.ShowReadmeOnStart&quot;: &quot;true&quot;,
+    &quot;RunOnceActivity.git.unshallow&quot;: &quot;true&quot;,
+    &quot;SHARE_PROJECT_CONFIGURATION_FILES&quot;: &quot;true&quot;,
+    &quot;Spring Boot.ConfigserverApplication.executor&quot;: &quot;Run&quot;,
+    &quot;Spring Boot.DeliveriesApplication.executor&quot;: &quot;Run&quot;,
+    &quot;Spring Boot.EurekaserverApplication.executor&quot;: &quot;Run&quot;,
+    &quot;Spring Boot.GatewayserverApplication.executor&quot;: &quot;Run&quot;,
+    &quot;Spring Boot.LiveAuctionsApplication.executor&quot;: &quot;Run&quot;,
+    &quot;Spring Boot.NotificationsApplication.executor&quot;: &quot;Run&quot;,
+    &quot;Spring Boot.OrdersApplication.executor&quot;: &quot;Run&quot;,
+    &quot;Spring Boot.PaymentsApplication.executor&quot;: &quot;Run&quot;,
+    &quot;Spring Boot.ProductsApplication.executor&quot;: &quot;Run&quot;,
+    &quot;Spring Boot.TimedAuctionsApplication.executor&quot;: &quot;Run&quot;,
+    &quot;Spring Boot.UsersApplication.executor&quot;: &quot;Run&quot;,
+    &quot;git-widget-placeholder&quot;: &quot;bid-history&quot;,
+    &quot;node.js.detected.package.eslint&quot;: &quot;true&quot;,
+    &quot;node.js.detected.package.tslint&quot;: &quot;true&quot;,
+    &quot;node.js.selected.package.eslint&quot;: &quot;(autodetect)&quot;,
+    &quot;node.js.selected.package.tslint&quot;: &quot;(autodetect)&quot;,
+    &quot;nodejs_package_manager_path&quot;: &quot;npm&quot;,
+    &quot;project.structure.last.edited&quot;: &quot;Modules&quot;,
+    &quot;project.structure.proportion&quot;: &quot;0.0&quot;,
+    &quot;project.structure.side.proportion&quot;: &quot;0.0&quot;,
+    &quot;run.configurations.included.in.services&quot;: &quot;true&quot;,
+    &quot;vue.rearranger.settings.migration&quot;: &quot;true&quot;
   }
-}]]></component>
+}</component>
   <component name="RunDashboard">
     <option name="configurationTypes">
       <set>
@@ -222,6 +209,7 @@
       <workItem from="1748193978355" duration="1620000" />
       <workItem from="1748267201134" duration="13090000" />
       <workItem from="1748284846120" duration="6352000" />
+      <workItem from="1748324836814" duration="2180000" />
     </task>
     <servers />
   </component>
