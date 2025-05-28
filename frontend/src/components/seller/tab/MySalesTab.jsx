@@ -36,8 +36,14 @@ const MySalesTab = ({
       </div>
 
       {/* Empty, Error & Loading States */}
-      {isLoadingSales && <p className="text-center py-10 text-gray-500">Đang tải đơn bán...</p>}
-      {salesError && <p className="text-center py-10 text-red-500">Đã xảy ra lỗi: {salesError}</p>}
+      {isLoadingSales && (
+        <p className="text-center py-10 text-gray-500">Đang tải đơn bán...</p>
+      )}
+      {salesError && (
+        <p className="text-center py-10 text-red-500">
+          Đã xảy ra lỗi: {salesError}
+        </p>
+      )}
       {!isLoadingSales && !salesError && salesOrders.length === 0 && (
         <div className="text-center py-10">
           <p className="text-gray-500">
@@ -71,31 +77,48 @@ const MySalesTab = ({
                   )}
                 </div>
                 <span
-                  className={`text-xs font-medium px-2 py-0.5 rounded-full ${
+                  className={`inline-flex items-center gap-1 text-sm font-semibold px-3 py-1 rounded-full shadow-sm border transition-colors duration-200 ${
                     [
                       "AWAITING_WINNER_PAYMENT",
                       "AWAITING_NEXT_BIDDER_PAYMENT",
                     ].includes(order.status)
-                      ? "bg-orange-100 text-orange-700"
+                      ? "bg-yellow-50 text-yellow-800 border-yellow-300"
                       : order.status === "AWAITING_SELLER_DECISION"
-                      ? "bg-yellow-100 text-yellow-700"
+                      ? "bg-amber-100 text-amber-800 border-amber-300"
                       : order.status === "PAYMENT_SUCCESSFUL"
-                      ? "bg-green-100 text-green-700"
+                      ? "bg-green-100 text-green-800 border-green-300"
                       : [
                           "AWAITING_FULFILLMENT_CONFIRMATION",
                           "AWAITING_SHIPMENT",
                         ].includes(order.status)
-                      ? "bg-blue-100 text-blue-700"
+                      ? "bg-sky-100 text-sky-800 border-sky-300"
                       : order.status === "COMPLETED"
-                      ? "bg-purple-100 text-purple-700"
+                      ? "bg-emerald-100 text-emerald-800 border-emerald-300"
                       : order.status === "ORDER_SUPERSEDED_BY_REOPEN"
-                      ? "bg-indigo-100 text-indigo-700"
+                      ? "bg-gray-200 text-gray-800 border-gray-400"
                       : order.status.includes("CANCELLED")
-                      ? "bg-red-100 text-red-700"
-                      : "bg-gray-100 text-gray-700"
+                      ? "bg-rose-100 text-rose-700 border-rose-300"
+                      : "bg-slate-100 text-slate-700 border-slate-300"
                   }`}
                 >
-                  {orderStatusMap[order.status] || order.status.replace(/_/g, " ")}
+                  {/* Add emoji icons if you want quick recognition — optional */}
+                  {order.status.includes("CANCELLED") && <span>❌</span>}
+                  {order.status === "COMPLETED" && <span>✅</span>}
+                  {[
+                    "AWAITING_WINNER_PAYMENT",
+                    "AWAITING_NEXT_BIDDER_PAYMENT",
+                  ].includes(order.status) && <span>💰</span>}
+                  {order.status === "PAYMENT_SUCCESSFUL" && <span>✔️</span>}
+                  {[
+                    "AWAITING_SHIPMENT",
+                    "AWAITING_FULFILLMENT_CONFIRMATION",
+                  ].includes(order.status) && <span>📦</span>}
+                  {order.status === "AWAITING_SELLER_DECISION" && (
+                    <span>⏳</span>
+                  )}
+
+                  {orderStatusMap[order.status] ||
+                    order.status.replace(/_/g, " ")}
                 </span>
               </div>
 
@@ -125,7 +148,11 @@ const MySalesTab = ({
                       </p>
                     </div>
                     <div className="text-sm font-semibold text-gray-800 text-right">
-                      Giá bán: {(order.totalPrice || item.price || 0).toLocaleString("vi-VN")} VNĐ
+                      Giá bán:{" "}
+                      {(order.totalPrice || item.price || 0).toLocaleString(
+                        "vi-VN"
+                      )}{" "}
+                      VNĐ
                     </div>
                   </div>
                 </Link>
@@ -137,18 +164,23 @@ const MySalesTab = ({
                   <p className="text-xs text-yellow-700 font-semibold mb-1">
                     Thông tin các lựa chọn (nếu có):
                   </p>
-                  {order.eligibleSecondBidderId && order.eligibleSecondBidAmount != null ? (
+                  {order.eligibleSecondBidderId &&
+                  order.eligibleSecondBidAmount != null ? (
                     <p className="text-xs text-yellow-600">
-                      - Ưu đãi cho người mua hạng 2: {order.eligibleSecondBidAmount.toLocaleString("vi-VN")} VNĐ
+                      - Ưu đãi cho người mua hạng 2:{" "}
+                      {order.eligibleSecondBidAmount.toLocaleString("vi-VN")}{" "}
+                      VNĐ
                     </p>
                   ) : (
                     <p className="text-xs text-yellow-500">
                       - Không có người mua hạng 2 đủ điều kiện.
                     </p>
                   )}
-                  {order.eligibleThirdBidderId && order.eligibleThirdBidAmount != null ? (
+                  {order.eligibleThirdBidderId &&
+                  order.eligibleThirdBidAmount != null ? (
                     <p className="text-xs text-yellow-600 mt-0.5">
-                      - Ưu đãi cho người mua hạng 3: {order.eligibleThirdBidAmount.toLocaleString("vi-VN")} VNĐ
+                      - Ưu đãi cho người mua hạng 3:{" "}
+                      {order.eligibleThirdBidAmount.toLocaleString("vi-VN")} VNĐ
                     </p>
                   ) : (
                     <p className="text-xs text-yellow-500 mt-0.5">
@@ -161,7 +193,10 @@ const MySalesTab = ({
               {/* Footer */}
               <div className="px-4 py-3 bg-gray-50 flex flex-col sm:flex-row justify-between items-center gap-3 border-t">
                 <div className="text-sm text-gray-600">
-                  Ngày tạo: {new Date(order.createdAt || Date.now()).toLocaleDateString("vi-VN")}
+                  Ngày tạo:{" "}
+                  {new Date(order.createdAt || Date.now()).toLocaleDateString(
+                    "vi-VN"
+                  )}
                 </div>
                 <div className="text-right">
                   <span className="text-sm text-gray-600">Tổng tiền: </span>
@@ -180,9 +215,7 @@ const MySalesTab = ({
                   </button>
                 )}
                 {order.status === "AWAITING_FULFILLMENT_CONFIRMATION" && (
-                  <button
-                    className="cursor-pointer px-4 py-1.5 bg-cyan-500 text-white text-sm font-semibold rounded-md hover:bg-cyan-600 transition duration-150 ease-in-out shadow-sm"
-                  >
+                  <button className="cursor-pointer px-4 py-1.5 bg-cyan-500 text-white text-sm font-semibold rounded-md hover:bg-cyan-600 transition duration-150 ease-in-out shadow-sm">
                     Xác Nhận Giao Hàng
                   </button>
                 )}

@@ -22,6 +22,8 @@ import BuyerDeliveryActions from "../components/order/BuyerDeliverActions";
 import MarkAsShippedFormModal from "../components/delivery/MarkAsShippedFormModal";
 import MarkAsDeliveredFormModal from "../components/delivery/MarkAsDeliveredFormModal";
 import SubmitReviewModal from "../components/SubmitReviewModal";
+import SellerDecisionModal from "../components/SellerDecisionModal";
+import StartAuctionModal from "../components/StartAuctionModal";
 
 const STRIPE_PUBLISHABLE_KEY =
   "pk_test_51RN788QoAglQPjjvhupJXkisXj7R7wt7epc8hYTUbDBTCxumwAownPBKNMM8NfNVza13yVVf6SrfAnmAxoiJtfRw00cIVf2LIl";
@@ -52,10 +54,16 @@ function OrderDetailPage() {
   const [paymentProcessing, setPaymentProcessing] = useState(false); // Specific for payment initiation
   const [modalError, setModalError] = useState("");
 
+  const [isStartAuctionModalOpen, setIsStartAuctionModalOpen] = useState(false);
+  const [productToAuction, setProductToAuction] = useState(null);
+
   const [clientSecret, setClientSecret] = useState(null);
   const [showCheckoutForm, setShowCheckoutForm] = useState(false);
   const [checkoutFormOptions, setCheckoutFormOptions] = useState({});
   const [sellerCancelReason, setSellerCancelReason] = useState("");
+
+  const [isSellerDecisionModalOpen, setIsSellerDecisionModalOpen] =
+    useState(false);
 
   const [isMarkAsShippedModalOpen, setIsMarkAsShippedModalOpen] =
     useState(false);
@@ -73,7 +81,10 @@ function OrderDetailPage() {
   const [buyerActionError, setBuyerActionError] = useState("");
 
   const [isReviewModalOpen, setIsReviewModalOpen] = useState(false);
-  const [reviewSubmissionMessage, setReviewSubmissionMessage] = useState({ type: '', text: '' });
+  const [reviewSubmissionMessage, setReviewSubmissionMessage] = useState({
+    type: "",
+    text: "",
+  });
 
   const fetchUserProfile = useCallback(async () => {
     if (initialized && keycloak.authenticated) {
@@ -351,6 +362,113 @@ function OrderDetailPage() {
     setIsMarkAsShippedModalOpen(true);
   };
 
+  const handleOpenSellerDecisionModal = () => {
+    if (!order || !isSeller || order.status !== "AWAITING_SELLER_DECISION") {
+      console.warn("Cannot open seller decision modal: Conditions not met.");
+      return;
+    }
+    setModalError("");
+    setIsSellerDecisionModalOpen(true);
+  };
+
+  // Inside OrderDetailPage component:
+
+  // Handler to open seller decision modal (you might already have a version of this)
+  const handleOpenSellerDecisionModalOnDetail = () => {
+    if (!order || !isSeller || order.status !== "AWAITING_SELLER_DECISION") {
+      console.warn("Conditions not met to open seller decision modal.");
+      return;
+    }
+    setModalError(""); // Assuming you have a shared modalError state
+    setIsSellerDecisionModalOpen(true);
+  };
+
+  // Handler to close seller decision modal
+  const handleCloseSellerDecisionModalOnDetail = async (
+    decisionWasMade = false,
+    actionTaken = null
+  ) => {
+    setIsSellerDecisionModalOpen(false);
+    // If a decision was made AND it was NOT 'REOPEN_AUCTION' (which has its own refresh later)
+    if (decisionWasMade && actionTaken !== "REOPEN_AUCTION") {
+      await refreshAllDetails(); // refreshAllDetails should fetch order & delivery
+    }
+  };
+
+  // Handler called by SellerDecisionModal when "Reopen Auction" is chosen
+  const handleInitiateReopenAuctionOnDetail = (orderFromModal) => {
+    // orderFromModal is the 'order' object currently displayed on this page
+    if (
+      !orderFromModal ||
+      !orderFromModal.items ||
+      orderFromModal.items.length === 0
+    ) {
+      alert("Error: Order item details are missing. Cannot reopen auction.");
+      setIsSellerDecisionModalOpen(false); // Ensure decision modal is closed
+      return;
+    }
+
+    const firstItem = orderFromModal.items[0];
+    const productIdForReopen = firstItem.productId;
+    const productTitleForReopen =
+      firstItem.title || "Product (Details Missing)";
+    const productImageUrlForReopen = firstItem.imageUrl;
+
+    if (!productIdForReopen) {
+      alert(
+        "Error: Product ID is missing from order details. Cannot reopen auction."
+      );
+      setIsSellerDecisionModalOpen(false); // Ensure decision modal is closed
+      return;
+    }
+
+    const productDataForAuction = {
+      id: productIdForReopen,
+      title: productTitleForReopen,
+      imageUrls: productImageUrlForReopen ? [productImageUrlForReopen] : [],
+      originalOrderId: orderFromModal.id, // ID of the current order on OrderDetailPage
+      // Potentially carry over other relevant details from order or product snapshot
+      // reservePrice: orderFromModal.reservePriceSnapshot,
+    };
+
+    setProductToAuction(productDataForAuction);
+    setIsSellerDecisionModalOpen(false); // Close the decision modal
+    setIsStartAuctionModalOpen(true); // Open the start auction modal
+  };
+
+  // Handler called by StartAuctionModal upon successful submission
+  const handleStartAuctionSubmitOnDetail = async (createdAuctionDto) => {
+    setIsStartAuctionModalOpen(false);
+    const reopenedFromOrderInfo = productToAuction; // Contains originalOrderId
+    setProductToAuction(null);
+
+    alert(
+      `New auction (ID: ${createdAuctionDto.id}) started! This order (ID: ${reopenedFromOrderInfo?.originalOrderId}) should now be updated to reflect this.`
+    );
+    console.log(
+      `Frontend (OrderDetailPage): New auction ${createdAuctionDto.id} started. Original order ${reopenedFromOrderInfo?.originalOrderId} should be finalized by backend processes.`
+    );
+
+    // CRITICAL: Refresh the current order details.
+    // The backend should have updated the status of this original order
+    // (e.g., to ORDER_SUPERSEDED_BY_REOPEN) after the new auction was created.
+    await refreshAllDetails();
+
+    // Optionally navigate away, e.g., to the new auction or to My Auctions page
+    // if (createdAuctionDto.type === 'LIVE') {
+    //   navigate(`/live-auctions/${createdAuctionDto.id}`);
+    // } else {
+    //   navigate(`/timed-auctions/${createdAuctionDto.id}`);
+    // }
+  };
+
+  const handleCloseSellerDecisionModal = async (decisionWasMade = false) => {
+    setIsSellerDecisionModalOpen(false);
+    if (decisionWasMade) {
+      await refreshAllDetails();
+    }
+  };
+
   const handleConfirmMarkAsShipped = async (shippingData) => {
     // We need deliveryId. If not in deliveryDetails, and order status is AWAITING_SHIPMENT,
     // it implies the delivery record exists in DeliveriesService but might not have been fetched yet,
@@ -436,19 +554,26 @@ function OrderDetailPage() {
 
   const handleConfirmReceiptByBuyer = async () => {
     if (!deliveryDetails?.deliveryId || !isBuyer) {
-      setBuyerActionError("Cannot confirm receipt. Delivery details missing or not authorized.");
+      setBuyerActionError(
+        "Cannot confirm receipt. Delivery details missing or not authorized."
+      );
       return;
     }
     setIsConfirmingReceipt(true);
     setBuyerActionError("");
     try {
       // API Call to Deliveries Service: POST /deliveries/{deliveryId}/buyer-confirm-receipt
-      await apiClient.post(`/deliveries/${deliveryDetails.deliveryId}/buyer-confirm-receipt`);
+      await apiClient.post(
+        `/deliveries/${deliveryDetails.deliveryId}/buyer-confirm-receipt`
+      );
       alert("Thank you for confirming receipt!");
       await refreshAllDetails(); // Refresh to get updated delivery status
     } catch (err) {
       console.error("Error confirming receipt:", err);
-      setBuyerActionError(err.response?.data?.message || "Failed to confirm receipt. Please try again.");
+      setBuyerActionError(
+        err.response?.data?.message ||
+          "Failed to confirm receipt. Please try again."
+      );
       // Potentially show error in a toast or modal
       alert(err.response?.data?.message || "Failed to confirm receipt.");
     } finally {
@@ -458,7 +583,9 @@ function OrderDetailPage() {
 
   const handleRequestReturnByBuyer = async () => {
     if (!deliveryDetails?.deliveryId || !isBuyer) {
-      setBuyerActionError("Cannot request return. Delivery details missing or not authorized.");
+      setBuyerActionError(
+        "Cannot request return. Delivery details missing or not authorized."
+      );
       return;
     }
     // For now, this is a placeholder. A real return request would likely open a new form/modal
@@ -466,29 +593,42 @@ function OrderDetailPage() {
     // Let's simulate the API call part for now.
     setIsRequestingReturn(true); // Use a separate loading state if the action is complex
     setBuyerActionError("");
-    console.log("Buyer requesting return for delivery:", deliveryDetails.deliveryId);
-    
+    console.log(
+      "Buyer requesting return for delivery:",
+      deliveryDetails.deliveryId
+    );
+
     // Example: Open a new page or a more complex modal for return details
     // navigate(`/orders/${order.id}/return/create`, { state: { deliveryId: deliveryDetails.deliveryId } });
     // For now, just an alert and potential backend call:
     try {
-        // Dummy request DTO for now
-        const returnRequestData = { reason: "Item not as described (placeholder)", comments: "Details..." };
-        // API Call: POST /deliveries/{deliveryDetails.deliveryId}/request-return
-        await apiClient.post(`/deliveries/${deliveryDetails.deliveryId}/request-return`, returnRequestData);
-        alert("Your return request has been submitted. We will contact you shortly.");
-        await refreshAllDetails();
+      // Dummy request DTO for now
+      const returnRequestData = {
+        reason: "Item not as described (placeholder)",
+        comments: "Details...",
+      };
+      // API Call: POST /deliveries/{deliveryDetails.deliveryId}/request-return
+      await apiClient.post(
+        `/deliveries/${deliveryDetails.deliveryId}/request-return`,
+        returnRequestData
+      );
+      alert(
+        "Your return request has been submitted. We will contact you shortly."
+      );
+      await refreshAllDetails();
     } catch (err) {
-        console.error("Error submitting return request:", err);
-        setBuyerActionError(err.response?.data?.message || "Failed to submit return request.");
-        alert(err.response?.data?.message || "Failed to submit return request.");
+      console.error("Error submitting return request:", err);
+      setBuyerActionError(
+        err.response?.data?.message || "Failed to submit return request."
+      );
+      alert(err.response?.data?.message || "Failed to submit return request.");
     } finally {
-        setIsRequestingReturn(false);
+      setIsRequestingReturn(false);
     }
   };
 
   const handleOpenReviewModal = () => {
-    setReviewSubmissionMessage({ type: '', text: '' }); // Clear previous messages
+    setReviewSubmissionMessage({ type: "", text: "" }); // Clear previous messages
     setIsReviewModalOpen(true);
   };
 
@@ -498,7 +638,10 @@ function OrderDetailPage() {
 
   const handleReviewSuccess = (submittedReview) => {
     console.log("Review submitted successfully:", submittedReview);
-    setReviewSubmissionMessage({ type: 'success', text: 'Thank you for your review!' });
+    setReviewSubmissionMessage({
+      type: "success",
+      text: "Thank you for your review!",
+    });
     // Optionally, you might want to mark something locally so the "Leave Review" button disappears or changes
     // For instance, add a state like: const [hasReviewed, setHasReviewed] = useState(false);
     // and setHasReviewed(true) here. Then use `hasReviewed` to hide the button.
@@ -530,6 +673,9 @@ function OrderDetailPage() {
     (order.status === "AWAITING_WINNER_PAYMENT" ||
       order.status === "AWAITING_NEXT_BIDDER_PAYMENT");
 
+  const canSellerMakeDecision =
+    isSeller && order?.status === "AWAITING_SELLER_DECISION";
+
   const isAwaitingSellerFulfillmentConfirmation =
     order && order.status === "AWAITING_FULFILLMENT_CONFIRMATION";
 
@@ -552,7 +698,10 @@ function OrderDetailPage() {
       deliveryDetails.deliveryStatus === "PENDING_PREPARATION" ||
       deliveryDetails.deliveryStatus === "READY_FOR_SHIPMENT");
 
-  const showBuyerDeliveryActions = isBuyer && deliveryDetails && deliveryDetails.deliveryStatus === 'AWAITING_BUYER_CONFIRMATION';
+  const showBuyerDeliveryActions =
+    isBuyer &&
+    deliveryDetails &&
+    deliveryDetails.deliveryStatus === "AWAITING_BUYER_CONFIRMATION";
 
   const showAlternateBidders =
     order &&
@@ -566,7 +715,7 @@ function OrderDetailPage() {
     initialized &&
     keycloak.authenticated &&
     order &&
-    keycloak.subject === order.currentBidderId && 
+    keycloak.subject === order.currentBidderId &&
     order.status === "COMPLETED";
 
   let currentPayerBidAmount = 0;
@@ -663,12 +812,14 @@ function OrderDetailPage() {
           onConfirmReceipt={handleConfirmReceiptByBuyer}
           onRequestReturn={handleRequestReturnByBuyer}
           isLoadingConfirm={isConfirmingReceipt}
-          isLoadingReturn={isRequestingReturn} 
+          isLoadingReturn={isRequestingReturn}
           // You could also pass buyerActionError to display in the component
         />
       )}
       {buyerActionError && showBuyerDeliveryActions && (
-          <div className="my-2 p-3 bg-red-100 text-red-700 text-sm rounded-md">{buyerActionError}</div>
+        <div className="my-2 p-3 bg-red-100 text-red-700 text-sm rounded-md">
+          {buyerActionError}
+        </div>
       )}
 
       {isSeller && (
@@ -683,6 +834,8 @@ function OrderDetailPage() {
           }
           onOpenMarkAsShippedModal={handleOpenMarkAsShippedModal}
           onOpenMarkAsDeliveredModal={handleOpenMarkAsDeliveredModal}
+          onOpenSellerDecisionModal={handleOpenSellerDecisionModal}
+          canSellerMakeDecision={canSellerMakeDecision}
         />
       )}
 
@@ -706,7 +859,13 @@ function OrderDetailPage() {
       />
 
       {reviewSubmissionMessage.text && (
-        <div className={`my-4 p-3 rounded text-sm ${reviewSubmissionMessage.type === 'success' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
+        <div
+          className={`my-4 p-3 rounded text-sm ${
+            reviewSubmissionMessage.type === "success"
+              ? "bg-green-100 text-green-700"
+              : "bg-red-100 text-red-700"
+          }`}
+        >
           {reviewSubmissionMessage.text}
         </div>
       )}
@@ -714,9 +873,12 @@ function OrderDetailPage() {
       {/* --- "Leave a Review" Button Section for Buyer --- */}
       {canLeaveReview && (
         <div className="mt-6 p-4 bg-white rounded-lg shadow">
-          <h3 className="text-lg font-semibold mb-3 text-gray-800">Share Your Feedback</h3>
+          <h3 className="text-lg font-semibold mb-3 text-gray-800">
+            Share Your Feedback
+          </h3>
           <p className="text-sm text-gray-600 mb-4">
-            Your order is complete. Would you like to leave a review for the seller, {order.sellerUsernameSnapshot || 'this seller'}?
+            Your order is complete. Would you like to leave a review for the
+            seller, {order.sellerUsernameSnapshot || "this seller"}?
           </p>
           <button
             onClick={handleOpenReviewModal}
@@ -833,7 +995,8 @@ function OrderDetailPage() {
       <MarkAsDeliveredFormModal
         isOpen={isMarkAsDeliveredModalOpen}
         onClose={() => {
-          if (!isMarkingAsDelivered) { // Prevent closing if actively submitting
+          if (!isMarkingAsDelivered) {
+            // Prevent closing if actively submitting
             setIsMarkAsDeliveredModalOpen(false);
             setMarkAsDeliveredError(""); // Clear error on close
           }
@@ -845,8 +1008,9 @@ function OrderDetailPage() {
         isLoading={isMarkingAsDelivered}
         apiError={markAsDeliveredError}
       />
-      {order && order.sellerId && ( // Condition relies on order and order.sellerId being present
-         <SubmitReviewModal
+      {order &&
+        order.sellerId && ( // Condition relies on order and order.sellerId being present
+          <SubmitReviewModal
             isOpen={isReviewModalOpen}
             onClose={handleCloseReviewModal}
             orderId={order.id}
@@ -854,8 +1018,29 @@ function OrderDetailPage() {
             sellerName={order.sellerUsernameSnapshot || order.sellerId} // Fallback to sellerId if name snapshot isn't there
             onSuccess={handleReviewSuccess}
             onError={handleReviewError}
-         />
+          />
+        )}
+      {order && isSellerDecisionModalOpen && canSellerMakeDecision && (
+        <SellerDecisionModal
+          order={order}
+          isOpen={isSellerDecisionModalOpen}
+          onClose={handleCloseSellerDecisionModal}
+          onInitiateReopenAuction={handleInitiateReopenAuctionOnDetail}
+        />
       )}
+      {productToAuction &&
+        isStartAuctionModalOpen &&
+        isSeller && ( // isSeller ensures only seller can see/use it
+          <StartAuctionModal
+            isOpen={isStartAuctionModalOpen}
+            onClose={() => {
+              setIsStartAuctionModalOpen(false);
+              setProductToAuction(null);
+            }}
+            product={productToAuction} // Contains { id, title, imageUrls, originalOrderId }
+            onStartAuctionSubmit={handleStartAuctionSubmitOnDetail}
+          />
+        )}
     </div>
   );
 }
