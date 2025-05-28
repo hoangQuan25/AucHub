@@ -126,6 +126,7 @@ function TimedAuctionDetailPage() {
   // Bidding State
   const [isBidding, setIsBidding] = useState(false);
   const [maxBidOptions, setMaxBidOptions] = useState([]);
+  const [isBidConfirmOpen, setIsBidConfirmOpen] = useState(false);
   const [selectedMaxBid, setSelectedMaxBid] = useState("");
   const [bidError, setBidError] = useState("");
 
@@ -444,6 +445,7 @@ function TimedAuctionDetailPage() {
         `Max bid placement request for ${maxBidNum} sent successfully.`
       );
       fetchAuctionDetails();
+      fetchMyMaxBid(); 
     } catch (err) {
       console.error("Failed to place max bid:", err);
       const message =
@@ -875,8 +877,8 @@ function TimedAuctionDetailPage() {
                     {/* --- END DROPDOWN --- */}
 
                     <button
-                      onClick={handlePlaceBid} // Handler needs update
-                      disabled={!canBid || isBidding || !selectedMaxBid} // Disable if no option selected
+                      onClick={() => setIsBidConfirmOpen(true)}
+                      disabled={!canBid || isBidding || !selectedMaxBid}
                       className="px-5 py-2 bg-green-600 hover:bg-green-700 text-white font-semibold rounded text-sm disabled:opacity-60"
                     >
                       {isBidding ? "Placing..." : "Place Max Bid"}
@@ -1179,6 +1181,23 @@ function TimedAuctionDetailPage() {
         confirmButtonClass="bg-indigo-600 hover:bg-indigo-700" // Style as needed
         // No isLoading or error props specifically for this informational modal,
         // unless you want to add them for some reason.
+      />
+      <ConfirmationModal
+        isOpen={isBidConfirmOpen}
+        onClose={() => setIsBidConfirmOpen(false)}
+        onConfirm={async () => {
+          setIsBidConfirmOpen(false);
+          await handlePlaceBid();
+        }}
+        title="Confirm Your Bid"
+        message={`Are you sure you want to place a maximum bid of ${Number(
+          selectedMaxBid
+        ).toLocaleString("vi-VN")} VNĐ?`}
+        confirmText="Yes, Place Bid"
+        cancelText="No, Cancel"
+        confirmButtonClass="bg-green-600 hover:bg-green-700"
+        isLoading={isBidding}
+        error={bidError}
       />
       {/* Cancel Confirmation Modal */}
       <ConfirmationModal

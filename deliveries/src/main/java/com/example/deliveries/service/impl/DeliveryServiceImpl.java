@@ -21,6 +21,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.Duration;
 import java.time.LocalDateTime;
 import java.util.NoSuchElementException;
+import java.util.Set;
 import java.util.UUID;
 
 @Service
@@ -236,9 +237,16 @@ public class DeliveryServiceImpl implements DeliveryService {
         }
 
         // Allow reporting issue from most active states, but not if already resolved or cancelled
-        if (delivery.getDeliveryStatus() == DeliveryStatus.DELIVERED || delivery.getDeliveryStatus() == DeliveryStatus.CANCELLED) {
+        Set<DeliveryStatus> NON_REPORTABLE_STATUSES = Set.of(
+                DeliveryStatus.RECEIPT_CONFIRMED_BY_BUYER,
+                DeliveryStatus.COMPLETED_AUTO,
+                DeliveryStatus.CANCELLED
+                // Potentially others like RETURN_ACCEPTED, RETURN_COMPLETED if they exist
+        );
+// In reportDeliveryIssue:
+        if (NON_REPORTABLE_STATUSES.contains(delivery.getDeliveryStatus())) {
             log.warn("Cannot report issue for delivery {} as it is already {}." , deliveryId, delivery.getDeliveryStatus());
-            throw new IllegalStateException("Cannot report issue for a delivery that is already delivered or cancelled.");
+            throw new IllegalStateException("Cannot report issue for a delivery in its current state.");
         }
 
         delivery.setDeliveryStatus(DeliveryStatus.ISSUE_REPORTED);

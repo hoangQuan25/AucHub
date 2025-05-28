@@ -22,17 +22,6 @@
         <module name="payments" />
         <module name="deliveries" />
       </profile>
-      <profile name="Annotation profile for timedauctions" enabled="true">
-        <sourceOutputDir name="target/generated-sources/annotations" />
-        <sourceTestOutputDir name="target/generated-test-sources/test-annotations" />
-        <outputRelativeToContentRoot value="true" />
-        <processorPath useClasspath="false">
-          <entry name="$MAVEN_REPOSITORY$/org/projectlombok/lombok/1.18.36/lombok-1.18.36.jar" />
-        </processorPath>
-        <module name="timedauctions" />
-        <module name="gatewayserver" />
-        <module name="liveauctions" />
-      </profile>
       <profile name="Annotation profile for products" enabled="true">
         <sourceOutputDir name="target/generated-sources/annotations" />
         <sourceTestOutputDir name="target/generated-test-sources/test-annotations" />
@@ -44,6 +33,17 @@
         </processorPath>
         <module name="users" />
         <module name="products" />
+      </profile>
+      <profile name="Annotation profile for timedauctions" enabled="true">
+        <sourceOutputDir name="target/generated-sources/annotations" />
+        <sourceTestOutputDir name="target/generated-test-sources/test-annotations" />
+        <outputRelativeToContentRoot value="true" />
+        <processorPath useClasspath="false">
+          <entry name="$MAVEN_REPOSITORY$/org/projectlombok/lombok/1.18.36/lombok-1.18.36.jar" />
+        </processorPath>
+        <module name="timedauctions" />
+        <module name="gatewayserver" />
+        <module name="liveauctions" />
       </profile>
     </annotationProcessing>
   </component>

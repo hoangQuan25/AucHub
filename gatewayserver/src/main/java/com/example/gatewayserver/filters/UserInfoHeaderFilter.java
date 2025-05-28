@@ -26,8 +26,6 @@ public class UserInfoHeaderFilter implements GlobalFilter, Ordered {
     private static final String USER_ID_HEADER = "X-User-ID";
     private static final String USER_USERNAME_HEADER = "X-User-Username";
     private static final String USER_EMAIL_HEADER = "X-User-Email";
-    // You could add one for roles too if needed downstream
-    // private static final String USER_ROLES_HEADER = "X-User-Roles";
 
     @Override
     public Mono<Void> filter(ServerWebExchange exchange, GatewayFilterChain chain) {
@@ -47,8 +45,6 @@ public class UserInfoHeaderFilter implements GlobalFilter, Ordered {
                     String userId = jwt.getSubject(); // 'sub' claim is the standard user ID
                     String username = jwt.getClaimAsString("preferred_username"); // Standard Keycloak claim
                     String email = jwt.getClaimAsString("email");              // Standard Keycloak claim
-                    // Optional: Extract roles if needed downstream (KeycloakRoleConverter already does this for Security)
-                    // List<String> roles = ... extract roles from jwt.getClaim("realm_access")...
 
                     log.debug("UserInfoHeaderFilter: Adding headers for User ID: {}", userId);
 
@@ -72,12 +68,7 @@ public class UserInfoHeaderFilter implements GlobalFilter, Ordered {
 
     @Override
     public int getOrder() {
-        // IMPORTANT: Define the order
-        // Run this filter *AFTER* Spring Security's authentication filter has run
-        // SecurityWebFiltersOrder.AUTHENTICATION has order -100
-        // So, a value slightly higher (less negative or positive) runs after it.
         return SecurityWebFiltersOrder.AUTHENTICATION.getOrder() + 1;
-        // Alternatively, just use a value like -90 or 1 etc.
     }
 }
 

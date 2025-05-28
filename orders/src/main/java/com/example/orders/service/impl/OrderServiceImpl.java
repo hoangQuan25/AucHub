@@ -188,18 +188,19 @@ public class OrderServiceImpl implements OrderService {
                 publishPaymentDueEvent(order); // auctionType will be fetched from order object
             } else {
                 log.info("No eligible third bidder for order {}. Setting to NO_PAYMENT_FINAL.", orderId);
-                order.setOrderStatus(OrderStatus.ORDER_CANCELLED_NO_PAYMENT_FINAL);
+                order.setOrderStatus(OrderStatus.AWAITING_SELLER_DECISION);
+                publishSellerDecisionRequiredEvent(order);
             }
         } else if (paymentOfferAttempt >= 3) {
             log.info("Third (or later) offered bidder timed out for order {}. Setting to NO_PAYMENT_FINAL.", orderId);
-            order.setOrderStatus(OrderStatus.ORDER_CANCELLED_NO_PAYMENT_FINAL);
+            order.setOrderStatus(OrderStatus.AWAITING_SELLER_DECISION);
+            publishSellerDecisionRequiredEvent(order);
         }
 
         Order savedOrder = orderRepository.save(order);
         log.info("Order {} updated. New status: {}", orderId, savedOrder.getOrderStatus());
 
-        if (savedOrder.getOrderStatus() == OrderStatus.ORDER_CANCELLED_NO_PAYMENT_FINAL ||
-                savedOrder.getOrderStatus() == OrderStatus.ORDER_CANCELLED_SYSTEM) {
+        if (savedOrder.getOrderStatus() == OrderStatus.ORDER_CANCELLED_SYSTEM) {
             publishOrderCancelledEvent(savedOrder, "No payment received after all attempts or no eligible bidders remaining.");
         }
     }
@@ -464,18 +465,19 @@ public class OrderServiceImpl implements OrderService {
                 publishPaymentDueEvent(order); // Notify 3rd bidder
             } else {
                 log.info("No eligible third bidder for order {}. Cancelling order due to payment failure.", order.getId());
-                order.setOrderStatus(OrderStatus.ORDER_CANCELLED_NO_PAYMENT_FINAL);
+                order.setOrderStatus(OrderStatus.AWAITING_SELLER_DECISION);
+                publishSellerDecisionRequiredEvent(order); // Notify seller to decide next steps
             }
         } else if (currentAttempt >= 3) { // Third (or later) bidder's payment failed
             log.info("Third (or later) offered bidder's payment failed for order {}. Cancelling order.", order.getId());
-            order.setOrderStatus(OrderStatus.ORDER_CANCELLED_NO_PAYMENT_FINAL);
+            order.setOrderStatus(OrderStatus.AWAITING_SELLER_DECISION);
+            publishSellerDecisionRequiredEvent(order); // Notify seller to decide next steps
         }
 
         Order savedOrder = orderRepository.save(order);
         log.info("Order {} updated after payment failure. New status: {}", order.getId(), savedOrder.getOrderStatus());
 
-        if (savedOrder.getOrderStatus() == OrderStatus.ORDER_CANCELLED_NO_PAYMENT_FINAL ||
-                savedOrder.getOrderStatus() == OrderStatus.ORDER_CANCELLED_SYSTEM) {
+        if (savedOrder.getOrderStatus() == OrderStatus.ORDER_CANCELLED_SYSTEM) {
             publishOrderCancelledEvent(savedOrder, "Payment failed and no further options.");
         }
     }
@@ -636,18 +638,19 @@ public class OrderServiceImpl implements OrderService {
                 publishPaymentDueEvent(order);
             } else {
                 log.info("No eligible third bidder for order {}. Cancelling order due to buyer cancellation.", orderId);
-                order.setOrderStatus(OrderStatus.ORDER_CANCELLED_NO_PAYMENT_FINAL);
+                order.setOrderStatus(OrderStatus.AWAITING_SELLER_DECISION);
+                publishSellerDecisionRequiredEvent(order); // Notify seller to decide next steps
             }
         } else if (currentAttempt >= 3) { // Third (or later) bidder cancelled
             log.info("Third (or later) offered bidder cancelled for order {}. Cancelling order.", orderId);
-            order.setOrderStatus(OrderStatus.ORDER_CANCELLED_NO_PAYMENT_FINAL);
+            order.setOrderStatus(OrderStatus.AWAITING_SELLER_DECISION);
+            publishSellerDecisionRequiredEvent(order); // Notify seller to decide next steps
         }
 
         Order savedOrder = orderRepository.save(order);
         log.info("Order {} updated after buyer cancelled payment. New status: {}", orderId, savedOrder.getOrderStatus());
 
-        if (savedOrder.getOrderStatus() == OrderStatus.ORDER_CANCELLED_NO_PAYMENT_FINAL ||
-                savedOrder.getOrderStatus() == OrderStatus.ORDER_CANCELLED_SYSTEM) {
+        if (savedOrder.getOrderStatus() == OrderStatus.ORDER_CANCELLED_SYSTEM) {
             publishOrderCancelledEvent(savedOrder, "Buyer cancelled payment and no further options.");
         }
     }
