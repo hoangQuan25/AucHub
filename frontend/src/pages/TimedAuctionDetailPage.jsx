@@ -150,6 +150,8 @@ function TimedAuctionDetailPage() {
   const [isHammering, setIsHammering] = useState(false); // Renamed for clarity
   const [hammerError, setHammerError] = useState("");
 
+  const [userInfo, setUserInfo] = useState(null);
+
   // Image Carousel State
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
 
@@ -175,6 +177,20 @@ function TimedAuctionDetailPage() {
   const isAuctionActive = auctionDetails?.status === "ACTIVE";
   const isAuctionScheduled = auctionDetails?.status === "SCHEDULED"; // <<< NEW
   const isAuctionSold = auctionDetails?.status === "SOLD";
+
+  useEffect(() => {
+    if (initialized && keycloak.authenticated) {
+      apiClient
+        .get("/users/me")
+        .then((res) => setUserInfo(res.data))
+        .catch(() => setUserInfo(null));
+    }
+  }, [initialized, keycloak.authenticated]);
+
+  const isUserBanned =
+    userProfile &&
+    userProfile.banEndsAt &&
+    new Date(userProfile.banEndsAt) > new Date();
 
   const fetchUserProfileForBidding = useCallback(async () => {
     if (
@@ -445,7 +461,7 @@ function TimedAuctionDetailPage() {
         `Max bid placement request for ${maxBidNum} sent successfully.`
       );
       fetchAuctionDetails();
-      fetchMyMaxBid(); 
+      fetchMyMaxBid();
     } catch (err) {
       console.error("Failed to place max bid:", err);
       const message =
@@ -878,12 +894,38 @@ function TimedAuctionDetailPage() {
 
                     <button
                       onClick={() => setIsBidConfirmOpen(true)}
-                      disabled={!canBid || isBidding || !selectedMaxBid}
+                      disabled={
+                        !canBid || isBidding || !selectedMaxBid || isUserBanned
+                      }
                       className="px-5 py-2 bg-green-600 hover:bg-green-700 text-white font-semibold rounded text-sm disabled:opacity-60"
                     >
                       {isBidding ? "Placing..." : "Place Max Bid"}
                     </button>
                   </div>
+                  {isUserBanned && (
+                    <div className="flex items-center justify-center mt-4 p-3 bg-red-50 border border-red-300 rounded-lg shadow-sm">
+                      <span className="mr-3 text-2xl text-red-400">⛔</span>
+                      <div>
+                        <p className="font-semibold text-red-700 text-sm mb-1">
+                          You are banned from bidding
+                        </p>
+                        <p className="text-xs text-red-600">
+                          {userProfile?.banEndsAt ? (
+                            <>
+                              Ban lifts:{" "}
+                              <span className="font-bold">
+                                {new Date(userProfile.banEndsAt).toLocaleString(
+                                  "vi-VN"
+                                )}
+                              </span>
+                            </>
+                          ) : (
+                            "Until further notice."
+                          )}
+                        </p>
+                      </div>
+                    </div>
+                  )}
                   {bidError && (
                     <p className="text-xs text-red-500 mt-1">{bidError}</p>
                   )}
@@ -957,7 +999,8 @@ function TimedAuctionDetailPage() {
                     auctionDetails.status !== "ACTIVE" ||
                     !auctionDetails.highestBidderId ||
                     isCancelling ||
-                    isHammering
+                    isHammering ||
+                    (auctionDetails.reservePrice && !auctionDetails.reserveMet)
                   }
                   className="flex-1 w-full sm:w-auto px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded text-sm disabled:opacity-60 disabled:cursor-not-allowed"
                   title={

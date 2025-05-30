@@ -9,11 +9,20 @@ import com.example.users.dto.UpdateUserDto;
 import com.example.users.entity.User;
 import org.springframework.stereotype.Component;
 
+import java.time.LocalDateTime;
+
 @Component
 public class UserMapper {
 
     public UserDto toUserDto(User user) {
         if (user == null) return null;
+
+        boolean isBanned = false;
+        LocalDateTime banEndsAt = null;
+        if (user.getBanEndsAt() != null && LocalDateTime.now().isBefore(user.getBanEndsAt())) {
+            isBanned = true;
+            banEndsAt = user.getBanEndsAt();
+        }
 
         return UserDto.builder()
                 .id(user.getId())
@@ -36,11 +45,14 @@ public class UserMapper {
                 // Stripe & Default Card Info
                 .stripeCustomerId(user.getStripeCustomerId())
                 .stripeDefaultPaymentMethodId(user.getStripeDefaultPaymentMethodId())
-                .hasDefaultPaymentMethod(user.getStripeDefaultPaymentMethodId() != null) // Derived
+                .hasDefaultPaymentMethod(user.getStripeDefaultPaymentMethodId() != null)
                 .defaultCardBrand(user.getDefaultCardBrand())
                 .defaultCardLast4(user.getDefaultCardLast4())
                 .defaultCardExpiryMonth(user.getDefaultCardExpiryMonth())
                 .defaultCardExpiryYear(user.getDefaultCardExpiryYear())
+                // Ban info
+                .isBanned(isBanned)
+                .banEndsAt(banEndsAt)
                 .build();
     }
 

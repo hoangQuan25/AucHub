@@ -84,24 +84,26 @@ function AllNotificationsModal({ isOpen, onClose }) {
   };
 
   const handleNotificationClick = (notification) => {
-    // 1. Mark as read (if unread) using context function
-    if (!notification.isRead && notification.id) {
-      // Check if ID exists
-      markAsRead(notification.id);
+    // --- 2. UPDATE: Navigation logic ---
+    let path = null;
+    if (notification.relatedOrderId) {
+      path = `/orders/${notification.relatedOrderId}`;
+    } else if (notification.relatedAuctionId && notification.relatedAuctionType) {
+      // <-- CHECK auctionType
+      if (notification.relatedAuctionType.toUpperCase() === "LIVE") {
+        path = `/live-auctions/${notification.relatedAuctionId}`;
+      } else if (notification.relatedAuctionType.toUpperCase() === "TIMED") {
+        path = `/timed-auctions/${notification.relatedAuctionId}`;
+      }
     }
 
-    // 2. Navigate
-    if (notification.relatedAuctionId) {
-      // Assuming Timed Auctions for now
-      const path = `/timed-auctions/${notification.relatedAuctionId}`;
-      console.log(`Navigating to: ${path}`);
-      onClose();
+    if (path) {
+      onClose(); // Close the modal before navigating
       navigate(path);
-    } else {
-      console.log(
-        "Notification clicked, but no relatedAuctionId found:",
-        notification
-      );
+      // 1. Mark as read
+      if (!notification.isRead && notification.id) {
+        markAsRead(notification.id);
+      }
     }
   };
 
@@ -170,10 +172,18 @@ function AllNotificationsModal({ isOpen, onClose }) {
                   // Call common handler on click
                   onClick={() => handleNotificationClick(notif)}
                   className={`py-3 px-2 rounded transition-colors duration-150 ${
-                    !notif.isRead ? 'bg-blue-50 hover:bg-blue-100 font-medium' : 'hover:bg-gray-100'
-                  } ${notif.relatedAuctionId ? 'cursor-pointer' : 'cursor-default'}`} // Make clickable only if link exists
+                    !notif.isRead
+                      ? "bg-blue-50 hover:bg-blue-100 font-medium"
+                      : "hover:bg-gray-100"
+                  } ${
+                    notif.relatedAuctionId ? "cursor-pointer" : "cursor-default"
+                  }`} // Make clickable only if link exists
                 >
-                  <p className={`text-sm leading-relaxed ${!notif.isRead ? 'text-gray-900' : 'text-gray-700'}`}>
+                  <p
+                    className={`text-sm leading-relaxed ${
+                      !notif.isRead ? "text-gray-900" : "text-gray-700"
+                    }`}
+                  >
                     {notif.message}
                   </p>
                   <p className="text-xs text-gray-500 mt-1">

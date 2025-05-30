@@ -3,6 +3,7 @@ package com.example.notifications.service;
 import com.example.notifications.dto.FollowingAuctionSummaryDto;
 import com.example.notifications.dto.NotificationDto;
 import com.example.notifications.entity.AuctionStatus;
+import com.example.notifications.event.NotificationEvents;
 import com.example.notifications.event.NotificationEvents.*; // Import event types
 import com.example.notifications.event.DeliveryEvents;
 import org.springframework.data.domain.Page;
@@ -16,25 +17,32 @@ import java.util.UUID;
 public interface NotificationService {
 
     /**
+     * Processes a new auction created event, determines recipients,
+     * persists notifications, and sends real-time alerts.
+     * @param event The NewAuctionCreatedEvent received from RabbitMQ.
+     */
+    void processAuctionStarted(AuctionStartedEvent event, String auctionType);
+
+    /**
      * Processes an auction ended event, determines recipients,
      * persists notifications, and sends real-time alerts.
      * @param event The AuctionEndedEvent received from RabbitMQ.
      */
-    void processAuctionEnded(AuctionEndedEvent event);
+    void processAuctionEnded(AuctionEndedEvent event, String auctionType);
 
     /**
      * Processes an outbid event, notifies the outbid user,
      * persists the notification, and sends a real-time alert.
      * @param event The OutbidEvent received from RabbitMQ.
      */
-    void processOutbid(OutbidEvent event);
+    void processOutbid(OutbidEvent event, String auctionType);
 
     /**
      * Processes a comment reply event, notifies the original commenter,
      * persists the notification, and sends a real-time alert.
      * @param event The CommentReplyEvent received from RabbitMQ.
      */
-    void processCommentReply(CommentReplyEvent event);
+    void processCommentReply(CommentReplyEvent event, String auctionType);
 
     void processOrderCreated(OrderCreatedEvent event);
     void processOrderPaymentDue(OrderCreatedEvent event);
@@ -52,6 +60,8 @@ public interface NotificationService {
     void processDeliveryDelivered(DeliveryEvents.DeliveryDeliveredEventDto event);
     void processDeliveryAwaitingBuyerConfirmation(DeliveryEvents.DeliveryAwaitingBuyerConfirmationEventDto event);
     void processDeliveryIssueReported(DeliveryEvents.DeliveryIssueReportedEventDto event);
+
+    void processUserBanned(NotificationEvents.UserBannedEvent event);
 
     /**
      * Retrieves a paginated list of notifications for a specific user.
@@ -95,8 +105,7 @@ public interface NotificationService {
     /** Gets user IDs following a specific auction (used internally) */
     List<String> getFollowersForAuction(UUID auctionId);
 
-    /** Processes an auction started event */
-    void processAuctionStarted(AuctionStartedEvent event);
+
 
     /**
      * Retrieves details for auctions followed by a user, supporting filtering and pagination.

@@ -24,7 +24,6 @@ public class UserDto {
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
 
-    // Address (remains the same for single address)
     private String streetAddress;
     private String city;
     private String stateProvince;
@@ -39,4 +38,7 @@ public class UserDto {
     private String defaultCardLast4;
     private String defaultCardExpiryMonth;
     private String defaultCardExpiryYear;
+
+    private boolean isBanned;
+    private LocalDateTime banEndsAt;
 }

@@ -178,4 +178,15 @@ public final class NotificationEvents {
         String buyerId; // Or buyerUsernameSnapshot if available and preferred
         String productTitleSnapshot;
     }
+
+    @Value
+    @Builder
+    public static class UserBannedEvent { // Mirrors the DTO from UsersService
+        UUID eventId;
+        LocalDateTime eventTimestamp;
+        String userId;
+        LocalDateTime banEndsAt;
+        int banLevel;
+        int totalDefaults;
+    }
 }

@@ -12,6 +12,7 @@ import com.example.notifications.entity.AuctionFollower;
 import com.example.notifications.entity.Notification; // DB Entity
 import com.example.notifications.entity.AuctionStatus; // Enum for status check
 import com.example.notifications.event.DeliveryEvents;
+import com.example.notifications.event.NotificationEvents;
 import com.example.notifications.event.NotificationEvents.*; // Event types
 import com.example.notifications.mapper.NotificationMapper;
 import com.example.notifications.repository.AuctionFollowerRepository;
@@ -73,100 +74,118 @@ public class NotificationServiceImpl implements NotificationService {
     private static final String TYPE_DELIVERY_AWAITING_BUYER_CONFIRMATION = "DELIVERY_AWAITING_BUYER_CONFIRMATION";
     private static final String TYPE_DELIVERY_ISSUE_REPORTED = "DELIVERY_ISSUE_REPORTED";
 
+    private static final String TYPE_USER_BANNED = "USER_BANNED";
+
 
     private static final DateTimeFormatter SHORT_DATE_TIME_FORMATTER = DateTimeFormatter.ofLocalizedDateTime(FormatStyle.SHORT);
 
-
     @Override
-    @Transactional // Persist notification atomically
-    public void processAuctionEnded(AuctionEndedEvent event) {
-        log.debug("Processing AuctionEndedEvent for auction {}", event.getAuctionId());
-
-        Set<String> notifiedUserIds = new HashSet<>();
+    @Transactional
+    public void processAuctionStarted(AuctionStartedEvent event, String auctionType) {
+        log.debug("Processing AuctionStartedEvent for {} auction {}", auctionType, event.getAuctionId());
         String productTitle = truncate(event.getProductTitleSnapshot(), 50);
-        List<String> recipientIds = new ArrayList<>();
-        String baseMessage = String.format("Auction for '%s' has ended with status: %s.",
-                truncate(event.getProductTitleSnapshot(), 50), event.getFinalStatus());
         String message;
-        List<String> followerIds = getFollowersForAuction(event.getAuctionId());
+        Set<String> notifiedUserIds = new HashSet<>();
 
-        // 1. Notify Seller
+        // Notify Seller
         if (event.getSellerId() != null) {
-            recipientIds.add(event.getSellerId());
-            message = baseMessage; // Generic message for seller
-            if (event.getFinalStatus() == AuctionStatus.SOLD) {
-                message += String.format(" Sold for %s VNĐ to %s.",
-                        event.getWinningBid().toPlainString(), event.getWinnerUsernameSnapshot());
-            } else if (event.getFinalStatus() == AuctionStatus.RESERVE_NOT_MET) {
-                message += " The reserve price was not met.";
-            }
-            saveAndSendNotification(event.getSellerId(), TYPE_AUCTION_ENDED, message, event.getAuctionId(), null);
+            notifiedUserIds.add(event.getSellerId());
+            // MODIFIED: Use the auctionType parameter
+            message = String.format("Your %s auction for '%s' has started.",
+                    auctionType.toLowerCase(), productTitle);
+            saveAndSendNotification(event.getSellerId(), TYPE_AUCTION_STARTED, message, event.getAuctionId(), auctionType, null, null);
         }
 
-        // 2. Notify Winner (if applicable and different from seller)
-        if (event.getFinalStatus() == AuctionStatus.SOLD && event.getWinnerId() != null && !event.getWinnerId().equals(event.getSellerId())) {
-            recipientIds.add(event.getWinnerId()); // Add winner only once
-            message = String.format("Congratulations! You won the auction for '%s' with a bid of %s VNĐ.",
-                    truncate(event.getProductTitleSnapshot(), 50), event.getWinningBid().toPlainString());
-            saveAndSendNotification(event.getWinnerId(), TYPE_AUCTION_ENDED, message, event.getAuctionId(), null);
+        // Notify Followers
+        List<String> followerIds = getFollowersForAuction(event.getAuctionId());
+        if (!followerIds.isEmpty()) {
+            // MODIFIED: Use the auctionType parameter
+            message = String.format("The %s auction you follow for '%s' has started!",
+                    auctionType.toLowerCase(), productTitle);
+            String finalMessage = message;
+            followerIds.stream()
+                    .filter(followerId -> !notifiedUserIds.contains(followerId))
+                    .forEach(followerId -> saveAndSendNotification(followerId, TYPE_AUCTION_STARTED, finalMessage, event.getAuctionId(), auctionType, null, null));
         }
-
-        // 3. TODO: Notify other Bidders/Followers?
-        // --- NEW: Notify Other Bidders ---
-        String generalEndMessage;
-        if (event.getFinalStatus() == AuctionStatus.SOLD) {
-            generalEndMessage = String.format("Auction for '%s' has ended. Sold to %s for %s VNĐ.",
-                    productTitle, event.getWinnerUsernameSnapshot(), event.getWinningBid().toPlainString());
-        } else if (event.getFinalStatus() == AuctionStatus.RESERVE_NOT_MET) {
-            generalEndMessage = String.format("Auction for '%s' has ended. Reserve price not met.", productTitle);
-        } else { // CANCELLED
-            generalEndMessage = String.format("Auction for '%s' was cancelled.", productTitle);
-        }
-
-        for (String followerId : followerIds) {
-            log.info("Notifying follower {} of auction {} end.", followerId, event.getAuctionId());
-            if (notifiedUserIds.add(followerId)) { // Ensure only notified once
-                saveAndSendNotification(followerId, TYPE_AUCTION_ENDED, generalEndMessage, event.getAuctionId(), null);
-            }
-        }
-        // --- End Notify Other Bidders ---
-
-        log.info("Processed AuctionEndedEvent for auction {}, notified {} users.", event.getAuctionId(), recipientIds.size());
+        log.info("Processed AuctionStartedEvent for auction {}, notified {} users.", event.getAuctionId(), notifiedUserIds.size() + followerIds.size());
     }
-
 
     @Override
     @Transactional
-    public void processOutbid(OutbidEvent event) {
-        log.debug("Processing OutbidEvent for auction {}, user {}", event.getAuctionId(), event.getOutbidUserId());
+    public void processAuctionEnded(AuctionEndedEvent event, String auctionType) {
+        log.debug("Processing AuctionEndedEvent for {} auction {}", auctionType, event.getAuctionId());
+        Set<String> notifiedUserIds = new HashSet<>();
+        String productTitle = truncate(event.getProductTitleSnapshot(), 50);
 
-        String message = String.format("You have been outbid on '%s'! The current bid is now %s VNĐ by %s.",
+        // Notify Seller
+        if (event.getSellerId() != null) {
+            notifiedUserIds.add(event.getSellerId());
+            // MODIFIED: Create a more specific base message
+            String message = String.format("The %s auction for '%s' has ended.", auctionType.toLowerCase(), productTitle);
+            if (event.getFinalStatus() == AuctionStatus.SOLD) {
+                message += String.format(" You sold it for %s VNĐ to %s.",
+                        event.getWinningBid().toPlainString(), event.getWinnerUsernameSnapshot());
+            } else if (event.getFinalStatus() == AuctionStatus.RESERVE_NOT_MET) {
+                message += " The reserve price was not met.";
+            } else { // CANCELLED
+                message += " You have cancelled this auction.";
+            }
+            saveAndSendNotification(event.getSellerId(), TYPE_AUCTION_ENDED, message, event.getAuctionId(), auctionType, null, null);
+        }
+
+        // Notify Winner
+        if (event.getFinalStatus() == AuctionStatus.SOLD && event.getWinnerId() != null && !event.getWinnerId().equals(event.getSellerId())) {
+            notifiedUserIds.add(event.getWinnerId());
+            String message = String.format("Congratulations! You won the %s auction for '%s' with a bid of %s VNĐ.",
+                    auctionType.toLowerCase(), productTitle, event.getWinningBid().toPlainString());
+            saveAndSendNotification(event.getWinnerId(), TYPE_AUCTION_ENDED, message, event.getAuctionId(), auctionType, null, null);
+        }
+
+        // Notify Followers
+        String generalEndMessage;
+        if (event.getFinalStatus() == AuctionStatus.SOLD) {
+            generalEndMessage = String.format("The %s auction for '%s' has ended, selling to %s for %s VNĐ.",
+                    auctionType.toLowerCase(), productTitle, event.getWinnerUsernameSnapshot(), event.getWinningBid().toPlainString());
+        } else if (event.getFinalStatus() == AuctionStatus.RESERVE_NOT_MET) {
+            generalEndMessage = String.format("The %s auction for '%s' has ended. The reserve price was not met.", auctionType.toLowerCase(), productTitle);
+        } else { // CANCELLED
+            generalEndMessage = String.format("The %s auction for '%s' was cancelled.", auctionType.toLowerCase(), productTitle);
+        }
+        getFollowersForAuction(event.getAuctionId()).stream()
+                .filter(followerId -> !notifiedUserIds.contains(followerId))
+                .forEach(followerId -> saveAndSendNotification(followerId, TYPE_AUCTION_ENDED, generalEndMessage, event.getAuctionId(), auctionType, null, null));
+    }
+
+    @Override
+    @Transactional
+    public void processOutbid(OutbidEvent event, String auctionType) {
+        log.debug("Processing OutbidEvent for {} auction {}, user {}", auctionType, event.getAuctionId(), event.getOutbidUserId());
+
+        // MODIFIED: Specify it's a timed auction.
+        String message = String.format("You've been outbid on the timed auction for '%s'! The new bid is %s VNĐ by %s.",
                 truncate(event.getProductTitleSnapshot(), 50),
                 event.getNewCurrentBid().toPlainString(),
                 event.getNewHighestBidderUsernameSnapshot());
 
-        saveAndSendNotification(event.getOutbidUserId(), TYPE_OUTBID, message, event.getAuctionId(), null);
+        saveAndSendNotification(event.getOutbidUserId(), TYPE_OUTBID, message, event.getAuctionId(), auctionType, null, null);
         log.info("Processed OutbidEvent for auction {}, notified user {}.", event.getAuctionId(), event.getOutbidUserId());
     }
 
-
     @Override
     @Transactional
-    public void processCommentReply(CommentReplyEvent event) {
-        log.debug("Processing CommentReplyEvent for auction {}, original commenter {}", event.getAuctionId(), event.getOriginalCommenterId());
-
-        // Avoid notifying if user replies to themselves (already checked in publisher, but double check)
+    public void processCommentReply(CommentReplyEvent event, String auctionType) {
+        log.debug("Processing CommentReplyEvent for {} auction {}", auctionType, event.getAuctionId());
         if (event.getReplierUserId().equals(event.getOriginalCommenterId())) {
-            log.debug("User replied to their own comment, skipping notification.");
             return;
         }
 
-        String message = String.format("%s replied to your comment on '%s': '%s'",
+        // MODIFIED: Specify it's on a timed auction.
+        String message = String.format("%s replied to your comment on the timed auction for '%s': '%s'",
                 event.getReplierUsernameSnapshot(),
                 truncate(event.getProductTitleSnapshot(), 40),
-                event.getReplyCommentTextSample()); // Snippet from event
+                truncate(event.getReplyCommentTextSample(), 80));
 
-        saveAndSendNotification(event.getOriginalCommenterId(), TYPE_COMMENT_REPLY, message, event.getAuctionId(), event.getReplyCommentId());
+        saveAndSendNotification(event.getOriginalCommenterId(), TYPE_COMMENT_REPLY, message, event.getAuctionId(), auctionType, null, event.getReplyCommentId());
         log.info("Processed CommentReplyEvent for auction {}, notified user {}.", event.getAuctionId(), event.getOriginalCommenterId());
     }
 
@@ -177,23 +196,19 @@ public class NotificationServiceImpl implements NotificationService {
         String productTitle = truncate(event.getProductTitleSnapshot(), 50);
         String deadlineStr = event.getPaymentDeadline().format(SHORT_DATE_TIME_FORMATTER);
 
-        // Notify Buyer (Winner)
+        Map<String, String> userNames = getUsernamesFromIds(Arrays.asList(event.getSellerId(), event.getCurrentBidderId()));
+        String buyerUsername = userNames.getOrDefault(event.getCurrentBidderId(), "a buyer");
+
+
+        // Notify Buyer
         String buyerMessage = String.format("Your order for '%s' is created! Please pay %s %s by %s.",
-                productTitle,
-                event.getAmountDue().toPlainString(),
-                event.getCurrency(),
-                deadlineStr);
-        saveAndSendNotification(event.getCurrentBidderId(), TYPE_ORDER_CREATED, buyerMessage, event.getAuctionId(), null);
+                productTitle, event.getAmountDue().toPlainString(), event.getCurrency(), deadlineStr);
+        saveAndSendNotification(event.getCurrentBidderId(), TYPE_ORDER_CREATED, buyerMessage, event.getAuctionId(), null, event.getOrderId(), null);
 
         // Notify Seller
-        // Consider fetching buyer's username if desired for seller's message
-        String sellerMessage = String.format("Order created for your item '%s'. Awaiting payment of %s %s from buyer %s (User ID).",
-                productTitle,
-                event.getAmountDue().toPlainString(),
-                event.getCurrency(),
-                event.getCurrentBidderId() // Ideally, fetch username here
-        );
-        saveAndSendNotification(event.getSellerId(), TYPE_ORDER_CREATED, sellerMessage, event.getAuctionId(), null);
+        String sellerMessage = String.format("Order created for your item '%s'. Awaiting payment of %s %s from buyer %s.",
+                productTitle, event.getAmountDue().toPlainString(), event.getCurrency(), buyerUsername);
+        saveAndSendNotification(event.getSellerId(), TYPE_ORDER_CREATED, sellerMessage, event.getAuctionId(), null, event.getOrderId(), null);
 
         log.info("Processed OrderCreatedEvent for order {}, notified buyer {} and seller {}.",
                 event.getOrderId(), event.getCurrentBidderId(), event.getSellerId());
@@ -201,24 +216,23 @@ public class NotificationServiceImpl implements NotificationService {
 
     @Override
     @Transactional
-    public void processOrderPaymentDue(OrderCreatedEvent event) { // Reusing OrderCreatedEvent DTO
+    public void processOrderPaymentDue(OrderCreatedEvent event) {
         log.debug("Processing OrderPaymentDueEvent for order ID: {}, new current bidder: {}", event.getOrderId(), event.getCurrentBidderId());
         String productTitle = truncate(event.getProductTitleSnapshot(), 50);
         String deadlineStr = event.getPaymentDeadline().format(SHORT_DATE_TIME_FORMATTER);
 
-        // Notify the new current bidder (e.g., 2nd or 3rd place winner)
+        Map<String, String> userNames = getUsernamesFromIds(Collections.singletonList(event.getCurrentBidderId()));
+        String newBidderUsername = userNames.getOrDefault(event.getCurrentBidderId(), "the next bidder");
+
+        // Notify the new current bidder
         String bidderMessage = String.format("Good news! The item '%s' is now offered to you. Please pay %s %s by %s.",
-                productTitle,
-                event.getAmountDue().toPlainString(),
-                event.getCurrency(),
-                deadlineStr);
-        saveAndSendNotification(event.getCurrentBidderId(), TYPE_ORDER_PAYMENT_DUE, bidderMessage, event.getAuctionId(), null);
+                productTitle, event.getAmountDue().toPlainString(), event.getCurrency(), deadlineStr);
+        saveAndSendNotification(event.getCurrentBidderId(), TYPE_ORDER_PAYMENT_DUE, bidderMessage, event.getAuctionId(), null, event.getOrderId(), null);
 
-        // Optionally, notify the seller that the offer has moved to the next bidder
-        String sellerMessage = String.format("The offer for item '%s' (Order: %s) has been extended to the next bidder %s.",
-                productTitle, event.getOrderId().toString().substring(0,8), event.getCurrentBidderId());
-        saveAndSendNotification(event.getSellerId(), TYPE_ORDER_PAYMENT_DUE, sellerMessage, event.getAuctionId(), null);
-
+        // Notify the seller
+        String sellerMessage = String.format("The offer for item '%s' (Order: %s) has been extended to %s.",
+                productTitle, event.getOrderId().toString().substring(0, 8), newBidderUsername);
+        saveAndSendNotification(event.getSellerId(), TYPE_ORDER_PAYMENT_DUE, sellerMessage, event.getAuctionId(), null, event.getOrderId(), null);
 
         log.info("Processed OrderPaymentDueEvent for order {}, notified new bidder {} and seller {}.",
                 event.getOrderId(), event.getCurrentBidderId(), event.getSellerId());
@@ -250,11 +264,12 @@ public class NotificationServiceImpl implements NotificationService {
         log.debug("Processing SellerDecisionRequiredEvent for order ID: {}", event.getOrderId());
         String productTitle = truncate(event.getProductTitleSnapshot(), 50);
 
-        String sellerMessage = String.format("Action required for '%s' (Order: %s). Payment wasn't completed by bidder %s. Please decide the next step.",
-                productTitle,
-                event.getOrderId().toString().substring(0,8),
-                event.getDefaultedBidderId()); // Ideally, fetch username
-        saveAndSendNotification(event.getSellerId(), TYPE_SELLER_DECISION_REQUIRED, sellerMessage, event.getAuctionId(), null);
+        Map<String, String> userNames = getUsernamesFromIds(Collections.singletonList(event.getDefaultedBidderId()));
+        String defaultedBidderUsername = userNames.getOrDefault(event.getDefaultedBidderId(), "the previous bidder");
+
+        String sellerMessage = String.format("Action required for '%s'. Payment wasn't completed by %s. Please decide the next step for Order #%s.",
+                productTitle, defaultedBidderUsername, event.getOrderId().toString().substring(0, 8));
+        saveAndSendNotification(event.getSellerId(), TYPE_SELLER_DECISION_REQUIRED, sellerMessage, event.getAuctionId(), null, event.getOrderId(), null);
 
         log.info("Processed SellerDecisionRequiredEvent for order {}, notified seller {}.", event.getOrderId(), event.getSellerId());
     }
@@ -264,20 +279,21 @@ public class NotificationServiceImpl implements NotificationService {
     public void processOrderReadyForShipping(OrderReadyForShippingEvent event) {
         log.debug("Processing OrderReadyForShippingEvent for order ID: {}", event.getOrderId());
         String productTitle = truncate(event.getProductTitleSnapshot(), 50);
+        String orderIdShort = event.getOrderId().toString().substring(0, 8);
+
+        Map<String, String> userNames = getUsernamesFromIds(Arrays.asList(event.getSellerId(), event.getBuyerId()));
+        String sellerUsername = userNames.getOrDefault(event.getSellerId(), "The seller");
+        String buyerUsername = userNames.getOrDefault(event.getBuyerId(), "the buyer");
 
         // Notify Buyer
-        String buyerMessage = String.format("Payment confirmed for '%s'! The seller (%s) is preparing it for shipping. Order: %s",
-                productTitle,
-                event.getSellerId(), // Ideally, fetch seller username
-                event.getOrderId().toString().substring(0,8));
-        saveAndSendNotification(event.getBuyerId(), TYPE_ORDER_READY_FOR_SHIPPING, buyerMessage, event.getAuctionId(), null);
+        String buyerMessage = String.format("Payment confirmed for '%s'! Seller %s is preparing it for shipping. Order: #%s",
+                productTitle, sellerUsername, orderIdShort);
+        saveAndSendNotification(event.getBuyerId(), TYPE_ORDER_READY_FOR_SHIPPING, buyerMessage, event.getAuctionId(), null, event.getOrderId(), null);
 
         // Notify Seller
-        String sellerMessage = String.format("Payment received for '%s' (Order: %s) from buyer %s! Please prepare for shipping.",
-                productTitle,
-                event.getOrderId().toString().substring(0,8),
-                event.getBuyerId()); // Ideally, fetch buyer username
-        saveAndSendNotification(event.getSellerId(), TYPE_ORDER_READY_FOR_SHIPPING, sellerMessage, event.getAuctionId(), null);
+        String sellerMessage = String.format("Payment received for '%s' from buyer %s! Please prepare for shipping. Order: #%s",
+                productTitle, buyerUsername, orderIdShort);
+        saveAndSendNotification(event.getSellerId(), TYPE_ORDER_READY_FOR_SHIPPING, sellerMessage, event.getAuctionId(), null, event.getOrderId(), null);
 
         log.info("Processed OrderReadyForShippingEvent for order {}, notified buyer {} and seller {}.",
                 event.getOrderId(), event.getBuyerId(), event.getSellerId());
@@ -296,11 +312,11 @@ public class NotificationServiceImpl implements NotificationService {
                 truncate(event.getCancellationReason(), 100));
 
         // Notify Seller
-        saveAndSendNotification(event.getSellerId(), TYPE_ORDER_CANCELLED, baseMessage + " (As Seller)", event.getAuctionId(), null);
+        saveAndSendNotification(event.getSellerId(), TYPE_ORDER_CANCELLED, baseMessage + " (As Seller)", event.getAuctionId(), null, event.getOrderId(), null);
 
         // Notify the bidder involved at cancellation, if they are not the seller (and if a bidder was involved)
         if (event.getCurrentBidderIdAtCancellation() != null && !event.getCurrentBidderIdAtCancellation().equals(event.getSellerId())) {
-            saveAndSendNotification(event.getCurrentBidderIdAtCancellation(), TYPE_ORDER_CANCELLED, baseMessage + " (As Buyer/Bidder)", event.getAuctionId(), null);
+            saveAndSendNotification(event.getCurrentBidderIdAtCancellation(), TYPE_ORDER_CANCELLED, baseMessage + " (As Buyer/Bidder)", event.getAuctionId(), null, null, null);
             log.info("Processed OrderCancelledEvent for order {}, notified seller {} and involved bidder {}.",
                     event.getOrderId(), event.getSellerId(), event.getCurrentBidderIdAtCancellation());
         } else {
@@ -355,7 +371,7 @@ public class NotificationServiceImpl implements NotificationService {
         // Assuming auctionId is not directly relevant for a refund notification,
         // but if your Order entity (fetched via OrderService if needed) has it, you could pass it.
         // For now, passing orderId as relatedAuctionId for consistency if needed by saveAndSend or null.
-        saveAndSendNotification(event.getBuyerId(), TYPE_REFUND_SUCCEEDED, message, event.getOrderId(), null);
+        saveAndSendNotification(event.getBuyerId(), TYPE_REFUND_SUCCEEDED, message, null, null, event.getOrderId(), null);
 
         log.info("Processed RefundSucceededEvent for order {}, notified buyer {}.", event.getOrderId(), event.getBuyerId());
     }
@@ -375,7 +391,7 @@ public class NotificationServiceImpl implements NotificationService {
                 truncate(event.getFailureReason(), 100),
                 event.getPaymentIntentId());
 
-        saveAndSendNotification(event.getBuyerId(), TYPE_REFUND_FAILED, message, event.getOrderId(), null);
+        saveAndSendNotification(event.getBuyerId(), TYPE_REFUND_FAILED, message, null, null, event.getOrderId(), null);
 
         log.info("Processed RefundFailedEvent for order {}, notified buyer {}. Reason: {}", event.getOrderId(), event.getBuyerId(), event.getFailureReason());
         // You might also want to notify an admin/support team about refund failures.
@@ -387,39 +403,33 @@ public class NotificationServiceImpl implements NotificationService {
         log.debug("Processing OrderAwaitingFulfillmentConfirmationEvent for order ID: {}", event.getOrderId());
 
         if (event.getSellerId() == null) {
-            log.error("Cannot send order awaiting fulfillment confirmation notification: sellerId is missing. OrderId: {}", event.getOrderId());
+            log.error("Cannot send order awaiting fulfillment notification: sellerId is missing. OrderId: {}", event.getOrderId());
             return;
         }
 
         String productTitle = truncate(event.getProductTitleSnapshot(), 50);
+        String orderIdShort = event.getOrderId().toString().substring(0, 8);
+
+        Map<String, String> userNames = getUsernamesFromIds(Arrays.asList(event.getSellerId(), event.getBuyerId()));
+        String buyerUsername = userNames.getOrDefault(event.getBuyerId(), "the buyer");
+        String sellerUsername = userNames.getOrDefault(event.getSellerId(), "The seller");
+
 
         // --- Notification to Seller ---
-        // Consider fetching buyer's username if event.getBuyerId() is just an ID and you want a username.
-        String substring = event.getOrderId().toString().substring(0, 8);
         String sellerMessage = String.format(
-                "Action Required: Order #%s for '%s' has been paid by the buyer (%s). Please confirm if you can fulfill this order or cancel it.",
-                substring,
-                productTitle,
-                event.getBuyerId() // Or buyerUsername if available in event
+                "Action Required: Order #%s for '%s' has been paid by %s. Please confirm if you can fulfill this order.",
+                orderIdShort, productTitle, buyerUsername
         );
-        // Assuming auctionId is not in this specific event, we pass orderId as the related ID for the notification.
-        // If your saveAndSendNotification can handle a null auctionId or expects orderId here, adjust accordingly.
-        saveAndSendNotification(event.getSellerId(), TYPE_ORDER_AWAITING_FULFILLMENT_CONFIRMATION, sellerMessage, event.getOrderId(), null);
+        saveAndSendNotification(event.getSellerId(), TYPE_ORDER_AWAITING_FULFILLMENT_CONFIRMATION, sellerMessage, null, null, event.getOrderId(), null);
         log.info("Notified seller {} for order {} awaiting fulfillment confirmation.", event.getSellerId(), event.getOrderId());
 
-        // --- Optional: Notification to Buyer ---
-        // You might also want to inform the buyer that their payment was successful and what the next step is.
+        // --- Notification to Buyer ---
         if (event.getBuyerId() != null) {
             String buyerMessage = String.format(
-                    "Your payment for order #%s ('%s') was successful! The seller is now confirming fulfillment before shipping.",
-                    substring,
-                    productTitle
+                    "Your payment for order #%s ('%s') was successful! %s is now confirming fulfillment before shipping.",
+                    orderIdShort, productTitle, sellerUsername
             );
-            // Using a slightly different type or the same type but relying on the message.
-            // Let's use a distinct type if you want to handle its display differently or for clarity.
-            // For now, let's re-use the same TYPE, the message content differentiates.
-            // Alternatively, define TYPE_PAYMENT_CONFIRMED_AWAITING_SELLER = "PAYMENT_CONFIRMED_AWAITING_SELLER";
-            saveAndSendNotification(event.getBuyerId(), TYPE_ORDER_AWAITING_FULFILLMENT_CONFIRMATION, buyerMessage, event.getOrderId(), null);
+            saveAndSendNotification(event.getBuyerId(), TYPE_ORDER_AWAITING_FULFILLMENT_CONFIRMATION, buyerMessage, null, null, event.getOrderId(), null);
             log.info("Notified buyer {} for order {} that payment is confirmed, awaiting seller fulfillment.", event.getBuyerId(), event.getOrderId());
         }
     }
@@ -436,12 +446,12 @@ public class NotificationServiceImpl implements NotificationService {
         String buyerMessage = String.format("The seller is preparing your order #%s (%s) for shipment. Delivery ID: #%s.",
                 orderIdShort, productInfo, deliveryIdShort);
         // For delivery notifications, using event.getDeliveryId() as the relatedId seems most direct.
-        saveAndSendNotification(event.getBuyerId(), TYPE_DELIVERY_CREATED, buyerMessage, event.getDeliveryId(), null);
+        saveAndSendNotification(event.getBuyerId(), TYPE_DELIVERY_CREATED, buyerMessage, null, null, event.getOrderId(), null);
 
         // Notify Seller
         String sellerMessage = String.format("Please prepare order #%s (%s) for shipment. Delivery ID: #%s.",
                 orderIdShort, productInfo, deliveryIdShort);
-        saveAndSendNotification(event.getSellerId(), TYPE_DELIVERY_CREATED, sellerMessage, event.getDeliveryId(), null);
+        saveAndSendNotification(event.getSellerId(), TYPE_DELIVERY_CREATED, sellerMessage, null, null, event.getOrderId(), null);
 
         log.info("Processed DeliveryCreatedEvent for delivery {}, notified buyer {} and seller {}.",
                 event.getDeliveryId(), event.getBuyerId(), event.getSellerId());
@@ -460,7 +470,7 @@ public class NotificationServiceImpl implements NotificationService {
                 productInfo,
                 event.getCourierName(),
                 event.getTrackingNumber());
-        saveAndSendNotification(event.getBuyerId(), TYPE_DELIVERY_SHIPPED, buyerMessage, event.getDeliveryId(), null);
+        saveAndSendNotification(event.getBuyerId(), TYPE_DELIVERY_SHIPPED, buyerMessage, null, null, event.getOrderId(), null);
 
         // Optional: Notify Seller (though they initiated this, a confirmation notification might be redundant)
         // String sellerMessage = String.format("You've marked order #%s (%s) as shipped with tracking %s.",
@@ -479,16 +489,19 @@ public class NotificationServiceImpl implements NotificationService {
         String orderIdShort = event.getOrderId().toString().substring(0, 8);
         String deliveredAtFormatted = event.getDeliveredAt() != null ? event.getDeliveredAt().format(SHORT_DATE_TIME_FORMATTER) : "recently";
 
+        Map<String, String> userNames = getUsernamesFromIds(Collections.singletonList(event.getBuyerId()));
+        String buyerUsername = userNames.getOrDefault(event.getBuyerId(), "the buyer");
+
 
         // Notify Buyer
         String buyerMessage = String.format("Delivered! Your order #%s (%s) was marked as delivered on %s.",
                 orderIdShort, productInfo, deliveredAtFormatted);
-        saveAndSendNotification(event.getBuyerId(), TYPE_DELIVERY_DELIVERED, buyerMessage, event.getDeliveryId(), null);
+        saveAndSendNotification(event.getBuyerId(), TYPE_DELIVERY_DELIVERED, buyerMessage, null, null, event.getOrderId(), null);
 
         // Notify Seller
         String sellerMessage = String.format("Order #%s (%s) for buyer %s has been marked as delivered on %s.",
-                orderIdShort, productInfo, event.getBuyerId(), deliveredAtFormatted); // Consider fetching buyer username if desired
-        saveAndSendNotification(event.getSellerId(), TYPE_DELIVERY_DELIVERED, sellerMessage, event.getDeliveryId(), null);
+                orderIdShort, productInfo, buyerUsername, deliveredAtFormatted);
+        saveAndSendNotification(event.getSellerId(), TYPE_DELIVERY_DELIVERED, sellerMessage, null, null, event.getOrderId(), null);
 
         log.info("Processed DeliveryDeliveredEvent for delivery {}, notified buyer {} and seller {}.",
                 event.getDeliveryId(), event.getBuyerId(), event.getSellerId());
@@ -507,14 +520,14 @@ public class NotificationServiceImpl implements NotificationService {
                 "Item Delivered! Your order #%s (%s) was marked as delivered around %s. Please confirm receipt within 3 days via the order details page.",
                 orderIdShort, productInfo, deliveredAtStr
         );
-        saveAndSendNotification(event.getBuyerId(), TYPE_DELIVERY_AWAITING_BUYER_CONFIRMATION, buyerMessage, event.getDeliveryId(), null);
+        saveAndSendNotification(event.getBuyerId(), TYPE_DELIVERY_AWAITING_BUYER_CONFIRMATION, buyerMessage, null, null,  event.getOrderId(), null);
 
         // Notify Seller
         String sellerMessage = String.format(
                 "Item Delivered for order #%s (%s). Awaiting buyer's confirmation of receipt.",
                 orderIdShort, productInfo
         );
-        saveAndSendNotification(event.getSellerId(), TYPE_DELIVERY_AWAITING_BUYER_CONFIRMATION, sellerMessage, event.getDeliveryId(), null);
+        saveAndSendNotification(event.getSellerId(), TYPE_DELIVERY_AWAITING_BUYER_CONFIRMATION, sellerMessage, null, null, event.getOrderId(), null);
 
         log.info("Processed DeliveryAwaitingBuyerConfirmationEvent for delivery {}, notified buyer {} and seller {}.",
                 event.getDeliveryId(), event.getBuyerId(), event.getSellerId());
@@ -528,29 +541,59 @@ public class NotificationServiceImpl implements NotificationService {
         String orderIdShort = event.getOrderId().toString().substring(0, 8);
         String issue = truncate(event.getIssueNotes(), 70);
 
-        // Notify Buyer (if the issue is relevant to them, e.g., failed delivery attempt)
-        // The message here depends on the nature of "issue reported".
-        // If it's a "failed delivery attempt", the message is more specific.
-        // For a generic "issue reported by seller", the buyer message might be different or not sent.
-        // Let's assume the "Phase 1" requirement: "A delivery attempt for order #XYZ failed. Reason: {...}"
-        String buyerMessage = String.format("Delivery Update for order #%s (%s): An issue was reported - '%s'. Please check order details or contact support.",
+        Map<String, String> userNames = getUsernamesFromIds(Collections.singletonList(event.getReporterId()));
+        String reporterUsername = userNames.getOrDefault(event.getReporterId(), "A user");
+
+        // Notify Buyer
+        String buyerMessage = String.format("Delivery Update for order #%s (%s): An issue was reported - '%s'.",
                 orderIdShort, productInfo, issue);
-        saveAndSendNotification(event.getBuyerId(), TYPE_DELIVERY_ISSUE_REPORTED, buyerMessage, event.getDeliveryId(), null);
+        saveAndSendNotification(event.getBuyerId(), TYPE_DELIVERY_ISSUE_REPORTED, buyerMessage, null, null, event.getOrderId(), null);
 
 
-        // Notify Seller (if the issue was reported by the system or needs their attention)
-        // If the seller *is* the reporter, this might be redundant unless it's a confirmation.
-        if (!event.getSellerId().equals(event.getReporterId())) {
-            String sellerMessage = String.format("Issue reported for delivery #%s (order #%s, product %s): '%s'. Reported by: %s.",
-                    event.getDeliveryId().toString().substring(0,8), orderIdShort, productInfo, issue, event.getReporterId());
-            saveAndSendNotification(event.getSellerId(), TYPE_DELIVERY_ISSUE_REPORTED, sellerMessage, event.getDeliveryId(), null);
+        // Notify Seller only if they were not the one who reported it
+        if (!Objects.equals(event.getSellerId(), event.getReporterId())) {
+            String sellerMessage = String.format("Issue reported for delivery #%s (order #%s): '%s'. Reported by: %s.",
+                    event.getDeliveryId().toString().substring(0,8), orderIdShort, issue, reporterUsername);
+            saveAndSendNotification(event.getSellerId(), TYPE_DELIVERY_ISSUE_REPORTED, sellerMessage, null, null, event.getOrderId(), null);
         } else {
             log.info("Seller {} reported the issue for delivery {}. No separate notification to seller.", event.getSellerId(), event.getDeliveryId());
         }
 
+        log.info("Processed DeliveryIssueReportedEvent for delivery {}, issue: '{}'. Notified relevant parties.",
+                event.getDeliveryId(), event.getIssueNotes());
+    }
 
-        log.info("Processed DeliveryIssueReportedEvent for delivery {}, issue: '{}'. Notified buyer {}.",
-                event.getDeliveryId(), event.getIssueNotes(), event.getBuyerId());
+    @Override
+    @Transactional
+    public void processUserBanned(NotificationEvents.UserBannedEvent event) {
+        log.debug("Processing UserBannedEvent for user ID: {}", event.getUserId());
+
+        String banDurationDescription;
+        if (event.getBanLevel() == 1) {
+            banDurationDescription = "1 week";
+        } else if (event.getBanLevel() >= 2) {
+            banDurationDescription = "1 month";
+        } else {
+            banDurationDescription = "a specified period"; // Fallback
+        }
+
+        String formattedBanEndsAt = event.getBanEndsAt() != null ?
+                event.getBanEndsAt().format(SHORT_DATE_TIME_FORMATTER) : "N/A";
+
+        String message = String.format(
+                "Account Notice: Due to %d payment defaults where you were the winning bidder, " +
+                        "your ability to bid has been temporarily restricted for %s, until %s. " +
+                        "Further defaults may lead to longer restrictions.",
+                event.getTotalDefaults(),
+                banDurationDescription,
+                formattedBanEndsAt
+        );
+
+        // No auctionId, orderId, or commentId directly related to a ban notification itself
+        saveAndSendNotification(event.getUserId(), TYPE_USER_BANNED, message, null, null, null, null);
+
+        log.info("Processed UserBannedEvent for user {}, notified about ban until {}.",
+                event.getUserId(), formattedBanEndsAt);
     }
 
 
@@ -695,40 +738,7 @@ public class NotificationServiceImpl implements NotificationService {
         return auctionFollowerRepository.findUserIdsByAuctionId(auctionId);
     }
 
-    /**
-     * Processes an auction started event
-     *
-     * @param event
-     */
-    @Override
-    @Transactional // Needed for potential saveAndSendNotification call
-    public void processAuctionStarted(AuctionStartedEvent event) {
-        log.debug("Processing AuctionStartedEvent for auction {}", event.getAuctionId());
-        String productTitle = truncate(event.getProductTitleSnapshot(), 50);
-        String message;
 
-        // Fetch followers for this auction
-        List<String> followerIds = getFollowersForAuction(event.getAuctionId()); // Use helper/repo method
-        Set<String> notifiedUserIds = new HashSet<>(followerIds); // Keep track
-
-        // Notify Seller (if not already following maybe?)
-        if(event.getSellerId() != null && notifiedUserIds.add(event.getSellerId())) { // Add returns true if not present
-            message = String.format("Your %s auction for '%s' has started.",
-                    event.getAuctionType().toLowerCase(), productTitle);
-            saveAndSendNotification(event.getSellerId(), "AUCTION_STARTED", message, event.getAuctionId(), null);
-        }
-
-        // Notify Followers
-        message = String.format("Auction for '%s' (type: %s) has started!",
-                productTitle, event.getAuctionType());
-        for (String followerId : followerIds) {
-            // Avoid re-notifying seller if they also followed
-            if (!followerId.equals(event.getSellerId())) {
-                saveAndSendNotification(followerId, "AUCTION_STARTED", message, event.getAuctionId(), null);
-            }
-        }
-        log.info("Processed AuctionStartedEvent for auction {}, notified {} unique users.", event.getAuctionId(), notifiedUserIds.size());
-    }
 
     /**
      * Retrieves details for auctions followed by a user, supporting filtering and pagination.
@@ -868,6 +878,32 @@ public class NotificationServiceImpl implements NotificationService {
         return new PageImpl<>(pageContent, pageable, filteredList.size());
     }
 
+    private Map<String, String> getUsernamesFromIds(List<String> userIds) {
+        if (CollectionUtils.isEmpty(userIds)) {
+            return Collections.emptyMap();
+        }
+        try {
+            // Remove duplicates and nulls before making the client call
+            List<String> distinctIds = userIds.stream().filter(Objects::nonNull).distinct().collect(Collectors.toList());
+            if(distinctIds.isEmpty()) {
+                return Collections.emptyMap();
+            }
+
+            Map<String, UserBasicInfoDto> userInfoMap = userServiceClient.getUsersBasicInfoByIds(distinctIds);
+
+            return userInfoMap.entrySet().stream()
+                    .collect(Collectors.toMap(
+                            Map.Entry::getKey,
+                            entry -> entry.getValue().getUsername()
+                    ));
+        } catch (Exception e) {
+            log.error("Failed to fetch usernames for IDs: {}. Error: {}", userIds, e.getMessage());
+            // Return an empty map on failure to prevent halting notification flow.
+            // The calling methods will handle the fallback.
+            return Collections.emptyMap();
+        }
+    }
+
 
     // Optional helper to push unread count updates via WebSocket
     private void sendUnreadCountUpdate(String userId) {
@@ -884,7 +920,7 @@ public class NotificationServiceImpl implements NotificationService {
 
 
     // --- Helper Method to Save and Send ---
-    private void saveAndSendNotification(String userId, String type, String message, UUID auctionId, Long commentId) {
+    private void saveAndSendNotification(String userId, String type, String message, UUID auctionId, String auctionType, UUID orderId, Long commentId) {
         try {
             // 1. Create and Save Notification Entity
             Notification notification = Notification.builder()
@@ -893,40 +929,38 @@ public class NotificationServiceImpl implements NotificationService {
                     .message(message)
                     .isRead(false)
                     .relatedAuctionId(auctionId)
+                    .relatedAuctionType(auctionType)
+                    .relatedOrderId(orderId)
                     .relatedCommentId(commentId)
-                    // createdAt is set automatically
                     .build();
             Notification savedNotification = notificationRepository.save(notification);
             log.debug("Saved notification ID {} for user {}", savedNotification.getId(), userId);
 
             // 2. Create DTO for WebSocket Payload
             NotificationDto notificationDto = NotificationDto.builder()
-                    // .id(savedNotification.getId().toString()) // Include ID if client needs it
                     .type(savedNotification.getType())
                     .message(savedNotification.getMessage())
                     .timestamp(savedNotification.getCreatedAt())
                     .relatedAuctionId(savedNotification.getRelatedAuctionId())
-                    // .relatedCommentId(savedNotification.getRelatedCommentId())
+                    .relatedAuctionType(savedNotification.getRelatedAuctionType())
+                    .relatedOrderId(savedNotification.getRelatedOrderId())
                     .isRead(savedNotification.isRead())
-                    .details(null) // Add extra details if needed
+                    .details(null)
                     .build();
 
             // 3. Send via WebSocket to specific user destination
-            // The prefix '/user/' targets a specific user session managed by Spring WebSocket
-            String destination = "/queue/notifications"; // User-specific destination suffix
+            String destination = "/queue/notifications";
             messagingTemplate.convertAndSendToUser(
-                    userId,         // User ID (Spring resolves this to the correct session/topic)
-                    destination,    // The destination suffix
-                    notificationDto // The payload DTO
+                    userId,
+                    destination,
+                    notificationDto
             );
             log.info("Sent WebSocket notification type '{}' to user {}, destination '/user/{}/{}'", type, userId, userId, destination);
 
             // 4. (Optional) Trigger Email Notification
-            sendEmailNotification(userId, message); // Implement this method if needed
-
+            sendEmailNotification(userId, message);
 
         } catch (Exception e) {
-            // Log error but generally don't let notification failure stop event processing
             log.error("Failed to save or send notification type '{}' for user {}: {}", type, userId, e.getMessage(), e);
         }
     }

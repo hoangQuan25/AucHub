@@ -118,6 +118,13 @@ public class UserController {
         return ResponseEntity.ok(usersInfo);
     }
 
+    @GetMapping("/{userId}/ban-status")
+    public ResponseEntity<UserBanStatusDto> getBanStatus(@PathVariable String userId) {
+        log.debug("Checking ban status for user ID: {}", userId);
+        UserBanStatusDto banStatus = userService.getUserBanStatus(userId);
+        return ResponseEntity.ok(banStatus);
+    }
+
     @PostMapping("/me/payment-method/setup-intent-secret")
     public ResponseEntity<?> createSetupIntentSecret(@RequestHeader(USER_ID_HEADER) String userId,
                                                      @RequestHeader(value = USER_EMAIL_HEADER, required = false) String email, // For creating Stripe Customer

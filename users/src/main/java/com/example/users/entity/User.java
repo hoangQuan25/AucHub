@@ -46,8 +46,6 @@ public class User {
     @Column(name = "seller_description", length = 1000) // Or TEXT type if longer
     private String sellerDescription;
 
-    // --- Single Address Fields (Keep as is for now for simplicity) ---
-    // These are important for default shipping/billing if no other address is specified for an order.
     @Column(length = 255)
     private String streetAddress;
     @Column(length = 100)
@@ -66,9 +64,6 @@ public class User {
     @Column(name = "stripe_default_payment_method_id", length = 255) // Store ID of the default Stripe PaymentMethod
     private String stripeDefaultPaymentMethodId;
 
-    // --- Displayable Card Info (derived from default Stripe PaymentMethod) ---
-    // These fields will be populated by your service AFTER a successful Stripe SetupIntent
-    // and should not be directly updatable by the user via UpdateUserDto in a free-form way.
     @Column(name = "default_card_brand", length = 50)      // e.g., "Visa", "Mastercard"
     private String defaultCardBrand;
     @Column(name = "default_card_last4", length = 4)
@@ -77,6 +72,16 @@ public class User {
     private String defaultCardExpiryMonth;
     @Column(name = "default_card_expiry_year", length = 4)  // e.g., "2028"
     private String defaultCardExpiryYear;
+
+    @Column(name = "first_winner_payment_default_count", nullable = false)
+    private int firstWinnerPaymentDefaultCount = 0;
+
+    @Column(name = "ban_ends_at")
+    private LocalDateTime banEndsAt;
+
+    // To track the level of ban for escalation: 0=none, 1=week_ban_applied, 2=month_ban_applied_etc.
+    @Column(name = "current_ban_level", nullable = false)
+    private int currentBanLevel = 0;
 
     @CreationTimestamp
     @Column(name = "created_at", nullable = false, updatable = false)

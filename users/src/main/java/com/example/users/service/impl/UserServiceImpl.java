@@ -1,9 +1,7 @@
 package com.example.users.service.impl;
 
-import com.example.users.dto.PublicSellerProfileDto;
-import com.example.users.dto.UpdateUserDto;
-import com.example.users.dto.UserBasicInfoDto;
-import com.example.users.dto.UserDto;
+import com.example.users.dto.*;
+import com.example.users.dto.event.UserBannedEventDto;
 import com.example.users.entity.User;
 import com.example.users.exception.ResourceNotFoundException;
 import com.example.users.exception.UserNotFoundException;
@@ -15,13 +13,16 @@ import com.example.users.service.UserService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.keycloak.representations.idm.UserRepresentation; // Keep this if getOrCreateUserProfile uses it
+import org.springframework.amqp.rabbit.core.RabbitTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.CollectionUtils; // Keep this
 
+import java.time.LocalDateTime;
 import java.util.Collections; // Keep this
 import java.util.List;       // Keep this
 import java.util.Map;        // Keep this
+import java.util.UUID;
 import java.util.stream.Collectors; // Keep this
 
 
@@ -33,7 +34,8 @@ public class UserServiceImpl implements UserService {
     private final UserRepository userRepository;
     private final UserMapper userMapper;
     private final KeycloakAdminService keycloakAdminService;
-    private final SellerReviewService sellerReviewService; // Assuming this is needed for public profile
+    private final SellerReviewService sellerReviewService;
+    private final RabbitTemplate rabbitTemplate;
 
     @Override
     @Transactional
@@ -181,7 +183,6 @@ public class UserServiceImpl implements UserService {
     }
 
 
-    // --- NEW METHOD IMPLEMENTATION ---
     @Override
     @Transactional
     public void saveStripePaymentDetails(String userId, String stripeCustomerId, String stripeDefaultPaymentMethodId,
@@ -201,5 +202,86 @@ public class UserServiceImpl implements UserService {
 
         userRepository.save(user);
         log.info("Successfully saved Stripe payment details for user ID: {}", userId);
+    }
+
+    @Override
+    @Transactional
+    public void processFirstWinnerPaymentDefault(String userId) {
+        log.info("Processing first winner payment default for user ID: {}", userId);
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> {
+                    log.warn("User not found for payment default processing: {}", userId);
+                    // If user doesn't exist, they can't have defaulted.
+                    // This could be a sign of an issue, but for now, we can't ban a non-existent user.
+                    return new UserNotFoundException("User not found: " + userId);
+                });
+
+        // Check if currently banned
+        if (user.getBanEndsAt() != null && LocalDateTime.now().isBefore(user.getBanEndsAt())) {
+            log.info("User {} is currently banned until {}. Default still counted.", userId, user.getBanEndsAt());
+            // Policy: Current ban remains, default is still counted. No immediate re-banning while already banned.
+        }
+
+        // Has a previous ban period ended?
+        boolean previousBanExpired = user.getCurrentBanLevel() > 0 &&
+                (user.getBanEndsAt() == null || LocalDateTime.now().isAfter(user.getBanEndsAt()));
+
+        user.setFirstWinnerPaymentDefaultCount(user.getFirstWinnerPaymentDefaultCount() + 1);
+        log.info("User {} default count incremented to: {}", userId, user.getFirstWinnerPaymentDefaultCount());
+
+        boolean newBanApplied = false;
+        String banDurationMessage = "";
+
+        if (previousBanExpired) { // Defaulted *after* a previous ban ended.
+            log.info("User {} defaulted after a previous ban period expired (current ban level {}). Applying 1-month ban.", userId, user.getCurrentBanLevel());
+            user.setBanEndsAt(LocalDateTime.now().plusMonths(1));
+            user.setCurrentBanLevel(Math.max(user.getCurrentBanLevel(), 2)); // Escalate to level 2 (month) or keep if already higher
+            newBanApplied = true;
+            banDurationMessage = "1 month";
+        } else if (user.getCurrentBanLevel() == 0 && user.getFirstWinnerPaymentDefaultCount() >= 3) {
+            // First time reaching 3 defaults, and no current or past ban level recorded.
+            log.info("User {} reached {} defaults (no prior ban level). Applying 1-week ban.", userId, user.getFirstWinnerPaymentDefaultCount());
+            user.setBanEndsAt(LocalDateTime.now().plusWeeks(1));
+            user.setCurrentBanLevel(1); // Set to level 1 (week)
+            newBanApplied = true;
+            banDurationMessage = "1 week";
+        }
+
+        User savedUser = userRepository.save(user);
+
+        if (newBanApplied) {
+            log.info("User {} has been banned for {} until {}. Ban level: {}. Total defaults: {}",
+                    userId, banDurationMessage, savedUser.getBanEndsAt(), savedUser.getCurrentBanLevel(), savedUser.getFirstWinnerPaymentDefaultCount());
+
+            // Publish UserBannedEvent
+            UserBannedEventDto bannedEvent = UserBannedEventDto.builder()
+                    .eventId(UUID.randomUUID())
+                    .eventTimestamp(LocalDateTime.now())
+                    .userId(savedUser.getId())
+                    .banEndsAt(savedUser.getBanEndsAt())
+                    .banLevel(savedUser.getCurrentBanLevel())
+                    .totalDefaults(savedUser.getFirstWinnerPaymentDefaultCount())
+                    .build();
+            try {
+                // Use constants defined in UsersService's RabbitMqConfig
+                rabbitTemplate.convertAndSend(
+                        com.example.users.config.RabbitMqConfig.USER_EVENTS_EXCHANGE, // Ensure this constant exists
+                        com.example.users.config.RabbitMqConfig.USER_EVENT_BANNED_ROUTING_KEY, // Ensure this constant exists
+                        bannedEvent);
+                log.info("Published UserBannedEvent for user {}", savedUser.getId());
+            } catch (Exception e) {
+                log.error("Error publishing UserBannedEvent for user {}: {}", savedUser.getId(), e.getMessage(), e);
+            }
+        }
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public UserBanStatusDto getUserBanStatus(String userId) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new UserNotFoundException("User not found: " + userId));
+
+        boolean isBanned = user.getBanEndsAt() != null && LocalDateTime.now().isBefore(user.getBanEndsAt());
+        return new UserBanStatusDto(isBanned, isBanned ? user.getBanEndsAt() : null);
     }
 }

@@ -44,6 +44,11 @@ public class RabbitMqConfig {
     public static final String AUCTION_ENDED_ROUTING_KEY_PREFIX = "auction.";
     public static final String AUCTION_STARTED_ROUTING_KEY_PREFIX = "auction.";
 
+    // --- Dead Letter Exchange and Queue ---
+    public static final String MAIN_DLX_EXCHANGE = "dlx.main_exchange"; // Dead Letter Exchange
+    public static final String MAIN_DEAD_LETTER_QUEUE = "q.main_dead_letter_queue"; // General Dead Letter Queue
+    public static final String MAIN_DLQ_ROUTING_KEY = "dlq.main.key";
+
 
     // --- Exchanges ---
     @Bean
@@ -70,26 +75,51 @@ public class RabbitMqConfig {
         return new TopicExchange(NOTIFICATIONS_EXCHANGE);
     }
 
+    @Bean
+    public DirectExchange mainDlxExchange() {
+        return ExchangeBuilder.directExchange(MAIN_DLX_EXCHANGE)
+                .durable(true)
+                .build();
+    }
+
 
     // --- Queues ---
     @Bean
     Queue tdAuctionStartQueue() {
-        return QueueBuilder.durable(TD_AUCTION_START_QUEUE).build();
+        return QueueBuilder.durable(TD_AUCTION_START_QUEUE)
+                .withArgument("x-dead-letter-exchange", MAIN_DLX_EXCHANGE)
+                .withArgument("x-dead-letter-routing-key", MAIN_DLQ_ROUTING_KEY)
+                .build();
     }
 
     @Bean
     Queue tdAuctionEndQueue() {
-        return QueueBuilder.durable(TD_AUCTION_END_QUEUE).build();
+        return QueueBuilder.durable(TD_AUCTION_END_QUEUE)
+                .withArgument("x-dead-letter-exchange", MAIN_DLX_EXCHANGE)
+                .withArgument("x-dead-letter-routing-key", MAIN_DLQ_ROUTING_KEY)
+                .build();
     }
 
     @Bean
     Queue tdAuctionCancelQueue() {
-        return QueueBuilder.durable(TD_AUCTION_CANCEL_QUEUE).build();
+        return QueueBuilder.durable(TD_AUCTION_CANCEL_QUEUE)
+                .withArgument("x-dead-letter-exchange", MAIN_DLX_EXCHANGE)
+                .withArgument("x-dead-letter-routing-key", MAIN_DLQ_ROUTING_KEY)
+                .build();
     }
 
     @Bean
     Queue tdAuctionHammerQueue() { // For ending early
-        return QueueBuilder.durable(TD_AUCTION_HAMMER_QUEUE).build();
+        return QueueBuilder.durable(TD_AUCTION_HAMMER_QUEUE)
+                .withArgument("x-dead-letter-exchange", MAIN_DLX_EXCHANGE)
+                .withArgument("x-dead-letter-routing-key", MAIN_DLQ_ROUTING_KEY)
+                .build();
+    }
+
+    @Bean
+    public Queue mainDeadLetterQueue() {
+        return QueueBuilder.durable(MAIN_DEAD_LETTER_QUEUE)
+                .build();
     }
 
     // --- Bindings ---
@@ -139,6 +169,13 @@ public class RabbitMqConfig {
         return BindingBuilder.bind(tdAuctionEndQueue)
                 .to(tdAuctionCommandExchange)
                 .with(TD_END_ROUTING_KEY); // Reuse same routing key
+    }
+
+    @Bean
+    public Binding mainDeadLetterBinding(Queue mainDeadLetterQueue, DirectExchange mainDlxExchange) {
+        return BindingBuilder.bind(mainDeadLetterQueue)
+                .to(mainDlxExchange)
+                .with(MAIN_DLQ_ROUTING_KEY); // Bind the DLQ with the specific routing key
     }
 
     // --- Message Converter (identical is fine) ---

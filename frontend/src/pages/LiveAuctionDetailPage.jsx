@@ -9,7 +9,12 @@ import ConfirmationModal from "../components/ConfirmationModal";
 import CollapsibleSection from "../components/CollapsibleSection";
 import AuctionRules from "../components/AuctionRules";
 import AuctionChatPanel from "../components/AuctionChatPanel";
-import { FaChevronLeft, FaChevronRight, FaEye, FaCreditCard } from "react-icons/fa"; // Icons for arrows
+import {
+  FaChevronLeft,
+  FaChevronRight,
+  FaEye,
+  FaCreditCard,
+} from "react-icons/fa"; // Icons for arrows
 import SockJS from "sockjs-client/dist/sockjs"; // Use specific path for wider compatibility
 import { Client } from "@stomp/stompjs";
 
@@ -55,6 +60,17 @@ function LiveAuctionDetailPage() {
 
   // --- State for Image Carousel ---
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
+
+  const [userInfo, setUserInfo] = useState(null);
+
+  useEffect(() => {
+    if (initialized && keycloak.authenticated) {
+      apiClient
+        .get("/users/me")
+        .then((res) => setUserInfo(res.data))
+        .catch(() => setUserInfo(null));
+    }
+  }, [initialized, keycloak.authenticated]);
 
   // --- Fetch Initial Auction Details (useEffect) ---
   useEffect(() => {
@@ -470,6 +486,12 @@ function LiveAuctionDetailPage() {
       ? "Auction ended without meeting reserve price."
       : null;
 
+  const isUserBanned = !!(
+    userInfo &&
+    userInfo.banEndsAt &&
+    new Date(userInfo.banEndsAt) > new Date()
+  );
+
   const handleGoToPayment = async () => {
     setIsNavigatingToPayment(true);
     setNavigationError("");
@@ -642,7 +664,7 @@ function LiveAuctionDetailPage() {
             <>
               <button
                 onClick={() => promptBid(auctionDetails.nextBidAmount)}
-                disabled={!canPlaceBid || isBidding}
+                disabled={!canPlaceBid || isBidding || isUserBanned}
                 className="w-full py-3 px-4 bg-green-600 hover:bg-green-700 text-white font-bold rounded text-lg disabled:opacity-60"
               >
                 {isBidding
@@ -678,12 +700,36 @@ function LiveAuctionDetailPage() {
                       promptBid(bidNum);
                     }
                   }}
-                  disabled={isBidding || !customBidAmount}
+                  disabled={isBidding || !customBidAmount || isUserBanned}
                   className="px-4 py-2 bg-green-500 hover:bg-green-600 text-white rounded text-sm disabled:opacity-60"
                 >
                   Bid
                 </button>
               </div>
+              {isUserBanned && (
+                <div className="flex items-center justify-center mt-4 p-3 bg-red-50 border border-red-300 rounded-lg shadow-sm">
+                  <span className="mr-3 text-2xl text-red-400">⛔</span>
+                  <div>
+                    <p className="font-semibold text-red-700 text-sm mb-1">
+                      You are banned from bidding
+                    </p>
+                    <p className="text-xs text-red-600">
+                      {userInfo?.banEndsAt ? (
+                        <>
+                          Ban lifts:{" "}
+                          <span className="font-bold">
+                            {new Date(userInfo.banEndsAt).toLocaleString(
+                              "vi-VN"
+                            )}
+                          </span>
+                        </>
+                      ) : (
+                        "Until further notice."
+                      )}
+                    </p>
+                  </div>
+                </div>
+              )}
               {bidError && (
                 <p className="text-center text-xs text-red-500 mt-2">
                   {bidError}
