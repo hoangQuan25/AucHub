@@ -47,6 +47,7 @@ public class RabbitMqConfig {
     public static final String DELIVERY_DELIVERED_NOTIFICATION_QUEUE = "q.notification.delivery.delivered";
     public static final String DELIVERY_ISSUE_REPORTED_NOTIFICATION_QUEUE = "q.notification.delivery.issue.reported";
     public static final String DELIVERY_AWAITING_BUYER_CONFIRMATION_NOTIFICATION_QUEUE = "q.notification.delivery.awaiting_buyer_confirmation";
+    public static final String USER_BANNED_NOTIFICATION_QUEUE = "q.notification.user.banned";
 
     // --- Routing Keys for Order & User Event Notifications (New - must match publisher in OrderService) ---
     public static final String ORDER_EVENT_CREATED_ROUTING_KEY = "order.event.created";
@@ -63,6 +64,12 @@ public class RabbitMqConfig {
     public static final String DELIVERY_EVENT_DELIVERED_ROUTING_KEY = "delivery.event.delivered";
     public static final String DELIVERY_EVENT_ISSUE_REPORTED_ROUTING_KEY = "delivery.event.issue.reported";
     public static final String DELIVERY_EVENT_AWAITING_BUYER_CONFIRMATION_ROUTING_KEY = "delivery.event.awaiting.buyer.confirmation";
+    public static final String USER_EVENT_BANNED_ROUTING_KEY = "user.event.banned";
+
+    // --- Dead Letter Exchange and Queue ---
+    public static final String MAIN_DLX_EXCHANGE = "dlx.main_exchange"; // Dead Letter Exchange
+    public static final String MAIN_DEAD_LETTER_QUEUE = "q.main_dead_letter_queue"; // General Dead Letter Queue
+    public static final String MAIN_DLQ_ROUTING_KEY = "dlq.main.key";
 
 
     // --- Exchange Beans ---
@@ -93,96 +100,171 @@ public class RabbitMqConfig {
         return new TopicExchange(DELIVERIES_EVENTS_EXCHANGE, true, false);
     }
 
+    @Bean
+    public DirectExchange mainDlxExchange() {
+        return ExchangeBuilder.directExchange(MAIN_DLX_EXCHANGE)
+                .durable(true)
+                .build();
+    }
+
     // --- Queue Beans (Existing) ---
     @Bean
     Queue auctionStartedQueue() {
-        return QueueBuilder.durable(AUCTION_STARTED_QUEUE).build();
+        return QueueBuilder.durable(AUCTION_STARTED_QUEUE)
+                .withArgument("x-dead-letter-exchange", MAIN_DLX_EXCHANGE)
+                .withArgument("x-dead-letter-routing-key", MAIN_DLQ_ROUTING_KEY)
+                .build();
     }
 
     @Bean
     Queue auctionEndedQueue() {
-        return QueueBuilder.durable(AUCTION_ENDED_QUEUE).build();
+        return QueueBuilder.durable(AUCTION_ENDED_QUEUE)
+                .withArgument("x-dead-letter-exchange", MAIN_DLX_EXCHANGE)
+                .withArgument("x-dead-letter-routing-key", MAIN_DLQ_ROUTING_KEY)
+                .build();
     }
 
     @Bean
     Queue auctionOutbidQueue() {
-        return QueueBuilder.durable(AUCTION_OUTBID_QUEUE).build();
+        return QueueBuilder.durable(AUCTION_OUTBID_QUEUE)
+                .withArgument("x-dead-letter-exchange", MAIN_DLX_EXCHANGE)
+                .withArgument("x-dead-letter-routing-key", MAIN_DLQ_ROUTING_KEY)
+                .build();
     }
 
     @Bean
     Queue commentRepliedQueue() {
-        return QueueBuilder.durable(COMMENT_REPLIED_QUEUE).build();
+        return QueueBuilder.durable(COMMENT_REPLIED_QUEUE)
+                .withArgument("x-dead-letter-exchange", MAIN_DLX_EXCHANGE)
+                .withArgument("x-dead-letter-routing-key", MAIN_DLQ_ROUTING_KEY)
+                .build();
     }
 
     // --- Queue Beans (New for Order/User Events) ---
     @Bean
     Queue orderCreatedQueue() {
-        return QueueBuilder.durable(ORDER_CREATED_QUEUE).build();
+        return QueueBuilder.durable(ORDER_CREATED_QUEUE)
+                .withArgument("x-dead-letter-exchange", MAIN_DLX_EXCHANGE)
+                .withArgument("x-dead-letter-routing-key", MAIN_DLQ_ROUTING_KEY)
+                .build();
     }
 
     @Bean
     Queue orderPaymentDueQueue() {
-        return QueueBuilder.durable(ORDER_PAYMENT_DUE_QUEUE).build();
+        return QueueBuilder.durable(ORDER_PAYMENT_DUE_QUEUE)
+                .withArgument("x-dead-letter-exchange", MAIN_DLX_EXCHANGE)
+                .withArgument("x-dead-letter-routing-key", MAIN_DLQ_ROUTING_KEY)
+                .build();
     }
 
     @Bean
     Queue sellerDecisionRequiredQueue() {
-        return QueueBuilder.durable(ORDER_SELLER_DECISION_REQUIRED_QUEUE).build();
+        return QueueBuilder.durable(ORDER_SELLER_DECISION_REQUIRED_QUEUE)
+                .withArgument("x-dead-letter-exchange", MAIN_DLX_EXCHANGE)
+                .withArgument("x-dead-letter-routing-key", MAIN_DLQ_ROUTING_KEY)
+                .build();
     }
 
     @Bean
     Queue orderReadyForShippingQueue() {
-        return QueueBuilder.durable(ORDER_READY_FOR_SHIPPING_QUEUE).build();
+        return QueueBuilder.durable(ORDER_READY_FOR_SHIPPING_QUEUE)
+                .withArgument("x-dead-letter-exchange", MAIN_DLX_EXCHANGE)
+                .withArgument("x-dead-letter-routing-key", MAIN_DLQ_ROUTING_KEY)
+                .build();
     }
 
     @Bean
     Queue orderCancelledQueue() {
-        return QueueBuilder.durable(ORDER_CANCELLED_QUEUE).build();
+        return QueueBuilder.durable(ORDER_CANCELLED_QUEUE)
+                .withArgument("x-dead-letter-exchange", MAIN_DLX_EXCHANGE)
+                .withArgument("x-dead-letter-routing-key", MAIN_DLQ_ROUTING_KEY)
+                .build();
     }
 
     @Bean
     Queue userPaymentDefaultedQueue() {
-        return QueueBuilder.durable(USER_PAYMENT_DEFAULTED_QUEUE).build();
+        return QueueBuilder.durable(USER_PAYMENT_DEFAULTED_QUEUE)
+                .withArgument("x-dead-letter-exchange", MAIN_DLX_EXCHANGE)
+                .withArgument("x-dead-letter-routing-key", MAIN_DLQ_ROUTING_KEY)
+                .build();
     }
 
     @Bean
     Queue refundSucceededNotificationQueue() {
-        return QueueBuilder.durable(REFUND_SUCCEEDED_NOTIFICATION_QUEUE).build();
+        return QueueBuilder.durable(REFUND_SUCCEEDED_NOTIFICATION_QUEUE)
+                .withArgument("x-dead-letter-exchange", MAIN_DLX_EXCHANGE)
+                .withArgument("x-dead-letter-routing-key", MAIN_DLQ_ROUTING_KEY)
+                .build();
     }
 
     @Bean
     Queue refundFailedNotificationQueue() {
-        return QueueBuilder.durable(REFUND_FAILED_NOTIFICATION_QUEUE).build();
+        return QueueBuilder.durable(REFUND_FAILED_NOTIFICATION_QUEUE)
+                .withArgument("x-dead-letter-exchange", MAIN_DLX_EXCHANGE)
+                .withArgument("x-dead-letter-routing-key", MAIN_DLQ_ROUTING_KEY)
+                .build();
     }
 
     @Bean
     Queue orderAwaitingFulfillmentConfirmationQueue() {
-        return QueueBuilder.durable(ORDER_AWAITING_FULFILLMENT_CONFIRMATION_QUEUE).build();
+        return QueueBuilder.durable(ORDER_AWAITING_FULFILLMENT_CONFIRMATION_QUEUE)
+                .withArgument("x-dead-letter-exchange", MAIN_DLX_EXCHANGE)
+                .withArgument("x-dead-letter-routing-key", MAIN_DLQ_ROUTING_KEY)
+                .build();
     }
 
     @Bean
     Queue deliveryCreatedNotificationQueue() {
-        return QueueBuilder.durable(DELIVERY_CREATED_NOTIFICATION_QUEUE).build();
+        return QueueBuilder.durable(DELIVERY_CREATED_NOTIFICATION_QUEUE)
+                .withArgument("x-dead-letter-exchange", MAIN_DLX_EXCHANGE)
+                .withArgument("x-dead-letter-routing-key", MAIN_DLQ_ROUTING_KEY)
+                .build();
     }
 
     @Bean
     Queue deliveryShippedNotificationQueue() {
-        return QueueBuilder.durable(DELIVERY_SHIPPED_NOTIFICATION_QUEUE).build();
+        return QueueBuilder.durable(DELIVERY_SHIPPED_NOTIFICATION_QUEUE)
+                .withArgument("x-dead-letter-exchange", MAIN_DLX_EXCHANGE)
+                .withArgument("x-dead-letter-routing-key", MAIN_DLQ_ROUTING_KEY)
+                .build();
     }
 
     @Bean
     Queue deliveryDeliveredNotificationQueue() {
-        return QueueBuilder.durable(DELIVERY_DELIVERED_NOTIFICATION_QUEUE).build();
+        return QueueBuilder.durable(DELIVERY_DELIVERED_NOTIFICATION_QUEUE)
+                .withArgument("x-dead-letter-exchange", MAIN_DLX_EXCHANGE)
+                .withArgument("x-dead-letter-routing-key", MAIN_DLQ_ROUTING_KEY)
+                .build();
     }
 
     @Bean
     Queue deliveryIssueReportedNotificationQueue() {
-        return QueueBuilder.durable(DELIVERY_ISSUE_REPORTED_NOTIFICATION_QUEUE).build();
+        return QueueBuilder.durable(DELIVERY_ISSUE_REPORTED_NOTIFICATION_QUEUE)
+                .withArgument("x-dead-letter-exchange", MAIN_DLX_EXCHANGE)
+                .withArgument("x-dead-letter-routing-key", MAIN_DLQ_ROUTING_KEY)
+                .build();
     }
 
     @Bean
     Queue deliveryAwaitingBuyerConfirmationNotificationQueue() {
-        return QueueBuilder.durable(DELIVERY_AWAITING_BUYER_CONFIRMATION_NOTIFICATION_QUEUE).build();
+        return QueueBuilder.durable(DELIVERY_AWAITING_BUYER_CONFIRMATION_NOTIFICATION_QUEUE)
+                .withArgument("x-dead-letter-exchange", MAIN_DLX_EXCHANGE)
+                .withArgument("x-dead-letter-routing-key", MAIN_DLQ_ROUTING_KEY)
+                .build();
+    }
+
+    @Bean
+    Queue userBannedNotificationQueue() {
+        return QueueBuilder.durable(USER_BANNED_NOTIFICATION_QUEUE)
+                .withArgument("x-dead-letter-exchange", MAIN_DLX_EXCHANGE) // Use your shared DLX
+                .withArgument("x-dead-letter-routing-key", MAIN_DLQ_ROUTING_KEY) // And shared DLQ key
+                .build();
+    }
+
+    @Bean
+    public Queue mainDeadLetterQueue() {
+        return QueueBuilder.durable(MAIN_DEAD_LETTER_QUEUE)
+                .build();
     }
 
     // --- Binding Beans (Existing) ---
@@ -312,6 +394,20 @@ public class RabbitMqConfig {
         return BindingBuilder.bind(deliveryIssueReportedNotificationQueue)
                 .to(deliveriesEventsExchange)
                 .with(DELIVERY_EVENT_ISSUE_REPORTED_ROUTING_KEY);
+    }
+
+    @Bean
+    Binding userBannedNotificationBinding(Queue userBannedNotificationQueue, TopicExchange userEventsExchange) {
+        return BindingBuilder.bind(userBannedNotificationQueue)
+                .to(userEventsExchange) // Listen on the USER_EVENTS_EXCHANGE
+                .with(USER_EVENT_BANNED_ROUTING_KEY);
+    }
+
+    @Bean
+    public Binding mainDeadLetterBinding(Queue mainDeadLetterQueue, DirectExchange mainDlxExchange) {
+        return BindingBuilder.bind(mainDeadLetterQueue)
+                .to(mainDlxExchange)
+                .with(MAIN_DLQ_ROUTING_KEY); // Bind the DLQ with the specific routing key
     }
 
     // --- Message Converter (Essential for DTO conversion) ---

@@ -40,13 +40,13 @@ public class Notification {
     private UUID relatedAuctionId;
 
     @Column(updatable = false)
-    private Long relatedCommentId; // Could be parent or reply ID depending on type
+    private String relatedAuctionType; // "LIVE" or "TIMED"
 
-    // Optional: Store extra event details as JSON if needed later
-    // @Lob
-    // @Column(columnDefinition = "TEXT")
-    // private String eventDetailsJson;
-    // ---
+    @Column(updatable = false)
+    private Long relatedCommentId;
+
+    @Column(updatable = false)
+    private UUID relatedOrderId;
 
     @CreationTimestamp
     @Column(nullable = false, updatable = false)

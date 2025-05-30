@@ -6,23 +6,22 @@ function UserPaymentMethodSection({
   isAddingPaymentMethod,
   paymentMethodError,
   paymentMethodSuccess,
-  stripePromise, // For disabling button if Stripe.js not loaded
+  stripePromise,
 }) {
   if (!profileData) return null;
 
-  // Assuming backend UserDto provides a boolean 'hasDefaultPaymentMethod'
-  // If not, derive it: const hasDefaultPaymentMethod = !!profileData.defaultCardLast4;
   const hasDefaultPaymentMethod = profileData.hasDefaultPaymentMethod || !!profileData.defaultCardLast4;
 
-
   return (
-    <div className="mb-6 p-4 border rounded bg-white shadow-sm">
-      <div className="flex justify-between items-center mb-3 border-b pb-2">
-        <h3 className="text-lg font-semibold">Payment Method</h3>
+    <div className="bg-white p-6 rounded-xl shadow-lg hover:shadow-xl transition-shadow duration-300 border border-gray-200 h-full">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-4 pb-3 border-b border-gray-200">
+        <h3 className="text-xl font-semibold text-slate-800 mb-2 sm:mb-0">
+          Payment Method
+        </h3>
         <button
           onClick={onAddOrUpdatePaymentMethod}
           disabled={isAddingPaymentMethod || !stripePromise}
-          className="bg-blue-500 hover:bg-blue-600 text-white text-xs font-semibold py-1 px-3 rounded disabled:opacity-50"
+          className="bg-sky-500 hover:bg-sky-600 text-white text-sm font-semibold py-2 px-4 rounded-lg disabled:opacity-60 disabled:cursor-not-allowed shadow-md hover:shadow-lg transition-all duration-150 ease-in-out w-full sm:w-auto"
         >
           {isAddingPaymentMethod
             ? 'Processing...'
@@ -31,31 +30,31 @@ function UserPaymentMethodSection({
             : 'Add Payment Method'}
         </button>
       </div>
+
       {paymentMethodError && (
-        <p className="text-red-500 text-sm mb-2">{paymentMethodError}</p>
+        <p className="text-red-500 text-sm mb-3 p-3 bg-red-50 rounded-md">{paymentMethodError}</p>
       )}
       {paymentMethodSuccess && (
-        <p className="text-green-500 text-sm mb-2">{paymentMethodSuccess}</p>
+        <p className="text-green-600 text-sm mb-3 p-3 bg-green-50 rounded-md">{paymentMethodSuccess}</p>
       )}
 
       {hasDefaultPaymentMethod && profileData.defaultCardLast4 ? (
-        <p>
-          <strong>Default Card:</strong>{' '}
-          {profileData.defaultCardBrand || 'N/A'} ending in ****{' '}
-          {profileData.defaultCardLast4}
+        <div className="text-sm text-slate-700 space-y-1">
+          <p>
+            <span className="font-medium text-slate-600">Default Card:</span>{' '}
+            <strong className="text-slate-800">{profileData.defaultCardBrand || 'Card'}</strong> ending in ****{' '}
+            <strong className="text-slate-800">{profileData.defaultCardLast4}</strong>
+          </p>
           {profileData.defaultCardExpiryMonth &&
             profileData.defaultCardExpiryYear && (
-              <span className="text-gray-600 text-sm">
-                {' '}
-                (Exp: {profileData.defaultCardExpiryMonth}/
-                {profileData.defaultCardExpiryYear})
-              </span>
+              <p className="text-slate-500 text-xs">
+                Expires: {profileData.defaultCardExpiryMonth}/{profileData.defaultCardExpiryYear}
+              </p>
             )}
-        </p>
+        </div>
       ) : (
-        <p className="text-gray-600 text-sm">
-          No default payment method saved. Click "Add Payment Method" to set one
-          up for faster checkouts and bidding.
+        <p className="text-slate-500 text-sm italic">
+          No default payment method on file. Add one for faster checkouts.
         </p>
       )}
     </div>

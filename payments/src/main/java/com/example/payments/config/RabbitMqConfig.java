@@ -1,11 +1,6 @@
 package com.example.payments.config;
 
-import org.springframework.amqp.core.Binding;
-import org.springframework.amqp.core.BindingBuilder;
-import org.springframework.amqp.core.ExchangeBuilder;
-import org.springframework.amqp.core.Queue;
-import org.springframework.amqp.core.QueueBuilder;
-import org.springframework.amqp.core.TopicExchange;
+import org.springframework.amqp.core.*;
 import org.springframework.amqp.rabbit.connection.ConnectionFactory;
 import org.springframework.amqp.rabbit.core.RabbitTemplate;
 import org.springframework.amqp.support.converter.Jackson2JsonMessageConverter;
@@ -37,6 +32,11 @@ public class RabbitMqConfig {
     public static final String PAYMENT_EVENT_REFUND_SUCCEEDED_ROUTING_KEY = "payment.event.refund.succeeded"; // New
     public static final String PAYMENT_EVENT_REFUND_FAILED_ROUTING_KEY = "payment.event.refund.failed";       // New
 
+    // --- Dead Letter Exchange and Queue ---
+    public static final String MAIN_DLX_EXCHANGE = "dlx.main_exchange"; // Dead Letter Exchange
+    public static final String MAIN_DEAD_LETTER_QUEUE = "q.main_dead_letter_queue"; // General Dead Letter Queue
+    public static final String MAIN_DLQ_ROUTING_KEY = "dlq.main.key";
+
     // --- Exchange Beans ---
     @Bean
     public TopicExchange paymentsEventsExchange() { // For events published BY this service
@@ -47,17 +47,31 @@ public class RabbitMqConfig {
 
     @Bean
     public TopicExchange ordersEventsExchange() { // For events consumed BY this service (like refund requests)
-        // This service needs to know about the exchange to bind a queue to it.
-        // It assumes OrdersService defines and publishes to an exchange with this name.
         return ExchangeBuilder.topicExchange(ORDERS_EVENTS_EXCHANGE)
                 .durable(true) // Ensure properties match the publisher's definition
+                .build();
+    }
+
+    @Bean
+    public DirectExchange mainDlxExchange() {
+        return ExchangeBuilder.directExchange(MAIN_DLX_EXCHANGE)
+                .durable(true)
                 .build();
     }
 
     // --- Queue Beans ---
     @Bean
     public Queue refundRequestedQueue() {
-        return QueueBuilder.durable(REFUND_REQUESTED_QUEUE).build();
+        return QueueBuilder.durable(REFUND_REQUESTED_QUEUE)
+                .withArgument("x-dead-letter-exchange", MAIN_DLX_EXCHANGE)
+                .withArgument("x-dead-letter-routing-key", MAIN_DLQ_ROUTING_KEY)
+                .build();
+    }
+
+    @Bean
+    public Queue mainDeadLetterQueue() {
+        return QueueBuilder.durable(MAIN_DEAD_LETTER_QUEUE)
+                .build();
     }
 
     // --- Binding Beans ---
@@ -66,6 +80,13 @@ public class RabbitMqConfig {
         return BindingBuilder.bind(refundRequestedQueue)
                 .to(ordersEventsExchange) // Listen on the exchange OrdersService publishes to
                 .with(REFUND_REQUESTED_ROUTING_KEY);
+    }
+
+    @Bean
+    public Binding mainDeadLetterBinding(Queue mainDeadLetterQueue, DirectExchange mainDlxExchange) {
+        return BindingBuilder.bind(mainDeadLetterQueue)
+                .to(mainDlxExchange)
+                .with(MAIN_DLQ_ROUTING_KEY); // Bind the DLQ with the specific routing key
     }
 
     // --- Message Converter & RabbitTemplate (should be same as before) ---

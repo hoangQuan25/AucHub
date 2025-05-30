@@ -15,7 +15,8 @@ public class NotificationDto {
     private String message; // User-friendly message
     private LocalDateTime timestamp;
     private UUID relatedAuctionId; // Link back to the auction
-    // private Long relatedCommentId; // Link back to comment/reply
+    private String relatedAuctionType;
+    private UUID relatedOrderId;
     private boolean isRead; // Status (if managing read status)
     private Map<String, Object> details; // Optional map for extra structured data
 }

@@ -25,9 +25,9 @@ public class NotificationMapper {
                 .message(entity.getMessage())
                 .timestamp(entity.getCreatedAt())
                 .relatedAuctionId(entity.getRelatedAuctionId())
+                .relatedAuctionType(entity.getRelatedAuctionType())
                 .isRead(entity.isRead())
-                // Include ID if needed by frontend (e.g., for marking as read)
-                // .id(entity.getId().toString())
+                .relatedOrderId(entity.getRelatedOrderId())
                 .build();
         // Alternatively: BeanUtils.copyProperties(entity, dto); // Requires NotificationDto to have matching fields + setters
         return dto;

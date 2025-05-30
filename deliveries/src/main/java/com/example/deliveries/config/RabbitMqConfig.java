@@ -38,6 +38,11 @@ public class RabbitMqConfig {
     public static final String DELIVERY_AUTO_COMPLETE_SCHEDULE_ROUTING_KEY = "delivery.schedule.auto-complete";
     public static final String DELIVERY_EVENT_AUTO_COMPLETED_ROUTING_KEY = "delivery.event.auto.completed"; // For future auto-completion
 
+    // --- Dead Letter Exchange and Queue ---
+    public static final String MAIN_DLX_EXCHANGE = "dlx.main_exchange"; // Dead Letter Exchange
+    public static final String MAIN_DEAD_LETTER_QUEUE = "q.main_dead_letter_queue"; // General Dead Letter Queue
+    public static final String MAIN_DLQ_ROUTING_KEY = "dlq.main.key";
+
 
     // --- Exchange Beans ---
     @Bean
@@ -67,23 +72,36 @@ public class RabbitMqConfig {
                 args);
     }
 
+    @Bean
+    public DirectExchange mainDlxExchange() {
+        return ExchangeBuilder.directExchange(MAIN_DLX_EXCHANGE)
+                .durable(true)
+                .build();
+    }
+
     // --- Queue Beans ---
     @Bean
     public Queue orderReadyForShippingDeliveryQueue() {
         return QueueBuilder.durable(ORDER_READY_FOR_SHIPPING_DELIVERY_QUEUE)
-                // Optional: Configure DLX for this queue if needed
-                // .withArgument("x-dead-letter-exchange", "your_dlx_exchange_name")
-                // .withArgument("x-dead-letter-routing-key", "dlx.delivery.order.readyforshipping")
+                .withArgument("x-dead-letter-exchange", MAIN_DLX_EXCHANGE)
+                .withArgument("x-dead-letter-routing-key", MAIN_DLQ_ROUTING_KEY)
                 .build();
     }
 
     @Bean
     Queue deliveryAutoCompleteCommandQueue() {
         return QueueBuilder.durable(DELIVERY_AUTO_COMPLETE_COMMAND_QUEUE)
-                // .withArgument("x-dead-letter-exchange", "your_dlx_exchange_name") // Optional DLX
-                // .withArgument("x-dead-letter-routing-key", "dlx.delivery.auto_complete_command")
+                .withArgument("x-dead-letter-exchange", MAIN_DLX_EXCHANGE)
+                .withArgument("x-dead-letter-routing-key", MAIN_DLQ_ROUTING_KEY)
                 .build();
     }
+
+    @Bean
+    public Queue mainDeadLetterQueue() {
+        return QueueBuilder.durable(MAIN_DEAD_LETTER_QUEUE)
+                .build();
+    }
+
 
     // --- Binding Beans ---
     @Bean
@@ -100,6 +118,13 @@ public class RabbitMqConfig {
                 .to(deliveriesScheduleExchange)
                 .with(DELIVERY_AUTO_COMPLETE_SCHEDULE_ROUTING_KEY) // Routing key used for scheduling
                 .noargs();
+    }
+
+    @Bean
+    public Binding mainDeadLetterBinding(Queue mainDeadLetterQueue, DirectExchange mainDlxExchange) {
+        return BindingBuilder.bind(mainDeadLetterQueue)
+                .to(mainDlxExchange)
+                .with(MAIN_DLQ_ROUTING_KEY); // Bind the DLQ with the specific routing key
     }
 
     // --- Message Converter & RabbitTemplate ---

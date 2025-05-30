@@ -13,12 +13,14 @@ import {
   FaChartLine,
   FaUsers,
   FaShieldAlt,
+  FaClock,
 } from "react-icons/fa"; // Adjusted icons for categories
 
 // Import your actual components
 import AuctionCard from "../components/AuctionCard"; // Assuming path
 import CountdownTimer from "../components/CountdownTimer"; // Assuming path
 import apiClient from "../api/apiClient"; // Assuming path
+import InteractiveAuctionCard from "../components/InteractiveAuctionCard";
 
 const mainCategoryData = [
   {
@@ -112,6 +114,10 @@ function HomePage() {
   const [endingSoonAuctions, setEndingSoonAuctions] = useState([]);
   const [loadingEndingSoon, setLoadingEndingSoon] = useState(true);
   const [errorEndingSoon, setErrorEndingSoon] = useState("");
+
+  const [startingSoonAuctions, setStartingSoonAuctions] = useState([]);
+  const [loadingStartingSoon, setLoadingStartingSoon] = useState(true);
+  const [errorStartingSoon, setErrorStartingSoon] = useState("");
 
   const [hotAuctions, setHotAuctions] = useState([]);
   const [loadingHot, setLoadingHot] = useState(true);
@@ -262,6 +268,53 @@ function HomePage() {
       setLoadingBanner(false);
     }
   }, []);
+
+  const fetchStartingSoonAuctions = useCallback(
+    async (countPerType = 2, totalCount = 4) => {
+      setLoadingStartingSoon(true);
+      setErrorStartingSoon("");
+      try {
+        const commonParams = {
+          page: 0,
+          size: countPerType,
+          status: "SCHEDULED", // Key change: fetch SCHEDULED auctions
+          sort: "startTime,asc", // Sort by start time, ascending (earliest first)
+        };
+
+        const [liveRes, timedRes] = await Promise.allSettled([
+          apiClient.get("/liveauctions/search", { params: commonParams }),
+          apiClient.get("/timedauctions/search", { params: commonParams }),
+        ]);
+
+        const liveAuctionsData =
+          liveRes.status === "fulfilled"
+            ? (liveRes.value.data?.content || []).map((a) => ({
+                ...a,
+                auctionType: "LIVE",
+              }))
+            : [];
+        const timedAuctionsData =
+          timedRes.status === "fulfilled"
+            ? (timedRes.value.data?.content || []).map((a) => ({
+                ...a,
+                auctionType: "TIMED",
+              }))
+            : [];
+
+        const combined = [...liveAuctionsData, ...timedAuctionsData].sort(
+          (a, b) =>
+            new Date(a.startTime).getTime() - new Date(b.startTime).getTime()
+        );
+        setStartingSoonAuctions(combined.slice(0, totalCount));
+      } catch (err) {
+        console.error("Failed to fetch starting soon auctions:", err);
+        setErrorStartingSoon("Could not load auctions starting soon.");
+      } finally {
+        setLoadingStartingSoon(false);
+      }
+    },
+    []
+  );
 
   const fetchEndingSoonAuctions = useCallback(
     async (countPerType = 2, totalCount = 4) => {
@@ -429,6 +482,7 @@ function HomePage() {
       await Promise.allSettled([
         fetchBannerAuctions(),
         fetchFeaturedCategories(),
+        fetchStartingSoonAuctions(),
         fetchEndingSoonAuctions(),
         fetchHotAuctions(),
         fetchCheckOutLiveAuctions(),
@@ -439,6 +493,7 @@ function HomePage() {
   }, [
     fetchBannerAuctions,
     fetchFeaturedCategories,
+    fetchStartingSoonAuctions,
     fetchEndingSoonAuctions,
     fetchHotAuctions,
     fetchCheckOutLiveAuctions,
@@ -459,25 +514,6 @@ function HomePage() {
 
   const currentBannerItem =
     bannerAuctions.length > 0 ? bannerAuctions[currentBannerIndex] : null;
-
-  const handleAuctionCardClick = useCallback(
-    (auctionId, auctionType) => {
-      // Add console logs for debugging if you still need them:
-      // console.log('Attempting to navigate. Auction ID:', auctionId, 'Auction Type:', auctionType);
-
-      if (auctionType && typeof auctionType === 'string') {
-        // --- CORRECTED LINE ---
-        const path = `/${auctionType.toLowerCase()}-auctions/${auctionId}`;
-        // --- END CORRECTED LINE ---
-
-        // console.log('Constructed path:', path); // For debugging
-        navigate(path);
-      } else {
-        console.error("Cannot navigate: auctionType is invalid or undefined.", { auctionId, auctionType });
-      }
-    },
-    [navigate]
-  );
 
   // --- JSX Structure ---
   return (
@@ -626,11 +662,10 @@ function HomePage() {
                   {" "}
                   {/* 3 per row for 6 items */}
                   {checkOutTimedAuctions.map((auction) => (
-                    <AuctionCard
+                    <InteractiveAuctionCard
                       key={auction.id}
                       auction={auction}
                       type={auction.auctionType}
-                      onClick={handleAuctionCardClick}
                     />
                   ))}
                 </div>
@@ -659,11 +694,10 @@ function HomePage() {
                   {" "}
                   {/* 3 per row for 6 items */}
                   {checkOutLiveAuctions.map((auction) => (
-                    <AuctionCard
+                    <InteractiveAuctionCard
                       key={auction.id}
                       auction={auction}
                       type={auction.auctionType}
-                      onClick={handleAuctionCardClick}
                     />
                   ))}
                 </div>
@@ -672,12 +706,55 @@ function HomePage() {
         </div>
       </section>
 
+      <section className="py-8 sm:py-12 bg-white"> {/* Or bg-gray-50 for alternation */}
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex justify-between items-center mb-6 sm:mb-8">
+            <h2 className="text-2xl sm:text-3xl font-bold text-gray-800 flex items-center">
+              <FaClock className="text-green-500 mr-3" /> {/* Icon for Starting Soon */}
+              Sắp Bắt Đầu
+            </h2>
+            <Link
+              to="/search?status=SCHEDULED&sort=startTime,asc" // Link to all scheduled auctions
+              className="text-sm font-medium text-indigo-600 hover:text-indigo-800 transition-colors"
+            >
+              Xem Tất Cả &rarr;
+            </Link>
+          </div>
+          {loadingStartingSoon && (
+            <p className="text-center">Loading auctions starting soon...</p>
+          )}
+          {errorStartingSoon && (
+            <p className="text-center text-red-500">{errorStartingSoon}</p>
+          )}
+          {!loadingStartingSoon &&
+            !errorStartingSoon &&
+            startingSoonAuctions.length > 0 && (
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+                {startingSoonAuctions.map((auction) => (
+                  <InteractiveAuctionCard
+                    key={auction.id}
+                    auction={auction}
+                    type={auction.auctionType} // Make sure auctionType is added in fetch
+                  />
+                ))}
+              </div>
+            )}
+          {!loadingStartingSoon &&
+            !errorStartingSoon &&
+            startingSoonAuctions.length === 0 && (
+              <p className="text-center text-gray-500">
+                Không có phiên đấu giá nào sắp bắt đầu.
+              </p>
+            )}
+        </div>
+      </section>
+
       {/* 4. "Ending Soon" / "Hot Right Now" Auctions Section */}
       <section className="py-8 sm:py-12 bg-white">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center mb-6 sm:mb-8">
-            <h2 className="text-2xl sm:text-3xl font-bold text-gray-800">
-              Sắp Kết Thúc / Đang Hot
+            <h2 className="text-2xl sm:text-3xl font-bold text-gray-800 flex items-center">
+              <FaClock className="text-red-500 mr-3" /> Sắp Kết Thúc / Đang Hot
             </h2>
             <Link
               to="/search?status=ACTIVE&sort=endTime,asc"
@@ -707,11 +784,10 @@ function HomePage() {
               )
                 .slice(0, 4) // Show up to 4 unique auctions from these combined lists
                 .map((auction) => (
-                  <AuctionCard
+                  <InteractiveAuctionCard
                     key={auction.id}
                     auction={auction}
                     type={auction.auctionType}
-                    onClick={handleAuctionCardClick}
                   />
                 ))}
             </div>

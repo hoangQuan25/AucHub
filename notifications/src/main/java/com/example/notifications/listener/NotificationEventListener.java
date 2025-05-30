@@ -7,6 +7,8 @@ import com.example.notifications.service.NotificationService; // Create this ser
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.amqp.rabbit.annotation.RabbitListener;
+import org.springframework.amqp.support.AmqpHeaders;
+import org.springframework.messaging.handler.annotation.Header;
 import org.springframework.messaging.handler.annotation.Payload;
 import org.springframework.stereotype.Component;
 
@@ -18,46 +20,62 @@ public class NotificationEventListener {
     // Inject a service to handle the notification logic
     private final NotificationService notificationService;
 
+    private String getAuctionTypeFromRoutingKey(String routingKey) {
+        if (routingKey == null) return "TIMED"; // Default fallback
+        if (routingKey.contains(".live.")) return "LIVE";
+        if (routingKey.contains(".timed.")) return "TIMED";
+        return "TIMED"; // Default if no match
+    }
+
     @RabbitListener(queues = RabbitMqConfig.AUCTION_STARTED_QUEUE)
-    public void handleAuctionStarted(AuctionStartedEvent event) {
-        log.info("Received AuctionStartedEvent: {}", event);
+    public void handleAuctionStarted(
+            @Payload AuctionStartedEvent event,
+            @Header(AmqpHeaders.RECEIVED_ROUTING_KEY) String routingKey) { // <-- Capture routing key
+        log.info("Received AuctionStartedEvent via key [{}]: {}", routingKey, event);
         try {
-            notificationService.processAuctionStarted(event); // Call service method
+            String auctionType = getAuctionTypeFromRoutingKey(routingKey);
+            notificationService.processAuctionStarted(event, auctionType); // <-- Pass type to service
         } catch (Exception e) {
             log.error("Error processing AuctionStartedEvent for auction {}: {}", event.getAuctionId(), e.getMessage(), e);
         }
     }
 
     @RabbitListener(queues = RabbitMqConfig.AUCTION_ENDED_QUEUE)
-    public void handleAuctionEnded(AuctionEndedEvent event) {
-        log.info("Received AuctionEndedEvent: {}", event);
+    public void handleAuctionEnded(
+            @Payload AuctionEndedEvent event,
+            @Header(AmqpHeaders.RECEIVED_ROUTING_KEY) String routingKey) { // <-- Capture routing key
+        log.info("Received AuctionEndedEvent via key [{}]: {}", routingKey, event);
         try {
-            notificationService.processAuctionEnded(event);
+            String auctionType = getAuctionTypeFromRoutingKey(routingKey);
+            notificationService.processAuctionEnded(event, auctionType); // <-- Pass type to service
         } catch (Exception e) {
             log.error("Error processing AuctionEndedEvent for auction {}: {}", event.getAuctionId(), e.getMessage(), e);
-            // Consider error handling / dead-lettering
         }
     }
 
     @RabbitListener(queues = RabbitMqConfig.AUCTION_OUTBID_QUEUE)
-    public void handleOutbid(OutbidEvent event) {
-        log.info("Received OutbidEvent: {}", event);
+    public void handleOutbid(
+            @Payload OutbidEvent event,
+            @Header(AmqpHeaders.RECEIVED_ROUTING_KEY) String routingKey) { // <-- Capture routing key
+        log.info("Received OutbidEvent via key [{}]: {}", routingKey, event);
         try {
-            notificationService.processOutbid(event);
+            // Outbid events are only from Timed Auctions as per your info
+            notificationService.processOutbid(event, "TIMED");
         } catch (Exception e) {
             log.error("Error processing OutbidEvent for auction {}: {}", event.getAuctionId(), e.getMessage(), e);
-            // Consider error handling / dead-lettering
         }
     }
 
     @RabbitListener(queues = RabbitMqConfig.COMMENT_REPLIED_QUEUE)
-    public void handleCommentReply(CommentReplyEvent event) {
-        log.info("Received CommentReplyEvent: {}", event);
+    public void handleCommentReply(
+            @Payload CommentReplyEvent event,
+            @Header(AmqpHeaders.RECEIVED_ROUTING_KEY) String routingKey) { // <-- Capture routing key
+        log.info("Received CommentReplyEvent via key [{}]: {}", routingKey, event);
         try {
-            notificationService.processCommentReply(event);
+            // Comment events are only from Timed Auctions as per your info
+            notificationService.processCommentReply(event, "TIMED");
         } catch (Exception e) {
             log.error("Error processing CommentReplyEvent for comment {}: {}", event.getReplyCommentId(), e.getMessage(), e);
-            // Consider error handling / dead-lettering
         }
     }
 
@@ -212,6 +230,17 @@ public class NotificationEventListener {
             notificationService.processDeliveryIssueReported(event); // We'll define this in NotificationService
         } catch (Exception e) {
             log.error("Error processing DeliveryIssueReportedEvent for deliveryId {}: {}", event.getDeliveryId(), e.getMessage(), e);
+        }
+    }
+
+    @RabbitListener(queues = RabbitMqConfig.USER_BANNED_NOTIFICATION_QUEUE)
+    public void handleUserBanned(@Payload UserBannedEvent event) { // Use the new DTO
+        log.info("Received UserBannedEvent: userId={}, banEndsAt={}, level={}",
+                event.getUserId(), event.getBanEndsAt(), event.getBanLevel());
+        try {
+            notificationService.processUserBanned(event); // Create this method in NotificationService
+        } catch (Exception e) {
+            log.error("Error processing UserBannedEvent for user {}: {}", event.getUserId(), e.getMessage(), e);
         }
     }
 }

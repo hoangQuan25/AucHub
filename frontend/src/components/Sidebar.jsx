@@ -1,77 +1,65 @@
-// src/components/Sidebar.jsx – now includes the new “My Auctions” link for sellers
+// src/components/Sidebar.jsx
 import React from "react";
 import { NavLink } from "react-router-dom";
 import { useKeycloak } from "@react-keycloak/web";
+import { FaHome, FaUserCog, FaStore, FaBookOpen, FaPlusCircle, FaThList } from "react-icons/fa"; // Example icons
 
 function Sidebar() {
   const { keycloak } = useKeycloak();
   const isSeller = keycloak.hasRealmRole("ROLE_SELLER");
   const username = keycloak.tokenParsed?.preferred_username;
 
-  const linkStyle = "block py-2 px-4 rounded hover:bg-gray-700";
-  const activeLinkStyle = "bg-gray-700";
+  const baseLinkClasses = "flex items-center space-x-3 py-2.5 px-4 rounded-lg transition-all duration-200 ease-in-out group";
+  const activeLinkClasses = "bg-indigo-500 text-white font-semibold shadow-md hover:bg-indigo-400";
+  const inactiveLinkClasses = "text-slate-300 hover:bg-slate-700 hover:text-slate-100";
+  
+  // A helper for NavLink className prop
+  const getNavLinkClass = ({ isActive }) => `${baseLinkClasses} ${isActive ? activeLinkClasses : inactiveLinkClasses}`;
 
   return (
-    <aside className="w-64 bg-gray-900 text-white p-4 flex flex-col">
+    <aside className="w-64 bg-slate-800 text-slate-200 p-5 flex flex-col space-y-6 shadow-lg">
+      {/* Optional: User Info / Logo at the top of sidebar */}
+      {/* <div className="pb-6 border-b border-slate-700">
+        <h2 className="text-xl font-semibold text-white text-center">My AucHub</h2>
+      </div> */}
+      
       <nav className="flex-grow">
-        <ul>
+        <ul className="space-y-2">
           <li>
-            <NavLink
-              to="/"
-              end
-              className={({ isActive }) =>
-                `${linkStyle} ${isActive ? activeLinkStyle : ""}`
-              }
-            >
-              Homepage
+            <NavLink to="/" end className={getNavLinkClass}>
+              <FaHome className="text-slate-400 group-hover:text-slate-200 transition-colors group-[.bg-indigo-500]:text-indigo-100" size={18} />
+              <span>Homepage</span>
             </NavLink>
           </li>
-
           <li>
-            <NavLink
-              to="/auction-rules-guide"
-              end
-              className={({ isActive }) =>
-                `${linkStyle} ${isActive ? activeLinkStyle : ""}`
-              }
-            >
-              Auction rules
+            <NavLink to="/auction-rules-guide" className={getNavLinkClass}>
+              <FaBookOpen className="text-slate-400 group-hover:text-slate-200 transition-colors group-[.bg-indigo-500]:text-indigo-100" size={18} />
+              <span>Auction Rules</span>
             </NavLink>
           </li>
 
           {isSeller && (
             <>
-              {username && ( // Only show if username is available
+              {username && (
                 <li>
-                  <NavLink
-                    // Use the username (or ID if that's your identifier) for the route
-                    to={`/seller/${username}`}
-                    className={({ isActive }) =>
-                      `${linkStyle} ${isActive ? activeLinkStyle : ""}`
-                    }
-                  >
-                    My shop
+                  <NavLink to={`/seller/${username}`} className={getNavLinkClass}>
+                    <FaStore className="text-slate-400 group-hover:text-slate-200 transition-colors group-[.bg-indigo-500]:text-indigo-100" size={18} />
+                    <span>My Shop</span>
                   </NavLink>
                 </li>
               )}
+               
             </>
           )}
 
           <li>
-            <NavLink
-              to="/profile"
-              className={({ isActive }) =>
-                `${linkStyle} ${isActive ? activeLinkStyle : ""}`
-              }
-            >
-              Account Settings
+            <NavLink to="/profile" className={getNavLinkClass}>
+              <FaUserCog className="text-slate-400 group-hover:text-slate-200 transition-colors group-[.bg-indigo-500]:text-indigo-100" size={18} />
+              <span>Account Settings</span>
             </NavLink>
           </li>
         </ul>
       </nav>
-
-      {/* Optional footer */}
-      <div className="mt-auto text-xs text-gray-500" />
     </aside>
   );
 }

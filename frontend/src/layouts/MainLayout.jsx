@@ -2,6 +2,7 @@ import React from 'react';
 import { Outlet } from 'react-router-dom'; // Outlet renders the matched child route
 import Header from '../components/Header';
 import Sidebar from '../components/Sidebar';
+import Footer from '../components/Footer';
 
 function MainLayout() {
   return (
@@ -13,7 +14,7 @@ function MainLayout() {
           <Outlet /> {/* Child route components will render here */}
         </main>
       </div>
-       {/* Footer could go here if needed outside the main content scroll */}
+      <Footer />
     </div>
   );
 }

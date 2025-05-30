@@ -1,7 +1,7 @@
 import React, { useEffect } from "react";
 import { useKeycloak } from "@react-keycloak/web";
 import { BrowserRouter, Route, Routes, Navigate } from "react-router-dom";
-import { ToastContainer } from 'react-toastify';
+import { ToastContainer } from "react-toastify";
 import HomePage from "./pages/HomePage";
 import LoginPage from "./pages/LoginPage";
 import UserInfoPage from "./pages/UserInfoPage"; // Renamed/New page
@@ -48,7 +48,7 @@ function App() {
 
   return (
     <BrowserRouter>
-    <ToastContainer
+      <ToastContainer
         position="top-right"
         autoClose={5000}
         hideProgressBar={false}
@@ -89,12 +89,18 @@ function App() {
             element={<TimedAuctionDetailPage />}
           />
           <Route path="/profile" element={<UserInfoPage />} />
-          <Route path="/auction-rules-guide" element={<AuctionRulesGuidePage />} />
+          <Route
+            path="/auction-rules-guide"
+            element={<AuctionRulesGuidePage />}
+          />
           <Route path="/following" element={<FollowingAuctionsPage />} />
           <Route path="/my-orders" element={<MyOrdersPage />} />
           <Route path="/orders/:orderId" element={<OrderDetailPage />} />
           <Route path="/search" element={<AuctionSearchPage />} />
-          <Route path="/seller/:identifier" element={<PublicSellerProfilePage />} />
+          <Route
+            path="/seller/:identifier"
+            element={<PublicSellerProfilePage />}
+          />
           {/* Seller-specific Route */}
         </Route>
 

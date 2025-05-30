@@ -5,6 +5,7 @@ import com.example.timedauctions.client.ProductServiceClient; // Assuming Feign 
 import com.example.timedauctions.client.UserServiceClient;   // Assuming Feign client exists
 import com.example.timedauctions.client.dto.CategoryDto;
 import com.example.timedauctions.client.dto.ProductDto;
+import com.example.timedauctions.client.dto.UserBanStatusDto;
 import com.example.timedauctions.client.dto.UserBasicInfoDto;
 import com.example.timedauctions.commands.AuctionLifecycleCommands; // Create this package/classes
 import com.example.timedauctions.config.AuctionTimingProperties;
@@ -339,6 +340,28 @@ public class TimedAuctionServiceImpl implements TimedAuctionService {
                 log.warn("Could not acquire lock for auction {} to place bid", auctionId);
                 throw new IllegalStateException("Could not process bid at this time, please try again shortly.");
             }
+
+            // --- BAN CHECK ---
+            // Placed early after acquiring lock and before extensive processing.
+            try {
+                log.debug("Checking ban status for bidder {} for timed auction {}", bidderId, auctionId);
+                UserBanStatusDto banStatus = userServiceClient.getUserBanStatus(bidderId);
+                if (banStatus.isBanned()) {
+                    log.warn("User {} is banned from bidding until {}. Max bid rejected for timed auction {}.",
+                            bidderId, banStatus.getBanEndsAt(), auctionId);
+                    throw new UserBannedException("You are currently banned from bidding. Ban ends at: " + banStatus.getBanEndsAt());
+                }
+                log.debug("User {} is not banned. Proceeding with max bid.", bidderId);
+            } catch (UserBannedException e) {
+                throw e; // Re-throw to be caught by controller advice
+            } catch (Exception e) {
+                // Handle Feign client errors (e.g., UsersService down)
+                log.error("Failed to check ban status for user {}: {}. Applying fail-strict policy: Max bid rejected.",
+                        bidderId, e.getMessage());
+                // Fail-strict: If ban status cannot be verified, reject the bid.
+                throw new IllegalStateException("Could not verify bidding eligibility at this time. Please try again later.");
+            }
+            // --- END BAN CHECK ---
 
             // Fetch basic auction info first (read-only, outside main transaction potentially)
             TimedAuction auction = timedAuctionRepository.findById(auctionId)

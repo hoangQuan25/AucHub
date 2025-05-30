@@ -4,6 +4,7 @@ import com.example.liveauctions.client.ProductServiceClient; // Feign Client for
 import com.example.liveauctions.client.UserServiceClient; // Feign Client for Users
 import com.example.liveauctions.client.dto.CategoryDto;
 import com.example.liveauctions.client.dto.ProductDto; // DTO from Products service
+import com.example.liveauctions.client.dto.UserBanStatusDto;
 import com.example.liveauctions.client.dto.UserBasicInfoDto; // DTO from Users service
 import com.example.liveauctions.commands.AuctionLifecycleCommands;
 import com.example.liveauctions.config.AuctionTimingProperties;
@@ -284,6 +285,28 @@ public class LiveAuctionServiceImpl implements LiveAuctionService {
         try {
             lockAcquired = lock.tryLock(5, 10, TimeUnit.SECONDS);
             if (!lockAcquired) throw new IllegalStateException("Could not process bid, please retry.");
+
+            // --- BAN CHECK ---
+            // Placed early after acquiring lock and before extensive processing.
+            try {
+                log.debug("Checking ban status for bidder {} for auction {}", bidderId, auctionId);
+                UserBanStatusDto banStatus = userServiceClient.getUserBanStatus(bidderId);
+                if (banStatus.isBanned()) {
+                    log.warn("User {} is banned from bidding until {}. Bid rejected for auction {}.",
+                            bidderId, banStatus.getBanEndsAt(), auctionId);
+                    throw new UserBannedException("You are currently banned from bidding. Ban ends at: " + banStatus.getBanEndsAt());
+                }
+                log.debug("User {} is not banned. Proceeding with bid.", bidderId);
+            } catch (UserBannedException e) {
+                throw e; // Re-throw to be caught by controller advice
+            } catch (Exception e) {
+                // Handle Feign client errors (e.g., UsersService down)
+                log.error("Failed to check ban status for user {}: {}. Applying fail-strict policy: Bid rejected.",
+                        bidderId, e.getMessage());
+                // Fail-strict: If ban status cannot be verified, reject the bid.
+                throw new IllegalStateException("Could not verify bidding eligibility at this time. Please try again later.");
+            }
+            // --- END BAN CHECK ---
 
             LiveAuction auction = liveAuctionRepository.findById(auctionId)
                     .orElseThrow(() -> new AuctionNotFoundException("Auction not found: " + auctionId));

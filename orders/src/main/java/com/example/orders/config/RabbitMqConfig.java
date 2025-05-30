@@ -59,6 +59,11 @@ public class RabbitMqConfig {
     public static final String LIVE_AUCTION_REOPENED_ORDER_CREATED_ROUTING_KEY = "auction.live.reopened_order.created";
     public static final String ORDER_EVENT_COMPLETED_ROUTING_KEY = "order.event.completed";
 
+    // --- Dead Letter Exchange and Queue ---
+    public static final String MAIN_DLX_EXCHANGE = "dlx.main_exchange"; // Dead Letter Exchange
+    public static final String MAIN_DEAD_LETTER_QUEUE = "q.main_dead_letter_queue"; // General Dead Letter Queue
+    public static final String MAIN_DLQ_ROUTING_KEY = "dlq.main.key";
+
 
     // === Exchanges ===
 
@@ -95,16 +100,11 @@ public class RabbitMqConfig {
 
     @Bean
     TopicExchange notificationsExchange() {
-        // Declaring it here ensures it exists if Orders service starts first,
-        // or simply allows us to refer to it for binding.
-        // It should match the definition in your auction services.
         return new TopicExchange(NOTIFICATIONS_EXCHANGE_NAME, true, false);
     }
 
     @Bean
     TopicExchange paymentsEventsExchange() {
-        // Declare the exchange the Payment Service publishes to.
-        // Ensures the exchange exists from the perspective of this service for binding.
         return ExchangeBuilder.topicExchange(PAYMENTS_EVENTS_EXCHANGE_NAME)
                 .durable(true)
                 .build();
@@ -126,6 +126,13 @@ public class RabbitMqConfig {
         return new TopicExchange(LIVE_AUCTIONS_EVENTS_EXCHANGE_NAME, true, false);
     }
 
+    @Bean
+    public DirectExchange mainDlxExchange() {
+        return ExchangeBuilder.directExchange(MAIN_DLX_EXCHANGE)
+                .durable(true)
+                .build();
+    }
+
 
 
     // === Queues ===
@@ -133,45 +140,63 @@ public class RabbitMqConfig {
     @Bean
     Queue orderPaymentTimeoutQueue() {
         return QueueBuilder.durable(ORDER_PAYMENT_TIMEOUT_QUEUE)
-                // Optional: Configure Dead Letter Exchange (DLX) for this queue
-                // .withArgument("x-dead-letter-exchange", "your_dlx_exchange_name")
-                // .withArgument("x-dead-letter-routing-key", "dlx.order_payment_timeout")
+                .withArgument("x-dead-letter-exchange", MAIN_DLX_EXCHANGE)
+                .withArgument("x-dead-letter-routing-key", MAIN_DLQ_ROUTING_KEY)
                 .build();
     }
 
     @Bean
     Queue ordersAuctionEndedQueue() {
         return QueueBuilder.durable(ORDERS_AUCTION_ENDED_QUEUE)
-                // Optional: Configure DLX for this queue
+                .withArgument("x-dead-letter-exchange", MAIN_DLX_EXCHANGE)
+                .withArgument("x-dead-letter-routing-key", MAIN_DLQ_ROUTING_KEY)
                 .build();
     }
 
     @Bean
     Queue ordersPaymentSucceededQueue() {
-        return QueueBuilder.durable(ORDERS_PAYMENT_SUCCEEDED_QUEUE).build();
+        return QueueBuilder.durable(ORDERS_PAYMENT_SUCCEEDED_QUEUE)
+                .withArgument("x-dead-letter-exchange", MAIN_DLX_EXCHANGE)
+                .withArgument("x-dead-letter-routing-key", MAIN_DLQ_ROUTING_KEY)
+                .build();
     }
 
     @Bean
     Queue ordersPaymentFailedQueue() {
-        return QueueBuilder.durable(ORDERS_PAYMENT_FAILED_QUEUE).build();
+        return QueueBuilder.durable(ORDERS_PAYMENT_FAILED_QUEUE)
+                .withArgument("x-dead-letter-exchange", MAIN_DLX_EXCHANGE)
+                .withArgument("x-dead-letter-routing-key", MAIN_DLQ_ROUTING_KEY)
+                .build();
     }
 
     @Bean
     Queue ordersDeliveryReceiptConfirmedQueue() {
         return QueueBuilder.durable(ORDERS_DELIVERY_RECEIPT_CONFIRMED_QUEUE)
-                // .withArgument("x-dead-letter-exchange", "your_dlx_exchange_name") // Optional DLX
-                // .withArgument("x-dead-letter-routing-key", "dlx.orders.delivery_receipt_confirmed")
+                .withArgument("x-dead-letter-exchange", MAIN_DLX_EXCHANGE)
+                .withArgument("x-dead-letter-routing-key", MAIN_DLQ_ROUTING_KEY)
                 .build();
     }
 
     @Bean
     Queue ordersFinalizeReopenedTimedAuctionQueue() {
-        return QueueBuilder.durable(ORDERS_FINALIZE_REOPENED_TIMED_AUCTION_QUEUE).build();
+        return QueueBuilder.durable(ORDERS_FINALIZE_REOPENED_TIMED_AUCTION_QUEUE)
+                .withArgument("x-dead-letter-exchange", MAIN_DLX_EXCHANGE)
+                .withArgument("x-dead-letter-routing-key", MAIN_DLQ_ROUTING_KEY)
+                .build();
     }
 
     @Bean
     Queue ordersFinalizeReopenedLiveAuctionQueue() {
-        return QueueBuilder.durable(ORDERS_FINALIZE_REOPENED_LIVE_AUCTION_QUEUE).build();
+        return QueueBuilder.durable(ORDERS_FINALIZE_REOPENED_LIVE_AUCTION_QUEUE)
+                .withArgument("x-dead-letter-exchange", MAIN_DLX_EXCHANGE)
+                .withArgument("x-dead-letter-routing-key", MAIN_DLQ_ROUTING_KEY)
+                .build();
+    }
+
+    @Bean
+    public Queue mainDeadLetterQueue() {
+        return QueueBuilder.durable(MAIN_DEAD_LETTER_QUEUE)
+                .build();
     }
 
     // === Bindings ===
@@ -237,6 +262,12 @@ public class RabbitMqConfig {
                 .with(LIVE_AUCTION_REOPENED_ORDER_CREATED_ROUTING_KEY);
     }
 
+    @Bean
+    public Binding mainDeadLetterBinding(Queue mainDeadLetterQueue, DirectExchange mainDlxExchange) {
+        return BindingBuilder.bind(mainDeadLetterQueue)
+                .to(mainDlxExchange)
+                .with(MAIN_DLQ_ROUTING_KEY); // Bind the DLQ with the specific routing key
+    }
 
     @Bean
     public MessageConverter jsonMessageConverter() {

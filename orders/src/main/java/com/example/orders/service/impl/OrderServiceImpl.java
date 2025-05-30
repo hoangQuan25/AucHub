@@ -167,30 +167,10 @@ public class OrderServiceImpl implements OrderService {
             publishSellerDecisionRequiredEvent(order);
         } else if (paymentOfferAttempt == 2) {
             order.setOrderStatus(OrderStatus.PAYMENT_WINDOW_EXPIRED_NEXT_BIDDER);
-            log.info("Second offered bidder timed out for order {}.", orderId);
-            if (order.getEligibleThirdBidderId() != null && order.getEligibleThirdBidAmount() != null) {
-                log.info("Offering order {} to third eligible bidder: {}", orderId, order.getEligibleThirdBidderId());
-
-                BigDecimal thirdBidderBid = order.getEligibleThirdBidAmount();
-                BigDecimal premiumForThirdBidder = thirdBidderBid.multiply(BUYER_PREMIUM_RATE).setScale(2, RoundingMode.HALF_UP);
-                BigDecimal totalDueForThirdBidder = thirdBidderBid.add(premiumForThirdBidder);
-
-                order.setCurrentBidderId(order.getEligibleThirdBidderId());
-                order.setCurrentAmountDue(totalDueForThirdBidder);
-                order.setPaymentOfferAttempt(3);
-
-                Duration nextBidderPaymentDuration = paymentProperties.getNextBidderDuration();
-                LocalDateTime newDeadline = LocalDateTime.now().plus(nextBidderPaymentDuration);
-                order.setPaymentDeadline(newDeadline);
-                order.setOrderStatus(OrderStatus.AWAITING_NEXT_BIDDER_PAYMENT);
-
-                schedulePaymentTimeoutCheck(order.getId(), newDeadline, 3);
-                publishPaymentDueEvent(order); // auctionType will be fetched from order object
-            } else {
-                log.info("No eligible third bidder for order {}. Setting to NO_PAYMENT_FINAL.", orderId);
-                order.setOrderStatus(OrderStatus.AWAITING_SELLER_DECISION);
-                publishSellerDecisionRequiredEvent(order);
-            }
+            log.info("Second offered bidder (attempt 2) timed out for order {}.", orderId);
+            // DON'T offer to 3rd automatically. Go to AWAITING_SELLER_DECISION.
+            order.setOrderStatus(OrderStatus.AWAITING_SELLER_DECISION);
+            publishSellerDecisionRequiredEvent(order);
         } else if (paymentOfferAttempt >= 3) {
             log.info("Third (or later) offered bidder timed out for order {}. Setting to NO_PAYMENT_FINAL.", orderId);
             order.setOrderStatus(OrderStatus.AWAITING_SELLER_DECISION);
@@ -227,10 +207,13 @@ public class OrderServiceImpl implements OrderService {
         }
 
         order.setSellerDecision(decisionDto.getDecisionType());
+        int attemptOfDefaultingBidder = order.getPaymentOfferAttempt();
 
         switch (decisionDto.getDecisionType()) {
             case OFFER_TO_NEXT_BIDDER:
-                if (order.getEligibleSecondBidderId() != null && order.getEligibleSecondBidAmount() != null) {
+                boolean offered = false;
+                if (attemptOfDefaultingBidder == 1 && // Winner defaulted, seller decides about 2nd
+                        order.getEligibleSecondBidderId() != null && order.getEligibleSecondBidAmount() != null) {
                     log.info("Seller chose to offer order {} to second eligible bidder: {}", orderId, order.getEligibleSecondBidderId());
 
                     BigDecimal secondBid = order.getEligibleSecondBidAmount();
@@ -239,18 +222,41 @@ public class OrderServiceImpl implements OrderService {
 
                     order.setCurrentBidderId(order.getEligibleSecondBidderId());
                     order.setCurrentAmountDue(totalDueForSecondBid);
-                    order.setPaymentOfferAttempt(2);
+                    order.setPaymentOfferAttempt(2); // <<< This is now for the 2nd bidder's attempt
                     Duration nextBidderPaymentDuration = paymentProperties.getNextBidderDuration();
                     LocalDateTime newDeadline = LocalDateTime.now().plus(nextBidderPaymentDuration);
                     order.setPaymentDeadline(newDeadline);
                     order.setOrderStatus(OrderStatus.AWAITING_NEXT_BIDDER_PAYMENT);
 
-                    schedulePaymentTimeoutCheck(order.getId(), newDeadline, 2);
-                    publishPaymentDueEvent(order); // auctionType will be fetched from order object
-                } else {
-                    log.warn("Seller chose to offer to next bidder for order {}, but no eligible second bidder found. Defaulting to cancel.", orderId);
-                    order.setOrderStatus(OrderStatus.ORDER_CANCELLED_SYSTEM);
-                    publishOrderCancelledEvent(order, "No eligible second bidder to offer to, as per seller's attempt.");
+                    schedulePaymentTimeoutCheck(order.getId(), newDeadline, 2); // Schedule for attempt 2
+                    publishPaymentDueEvent(order);
+                    offered = true;
+                } else if (attemptOfDefaultingBidder == 2 && // 2nd bidder defaulted, seller decides about 3rd
+                        order.getEligibleThirdBidderId() != null && order.getEligibleThirdBidAmount() != null) {
+                    log.info("Seller chose to offer order {} to third eligible bidder: {}", orderId, order.getEligibleThirdBidderId());
+
+                    BigDecimal thirdBid = order.getEligibleThirdBidAmount();
+                    BigDecimal premiumForThirdBid = thirdBid.multiply(BUYER_PREMIUM_RATE).setScale(2, RoundingMode.HALF_UP);
+                    BigDecimal totalDueForThirdBid = thirdBid.add(premiumForThirdBid);
+
+                    order.setCurrentBidderId(order.getEligibleThirdBidderId());
+                    order.setCurrentAmountDue(totalDueForThirdBid);
+                    order.setPaymentOfferAttempt(3); // <<< This is now for the 3rd bidder's attempt
+                    Duration nextBidderPaymentDuration = paymentProperties.getNextBidderDuration(); // Or a different duration for 3rd?
+                    LocalDateTime newDeadline = LocalDateTime.now().plus(nextBidderPaymentDuration);
+                    order.setPaymentDeadline(newDeadline);
+                    order.setOrderStatus(OrderStatus.AWAITING_NEXT_BIDDER_PAYMENT);
+
+                    schedulePaymentTimeoutCheck(order.getId(), newDeadline, 3); // Schedule for attempt 3
+                    publishPaymentDueEvent(order);
+                    offered = true;
+                }
+
+                if (!offered) {
+                    log.warn("Seller chose to offer to next bidder for order {}, but no eligible next bidder found for defaulted attempt {}. Defaulting to cancel.",
+                            orderId, attemptOfDefaultingBidder);
+                    order.setOrderStatus(OrderStatus.ORDER_CANCELLED_SYSTEM); // Or relevant final status
+                    publishOrderCancelledEvent(order, "No eligible next bidder to offer to, as per seller's attempt.");
                 }
                 break;
 
@@ -445,29 +451,10 @@ public class OrderServiceImpl implements OrderService {
             publishSellerDecisionRequiredEvent(order);
 
         } else if (currentAttempt == 2) { // Second bidder's payment failed
-            log.info("Second offered bidder's payment failed for order {}.", order.getId());
-            if (order.getEligibleThirdBidderId() != null && order.getEligibleThirdBidAmount() != null) {
-                log.info("Offering order {} to third eligible bidder: {}", order.getId(), order.getEligibleThirdBidderId());
-
-                BigDecimal thirdBid = order.getEligibleThirdBidAmount();
-                BigDecimal premiumForThirdBid = thirdBid.multiply(BUYER_PREMIUM_RATE).setScale(2, RoundingMode.HALF_UP);
-                BigDecimal totalDueForThirdBid = thirdBid.add(premiumForThirdBid);
-
-                order.setCurrentBidderId(order.getEligibleThirdBidderId());
-                order.setCurrentAmountDue(totalDueForThirdBid);
-                order.setPaymentOfferAttempt(3);
-                Duration nextBidderPaymentDuration = paymentProperties.getNextBidderDuration();
-                LocalDateTime newDeadline = LocalDateTime.now().plus(nextBidderPaymentDuration);
-                order.setPaymentDeadline(newDeadline);
-                order.setOrderStatus(OrderStatus.AWAITING_NEXT_BIDDER_PAYMENT);
-
-                schedulePaymentTimeoutCheck(order.getId(), newDeadline, 3); // Reschedule timeout
-                publishPaymentDueEvent(order); // Notify 3rd bidder
-            } else {
-                log.info("No eligible third bidder for order {}. Cancelling order due to payment failure.", order.getId());
-                order.setOrderStatus(OrderStatus.AWAITING_SELLER_DECISION);
-                publishSellerDecisionRequiredEvent(order); // Notify seller to decide next steps
-            }
+            log.info("Second offered bidder's (attempt 2) payment failed for order {}.", order.getId());
+            // DON'T offer to 3rd automatically. Go to AWAITING_SELLER_DECISION.
+            order.setOrderStatus(OrderStatus.AWAITING_SELLER_DECISION);
+            publishSellerDecisionRequiredEvent(order);
         } else if (currentAttempt >= 3) { // Third (or later) bidder's payment failed
             log.info("Third (or later) offered bidder's payment failed for order {}. Cancelling order.", order.getId());
             order.setOrderStatus(OrderStatus.AWAITING_SELLER_DECISION);
@@ -601,13 +588,6 @@ public class OrderServiceImpl implements OrderService {
         log.info("Buyer {} confirmed cancellation for order {}. Current attempt: {}",
                 buyerId, orderId, order.getPaymentOfferAttempt());
 
-        // Treat this as if the payment timed out for this user/attempt
-        // The existing handlePaymentTimeout logic is well-suited if we just advance the state to "expired" for this user.
-        // Or, we can have a more specific status like "CANCELLED_BY_BUYER_PENDING_PAYMENT" before moving to next state.
-
-        // Option 1: Re-use timeout logic by setting status and calling it (might be too coupled)
-        // Option 2: Replicate parts of the timeout logic here.
-
         publishUserPaymentDefaultedEvent(order); // Buyer is defaulting on this attempt
 
         int currentAttempt = order.getPaymentOfferAttempt();
@@ -618,29 +598,10 @@ public class OrderServiceImpl implements OrderService {
             log.info("Order {} status set to AWAITING_SELLER_DECISION. Winner cancelled payment attempt.", orderId);
             publishSellerDecisionRequiredEvent(order);
         } else if (currentAttempt == 2) { // Second bidder cancelled
-            log.info("Second offered bidder cancelled payment for order {}.", orderId);
-            if (order.getEligibleThirdBidderId() != null && order.getEligibleThirdBidAmount() != null) {
-                log.info("Offering order {} to third eligible bidder: {}", orderId, order.getEligibleThirdBidderId());
-
-                BigDecimal thirdBid = order.getEligibleThirdBidAmount();
-                BigDecimal premiumForThirdBid = thirdBid.multiply(BUYER_PREMIUM_RATE).setScale(2, RoundingMode.HALF_UP);
-                BigDecimal totalDueForThirdBid = thirdBid.add(premiumForThirdBid);
-
-                order.setCurrentBidderId(order.getEligibleThirdBidderId());
-                order.setCurrentAmountDue(totalDueForThirdBid);
-                order.setPaymentOfferAttempt(3);
-                Duration nextBidderPaymentDuration = paymentProperties.getNextBidderDuration();
-                LocalDateTime newDeadline = LocalDateTime.now().plus(nextBidderPaymentDuration);
-                order.setPaymentDeadline(newDeadline);
-                order.setOrderStatus(OrderStatus.AWAITING_NEXT_BIDDER_PAYMENT);
-
-                schedulePaymentTimeoutCheck(order.getId(), newDeadline, 3);
-                publishPaymentDueEvent(order);
-            } else {
-                log.info("No eligible third bidder for order {}. Cancelling order due to buyer cancellation.", orderId);
-                order.setOrderStatus(OrderStatus.AWAITING_SELLER_DECISION);
-                publishSellerDecisionRequiredEvent(order); // Notify seller to decide next steps
-            }
+            log.info("Second offered bidder (attempt 2) cancelled payment for order {}.", orderId);
+            // DON'T offer to 3rd automatically. Go to AWAITING_SELLER_DECISION.
+            order.setOrderStatus(OrderStatus.AWAITING_SELLER_DECISION);
+            publishSellerDecisionRequiredEvent(order);
         } else if (currentAttempt >= 3) { // Third (or later) bidder cancelled
             log.info("Third (or later) offered bidder cancelled for order {}. Cancelling order.", orderId);
             order.setOrderStatus(OrderStatus.AWAITING_SELLER_DECISION);
@@ -896,6 +857,43 @@ public class OrderServiceImpl implements OrderService {
     }
 
     private void publishSellerDecisionRequiredEvent(Order order) {
+        String defaultedBidderId = null;
+        BigDecimal defaultedBidAmount = null;
+        String nextEligibleBidderId = null;
+        BigDecimal nextEligibleBidAmount = null;
+        boolean canOfferToNext = false;
+        int offerAttemptOfDefaultingBidder = order.getPaymentOfferAttempt(); // Key: attempt number of the bidder who just defaulted
+
+        // Determine who defaulted and who is next based on the attempt number
+        // order.getCurrentBidderId() is the ID of the person who just defaulted
+        // order.getCurrentAmountDue() is the amount they were supposed to pay
+
+        if (offerAttemptOfDefaultingBidder == 1) { // Initial winner defaulted
+            defaultedBidderId = order.getInitialWinnerId(); // Or order.getCurrentBidderId() if it wasn't changed yet
+            defaultedBidAmount = order.getInitialWinningBidAmount();
+            nextEligibleBidderId = order.getEligibleSecondBidderId();
+            nextEligibleBidAmount = order.getEligibleSecondBidAmount();
+            canOfferToNext = (nextEligibleBidderId != null && nextEligibleBidAmount != null);
+        } else if (offerAttemptOfDefaultingBidder == 2) { // Second bidder (who was made current) defaulted
+            defaultedBidderId = order.getCurrentBidderId(); // This was the 2nd bidder
+            defaultedBidAmount = order.getCurrentAmountDue(); // The amount they were supposed to pay
+            nextEligibleBidderId = order.getEligibleThirdBidderId();
+            nextEligibleBidAmount = order.getEligibleThirdBidAmount();
+            canOfferToNext = (nextEligibleBidderId != null && nextEligibleBidAmount != null);
+        } else if (offerAttemptOfDefaultingBidder >= 3) { // Third bidder (or later, if logic extends) defaulted
+            defaultedBidderId = order.getCurrentBidderId(); // This was the 3rd bidder
+            defaultedBidAmount = order.getCurrentAmountDue();
+            // No further bidders in the current model
+            nextEligibleBidderId = null;
+            nextEligibleBidAmount = null;
+            canOfferToNext = false;
+        } else {
+            log.error("Unexpected paymentOfferAttempt ({}) on order {} when publishing SellerDecisionRequiredEvent.",
+                    offerAttemptOfDefaultingBidder, order.getId());
+            // Potentially don't publish or publish a generic error event
+            return;
+        }
+
         SellerDecisionRequiredEventDto event = SellerDecisionRequiredEventDto.builder()
                 .eventId(UUID.randomUUID())
                 .eventTimestamp(LocalDateTime.now())
@@ -904,15 +902,16 @@ public class OrderServiceImpl implements OrderService {
                 .productId(order.getProductId())
                 .productTitleSnapshot(order.getProductTitleSnapshot())
                 .sellerId(order.getSellerId())
-                .defaultedBidderId(order.getInitialWinnerId()) // This event is specific to winner's default
-                .defaultedBidAmount(order.getInitialWinningBidAmount())
-                .canOfferToSecondBidder(order.getEligibleSecondBidderId() != null && order.getEligibleSecondBidAmount() != null)
-                .eligibleSecondBidderId(order.getEligibleSecondBidderId())
-                .eligibleSecondBidAmount(order.getEligibleSecondBidAmount())
-                .paymentOfferAttemptOfDefaultingBidder(1) // Specific to winner's default (attempt 1)
+                .defaultedBidderId(defaultedBidderId)
+                .defaultedBidAmount(defaultedBidAmount)
+                .canOfferToSecondBidder(canOfferToNext) // Rename this DTO field if it's confusing, e.g., canOfferToNextEligible
+                .eligibleSecondBidderId(nextEligibleBidderId) // Rename DTO field e.g., nextEligibleBidderId
+                .eligibleSecondBidAmount(nextEligibleBidAmount) // Rename DTO field e.g., nextEligibleBidAmount
+                .paymentOfferAttemptOfDefaultingBidder(offerAttemptOfDefaultingBidder)
                 .build();
 
-        log.info("Publishing SellerDecisionRequiredEvent for order {}", event.getOrderId());
+        log.info("Publishing SellerDecisionRequiredEvent for order {}, defaulted attempt {}. Next eligible: {}",
+                event.getOrderId(), offerAttemptOfDefaultingBidder, nextEligibleBidderId);
         try {
             rabbitTemplate.convertAndSend(
                     RabbitMqConfig.ORDERS_EVENTS_EXCHANGE,

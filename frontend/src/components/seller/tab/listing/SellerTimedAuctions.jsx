@@ -3,6 +3,7 @@ import React from 'react';
 import AuctionCard from '../../../AuctionCard'; // Adjust path as needed
 import PaginationControls from '../../../PaginationControls'; // Adjust path as needed
 import { FaGavel } from 'react-icons/fa'; // Assuming you still want an icon
+import InteractiveAuctionCard from '../../../InteractiveAuctionCard';
 
 const SellerTimedAuctions = ({
   timedAuctions,
@@ -38,12 +39,10 @@ const SellerTimedAuctions = ({
         <>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
             {timedAuctions.map((auction) => (
-              <AuctionCard
+              <InteractiveAuctionCard
                 key={auction.id}
                 auction={auction}
                 type="TIMED"
-                onClick={onAuctionCardClick}
-                isOwner={isOwner} // Pass isOwner if AuctionCard uses it for owner-specific actions
               />
             ))}
           </div>

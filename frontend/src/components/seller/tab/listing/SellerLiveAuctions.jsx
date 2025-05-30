@@ -3,6 +3,7 @@ import React from 'react';
 import AuctionCard from '../../../AuctionCard'; // Adjust path as needed
 import PaginationControls from '../../../PaginationControls'; // Adjust path as needed
 import { FaBroadcastTower } from 'react-icons/fa'; // Different icon for live auctions
+import InteractiveAuctionCard from '../../../InteractiveAuctionCard';
 
 const SellerLiveAuctions = ({
   liveAuctions,
@@ -38,12 +39,10 @@ const SellerLiveAuctions = ({
         <>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
             {liveAuctions.map((auction) => (
-              <AuctionCard
+              <InteractiveAuctionCard
                 key={auction.id}
                 auction={auction}
                 type="LIVE"
-                onClick={onAuctionCardClick}
-                isOwner={isOwner} // Pass isOwner if AuctionCard uses it
               />
             ))}
           </div>

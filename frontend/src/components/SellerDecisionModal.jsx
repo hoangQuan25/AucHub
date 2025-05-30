@@ -14,12 +14,21 @@ const SellerDecisionModal = ({ order, isOpen, onClose, onInitiateReopenAuction }
   const availableDecisionTypes = Object.entries(SELLER_DECISION_TYPES).filter(
     ([apiKey, displayText]) => {
       if (apiKey === 'OFFER_TO_NEXT_BIDDER') {
-        // Only show this option if there's an eligible second bidder.
-        // This assumes 'order.eligibleSecondBidderId' is populated and non-null.
-        return !!order.eligibleSecondBidderId;
+        // order.paymentOfferAttempt tells us which attempt just failed, leading to this decision point.
+        // If attempt 1 (winner) failed, we check for eligibleSecondBidderId.
+        // If attempt 2 (second bidder) failed, we check for eligibleThirdBidderId.
+        if (order.paymentOfferAttempt === 1) {
+          return !!order.eligibleSecondBidderId; // Show if 2nd bidder exists
+        } else if (order.paymentOfferAttempt === 2) {
+          return !!order.eligibleThirdBidderId; // Show if 3rd bidder exists
+        } else {
+          // If paymentOfferAttempt is 3 or more, or an unexpected value,
+          // there are no further "next bidders" defined in the current logic for this option.
+          return false;
+        }
       }
       // For other decision types like 'REOPEN_AUCTION' or 'CANCEL_SALE',
-      // they are generally always available in this context.
+      // they are generally always available when order is AWAITING_SELLER_DECISION.
       return true;
     }
   );
@@ -104,7 +113,11 @@ const SellerDecisionModal = ({ order, isOpen, onClose, onInitiateReopenAuction }
           </h3>
           <div className="mt-2 px-7 py-3">
             <p className="text-sm text-gray-500 mb-4">
-              The winner did not complete the payment. Please choose an action:
+              {/* You can make this message more dynamic based on order.paymentOfferAttempt */}
+              {order.paymentOfferAttempt === 1 && "The initial winner did not complete the payment."}
+              {order.paymentOfferAttempt === 2 && "The second bidder did not complete the payment."}
+              {order.paymentOfferAttempt >= 3 && "The previously offered bidder did not complete the payment."}
+              Please choose an action:
             </p>
             <div className="space-y-2 text-left">
               {availableDecisionTypes.length > 0 ? (

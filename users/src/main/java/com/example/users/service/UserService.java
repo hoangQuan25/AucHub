@@ -1,10 +1,7 @@
 // src/main/java/com/example/users/service/UserService.java
 package com.example.users.service;
 
-import com.example.users.dto.PublicSellerProfileDto;
-import com.example.users.dto.UserBasicInfoDto;
-import com.example.users.dto.UserDto;
-import com.example.users.dto.UpdateUserDto;
+import com.example.users.dto.*;
 
 import java.util.List;
 import java.util.Map;
@@ -33,4 +30,8 @@ public interface UserService {
             String expMonth,
             String expYear
     );
+
+    void processFirstWinnerPaymentDefault(String userId);
+
+    UserBanStatusDto getUserBanStatus(String userId);
 }

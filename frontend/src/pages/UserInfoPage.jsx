@@ -13,6 +13,7 @@ import UserProfileInfoSection from "../components/user/UserProfileInfoSection";
 import UserAddressSection from "../components/user/UserAddressSection";
 import UserPaymentMethodSection from "../components/user/UserPaymentMethodSection";
 import UserSellerSection from "../components/user/UserSellerSection";
+import UserBanStatusSection from "../components/user/UserBanStatusSection";
 
 const STRIPE_PUBLISHABLE_KEY =
   "pk_test_51RN788QoAglQPjjvhupJXkisXj7R7wt7epc8hYTUbDBTCxumwAownPBKNMM8NfNVza13yVVf6SrfAnmAxoiJtfRw00cIVf2LIl";
@@ -340,103 +341,127 @@ function UserInfoPage() {
   // if (!profileData && profileError) { ... }
 
   return (
-    <div className="container mx-auto p-4 md:p-6">
-      {" "}
-      {/* Added a container for better spacing */}
-      <div className="flex justify-between items-center mb-6">
-        <h2 className="text-2xl font-bold">User Profile & Settings</h2>
-        {profileData &&
-          !profileError && ( // Show button only if profile data is loaded and no critical load error
+    <div className="bg-slate-50 min-h-screen"> {/* Added a light background to the whole page */}
+      <div className="container mx-auto p-4 md:p-8">
+        {profileData &&  profileData.banEndsAt && (
+          <UserBanStatusSection banEndsAt={profileData.banEndsAt} />
+        )}
+        <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8">
+          <h1 className="text-3xl font-bold text-slate-800 mb-4 md:mb-0">
+            User Profile & Settings
+          </h1>
+          {profileData && !profileError && (
             <button
               onClick={handleOpenEditModal}
-              className="bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-2 px-4 rounded text-sm transition duration-150 ease-in-out"
+              className="bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-2 px-5 rounded-lg text-sm shadow-md hover:shadow-lg transition-all duration-150 ease-in-out"
             >
               Edit Profile
             </button>
           )}
-      </div>
-      {isAvatarUploading && (
-        <p className="text-center text-blue-500 my-2">Uploading avatar...</p>
-      )}
-      {avatarUploadError && (
-        <p className="text-center text-red-500 my-2 bg-red-100 p-2 rounded">
-          {avatarUploadError}
-        </p>
-      )}
-      {/* Display Profile Load Error if it occurred AND profileData is not available */}
-      {profileError && !profileData && (
-        <p className="text-red-500 mb-4 text-center bg-red-100 p-3 rounded">
-          Error loading profile details: {profileError}
-        </p>
-      )}
-      {profileData ? (
-        <>
-          <UserProfileInfoSection
-            profileData={profileData}
-            onAvatarUpload={handleAvatarUpload}
-          />
-          <UserAddressSection profileData={profileData} />
-          <UserPaymentMethodSection
-            profileData={profileData}
-            onAddOrUpdatePaymentMethod={handleAddOrUpdatePaymentMethod}
-            isAddingPaymentMethod={isAddingPaymentMethod}
-            paymentMethodError={paymentMethodError}
-            paymentMethodSuccess={paymentMethodSuccess}
-            stripePromise={stripePromise}
-          />
-          <UserSellerSection
-            isSeller={profileData.seller} // Make sure 'seller' field exists in your UserDto from backend
-            onPromptBecomeSeller={promptBecomeSeller}
-            isSellerActivating={isSellerActivating}
-            sellerActivationError={sellerActivationError}
-            sellerActivationSuccess={sellerActivationSuccess}
-          />
-        </>
-      ) : (
-        !profileLoading &&
-        !profileError && (
-          <p className="text-center text-gray-600">
-            Could not load profile information.
+        </div>
+
+        {isAvatarUploading && (
+          <p className="text-center text-indigo-600 my-3 p-3 bg-indigo-100 rounded-lg">
+            Uploading avatar...
           </p>
-        )
-      )}
-      {/* Modals */}
-      <ConfirmationModal
-        isOpen={isConfirmationModalOpen}
-        onClose={() => setIsConfirmationModalOpen(false)}
-        onConfirm={handleConfirmBecomeSeller}
-        title="Become a Seller?"
-        message="Do you want to upgrade your account to gain seller privileges?"
-        isLoading={isSellerActivating}
-        error={sellerActivationError}
-        confirmText="Yes, Upgrade"
-        confirmButtonClass="bg-purple-600 hover:bg-purple-700"
-      />
-      {profileData &&
-        isEditModalOpen && ( // Ensure modal only renders when open and profileData exists
+        )}
+        {avatarUploadError && (
+          <p className="text-center text-red-600 my-3 bg-red-100 p-3 rounded-lg">
+            {avatarUploadError}
+          </p>
+        )}
+        {editSuccess && ( // Show general edit success message here for broader visibility
+          <p className="text-center text-green-600 my-3 bg-green-100 p-3 rounded-lg">
+            {editSuccess}
+          </p>
+        )}
+
+        {profileError && !profileData && (
+          <p className="text-red-600 mb-6 text-center bg-red-100 p-4 rounded-lg shadow">
+            Error loading profile details: {profileError}
+          </p>
+        )}
+
+        {profileData ? (
+          <div className="space-y-8"> {/* Consistent spacing for all main sections */}
+            <UserProfileInfoSection
+              profileData={profileData}
+              onAvatarUpload={handleAvatarUpload}
+            />
+
+            {/* Grid layout for Address, Payment, and Seller sections */}
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+              {/* Address Section - spans 1 column on lg, can be made to span 2 if desired */}
+              <div className="lg:col-span-1"> {/* Or lg:col-span-2 for wider address */}
+                <UserAddressSection profileData={profileData} />
+              </div>
+
+              {/* Payment and Seller Sections - stacked in the remaining column(s) */}
+              <div className="lg:col-span-2 space-y-8"> {/* Or lg:col-span-1 if address is wider */}
+                <UserPaymentMethodSection
+                  profileData={profileData}
+                  onAddOrUpdatePaymentMethod={handleAddOrUpdatePaymentMethod}
+                  isAddingPaymentMethod={isAddingPaymentMethod}
+                  paymentMethodError={paymentMethodError}
+                  paymentMethodSuccess={paymentMethodSuccess}
+                  stripePromise={stripePromise}
+                />
+                <UserSellerSection
+                  isSeller={profileData.seller || profileData.isSeller}
+                  onPromptBecomeSeller={promptBecomeSeller}
+                  isSellerActivating={isSellerActivating}
+                  sellerActivationError={sellerActivationError}
+                  sellerActivationSuccess={sellerActivationSuccess}
+                />
+              </div>
+            </div>
+          </div>
+        ) : (
+          !profileLoading &&
+          !profileError && (
+            <p className="text-center text-slate-600 p-10">
+              Could not load profile information.
+            </p>
+          )
+        )}
+
+        {/* Modals */}
+        <ConfirmationModal
+          isOpen={isConfirmationModalOpen}
+          onClose={() => setIsConfirmationModalOpen(false)}
+          onConfirm={handleConfirmBecomeSeller}
+          title="Become a Seller?"
+          message="Do you want to upgrade your account to gain seller privileges?"
+          isLoading={isSellerActivating}
+          error={sellerActivationError} // Pass error to be displayed in modal
+          confirmText="Yes, Upgrade"
+          confirmButtonClass="bg-purple-600 hover:bg-purple-700" // Keep purple for this distinct action
+        />
+        {profileData && isEditModalOpen && (
           <EditProfileModal
             isOpen={isEditModalOpen}
             onClose={() => setIsEditModalOpen(false)}
             onSave={handleSaveProfile}
             initialData={profileData}
-            error={editError}
-            success={editSuccess} // Pass success to potentially show in modal or clear it
+            error={editError} // Pass error to be displayed in modal
+            // success message is handled outside, or pass setEditSuccess to clear it from modal
           />
         )}
-      {isStripeSetupModalOpen && setupIntentClientSecret && stripePromise && (
-        <StripeWrappedSetupFormModal
-          isOpen={isStripeSetupModalOpen}
-          onClose={() => {
-            setIsStripeSetupModalOpen(false);
-            setSetupIntentClientSecret(null);
-            setPaymentMethodError(""); // Clear error when modal is manually closed
-          }}
-          clientSecret={setupIntentClientSecret}
-          onSuccess={handleStripeSetupSuccess}
-          onError={handleStripeSetupError}
-          stripePromise={stripePromise}
-        />
-      )}
+        {isStripeSetupModalOpen && setupIntentClientSecret && stripePromise && (
+          <StripeWrappedSetupFormModal
+            isOpen={isStripeSetupModalOpen}
+            onClose={() => {
+              setIsStripeSetupModalOpen(false);
+              setSetupIntentClientSecret(null);
+              setPaymentMethodError(""); 
+            }}
+            clientSecret={setupIntentClientSecret}
+            onSuccess={handleStripeSetupSuccess}
+            onError={handleStripeSetupError}
+            stripePromise={stripePromise}
+          />
+        )}
+      </div>
     </div>
   );
 }
