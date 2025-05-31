@@ -37,6 +37,8 @@ public class RabbitMqConfig {
     public static final String DELIVERY_EVENT_RETURN_REQUESTED_ROUTING_KEY = "delivery.event.return.requested";
     public static final String DELIVERY_AUTO_COMPLETE_SCHEDULE_ROUTING_KEY = "delivery.schedule.auto-complete";
     public static final String DELIVERY_EVENT_AUTO_COMPLETED_ROUTING_KEY = "delivery.event.auto.completed"; // For future auto-completion
+    public static final String DELIVERY_EVENT_RETURN_APPROVED_ROUTING_KEY = "delivery.event.return.approved";
+    public static final String DELIVERY_EVENT_REFUND_REQUIRED_ROUTING_KEY = "delivery.event.refund.required";
 
     // --- Dead Letter Exchange and Queue ---
     public static final String MAIN_DLX_EXCHANGE = "dlx.main_exchange"; // Dead Letter Exchange

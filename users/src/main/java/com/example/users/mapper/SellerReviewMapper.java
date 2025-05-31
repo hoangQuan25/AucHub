@@ -19,6 +19,7 @@ public class SellerReviewMapper {
         reviewDto.setRating(sellerReview.getRating());
         reviewDto.setComment(sellerReview.getComment());
         reviewDto.setCreatedAt(sellerReview.getCreatedAt());
+        reviewDto.setOrderId(sellerReview.getOrderId()); // Assuming SellerReview has an Order reference
 
         return reviewDto;
     }

@@ -116,112 +116,114 @@ function AllNotificationsModal({ isOpen, onClose }) {
   if (!isOpen) return null;
   const hasUnreadOnPage = notifications.some((n) => !n.isRead);
 
-  return (
+  // ...existing imports...
+
+return (
+  <div
+    className="fixed inset-0 z-50 flex justify-center items-center p-4"
+    style={{ background: "none" }} // No overlay/gradient background
+    onClick={onClose}
+  >
     <div
-      className="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center z-50 p-4"
-      onClick={onClose}
+      className="w-full max-w-2xl max-h-[80vh] flex flex-col border border-slate-700 rounded-2xl shadow-2xl bg-slate-900"
+      onClick={(e) => e.stopPropagation()}
     >
-      <div
-        className="bg-white rounded-lg shadow-xl w-full max-w-2xl max-h-[80vh] flex flex-col"
-        onClick={(e) => e.stopPropagation()}
-      >
-        {/* Header with Close & Mark All As Read */}
-        <div className="flex justify-between items-center p-4 border-b">
-          <h2 className="text-lg font-semibold text-gray-800">
-            All Notifications
-          </h2>
-          <div className="flex items-center space-x-4">
-            {/* Optional: Add Mark All Read button here */}
-            {hasUnreadOnPage && (
-              <button
-                onClick={handleMarkAllReadInModal}
-                className="text-xs text-indigo-600 hover:underline"
-              >
-                Mark all as read
-              </button>
-            )}
+      {/* Header */}
+      <div className="flex justify-between items-center p-5 border-b border-slate-700 bg-slate-800 rounded-t-2xl">
+        <h2 className="text-xl font-bold text-indigo-300 tracking-wide">
+          All Notifications
+        </h2>
+        <div className="flex items-center space-x-4">
+          {hasUnreadOnPage && (
             <button
-              onClick={onClose}
-              className="text-gray-500 hover:text-gray-800 text-2xl font-bold"
-              aria-label="Close notifications"
+              onClick={handleMarkAllReadInModal}
+              className="text-xs text-indigo-400 hover:text-indigo-200 font-semibold transition"
             >
-              &times;
+              Mark all as read
             </button>
-          </div>
+          )}
+          <button
+            onClick={onClose}
+            className="text-slate-400 hover:text-white text-2xl font-bold transition"
+            aria-label="Close notifications"
+          >
+            &times;
+          </button>
         </div>
+      </div>
 
-        {/* Modal Body */}
-        <div className="p-4 flex-grow overflow-y-auto">
-          {isLoading && (
-            <div className="text-center p-6 text-gray-500">
-              Loading notifications...
-            </div>
-          )}
-          {error && <div className="text-center p-6 text-red-600">{error}</div>}
-          {!isLoading && !error && notifications.length === 0 && (
-            <div className="text-center p-6 text-gray-500">
-              You have no notifications.
-            </div>
-          )}
-          {!isLoading && !error && notifications.length > 0 && (
-            <ul className="divide-y divide-gray-200">
-              {notifications.map((notif) => (
-                // Make list item clickable
-                <li
-                  key={notif.id || JSON.stringify(notif)}
-                  // Call common handler on click
-                  onClick={() => handleNotificationClick(notif)}
-                  className={`py-3 px-2 rounded transition-colors duration-150 ${
-                    !notif.isRead
-                      ? "bg-blue-50 hover:bg-blue-100 font-medium"
-                      : "hover:bg-gray-100"
-                  } ${
-                    notif.relatedAuctionId ? "cursor-pointer" : "cursor-default"
-                  }`} // Make clickable only if link exists
-                >
-                  <p
-                    className={`text-sm leading-relaxed ${
-                      !notif.isRead ? "text-gray-900" : "text-gray-700"
-                    }`}
-                  >
-                    {notif.message}
-                  </p>
-                  <p className="text-xs text-gray-500 mt-1">
-                    {new Date(notif.timestamp).toLocaleString()}
-                  </p>
-                </li>
-              ))}
-            </ul>
-          )}
-        </div>
-
-        {/* Footer (Pagination) */}
-        {pagination.totalPages > 1 && (
-          <div className="flex justify-center items-center gap-4 p-3 border-t bg-gray-50 rounded-b-lg">
-            <button
-              className="px-4 py-1.5 bg-white border rounded text-sm disabled:opacity-50"
-              disabled={pagination.page === 0 || isLoading}
-              onClick={() => handlePageChange(pagination.page - 1)}
-            >
-              Previous
-            </button>
-            <span className="text-sm text-gray-600">
-              Page {pagination.page + 1} of {pagination.totalPages}
-            </span>
-            <button
-              className="px-4 py-1.5 bg-white border rounded text-sm disabled:opacity-50"
-              disabled={
-                pagination.page >= pagination.totalPages - 1 || isLoading
-              }
-              onClick={() => handlePageChange(pagination.page + 1)}
-            >
-              Next
-            </button>
+      {/* Modal Body */}
+      <div className="p-5 flex-grow overflow-y-auto bg-slate-900">
+        {isLoading && (
+          <div className="text-center p-6 text-indigo-200">
+            Loading notifications...
           </div>
         )}
+        {error && (
+          <div className="text-center p-6 text-red-400">{error}</div>
+        )}
+        {!isLoading && !error && notifications.length === 0 && (
+          <div className="text-center p-6 text-indigo-400">
+            You have no notifications.
+          </div>
+        )}
+        {!isLoading && !error && notifications.length > 0 && (
+          <ul className="divide-y divide-slate-700">
+            {notifications.map((notif) => (
+              <li
+                key={notif.id || JSON.stringify(notif)}
+                onClick={() => handleNotificationClick(notif)}
+                className={`py-4 px-3 rounded-lg transition-colors duration-150 cursor-pointer group ${
+                  !notif.isRead
+                    ? "bg-slate-800 border-l-4 border-indigo-500 shadow"
+                    : "hover:bg-slate-800/80"
+                }`}
+              >
+                <p
+                  className={`text-base leading-relaxed ${
+                    !notif.isRead
+                      ? "text-indigo-100 font-semibold"
+                      : "text-slate-300"
+                  } group-hover:text-white transition`}
+                >
+                  {notif.message}
+                </p>
+                <p className="text-xs text-slate-400 mt-1">
+                  {new Date(notif.timestamp).toLocaleString()}
+                </p>
+              </li>
+            ))}
+          </ul>
+        )}
       </div>
+
+      {/* Footer (Pagination) */}
+      {pagination.totalPages > 1 && (
+        <div className="flex justify-center items-center gap-4 p-4 border-t border-slate-700 bg-slate-800 rounded-b-2xl">
+          <button
+            className="px-4 py-1.5 bg-slate-900 border border-slate-700 rounded text-sm text-indigo-200 hover:bg-slate-800 transition disabled:opacity-50"
+            disabled={pagination.page === 0 || isLoading}
+            onClick={() => handlePageChange(pagination.page - 1)}
+          >
+            Previous
+          </button>
+          <span className="text-sm text-indigo-300">
+            Page {pagination.page + 1} of {pagination.totalPages}
+          </span>
+          <button
+            className="px-4 py-1.5 bg-slate-900 border border-slate-700 rounded text-sm text-indigo-200 hover:bg-slate-800 transition disabled:opacity-50"
+            disabled={
+              pagination.page >= pagination.totalPages - 1 || isLoading
+            }
+            onClick={() => handlePageChange(pagination.page + 1)}
+          >
+            Next
+          </button>
+        </div>
+      )}
     </div>
-  );
+  </div>
+);
 }
 
 export default AllNotificationsModal;

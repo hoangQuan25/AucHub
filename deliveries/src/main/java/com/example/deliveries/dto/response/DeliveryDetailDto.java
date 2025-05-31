@@ -26,6 +26,13 @@ public class DeliveryDetailDto {
     private String trackingNumber;
     private LocalDateTime shippedAt;
     private LocalDateTime deliveredAt;
+    private String returnCourier;
+    private String returnTrackingNumber;
+    private LocalDateTime returnApprovedAt;
+    private LocalDateTime returnItemReceivedAt;
+    private String returnReason;
+    private String returnComments;
+    private String returnImageUrls;
     private String notes;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;

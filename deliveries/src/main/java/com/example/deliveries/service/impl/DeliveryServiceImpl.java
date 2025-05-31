@@ -12,6 +12,8 @@ import com.example.deliveries.entity.Delivery;
 import com.example.deliveries.entity.DeliveryStatus;
 import com.example.deliveries.repository.DeliveryRepository;
 import com.example.deliveries.service.DeliveryService;
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.amqp.rabbit.core.RabbitTemplate;
@@ -31,8 +33,9 @@ public class DeliveryServiceImpl implements DeliveryService {
 
     private final DeliveryRepository deliveryRepository;
     private final RabbitTemplate rabbitTemplate;
+    private final ObjectMapper objectMapper;
 
-    private static final Duration BUYER_CONFIRMATION_WINDOW = Duration.ofDays(3);
+    private static final Duration BUYER_CONFIRMATION_WINDOW = Duration.ofDays(7);
 
     @Override
     @Transactional
@@ -172,20 +175,32 @@ public class DeliveryServiceImpl implements DeliveryService {
     public Delivery requestReturnByBuyer(UUID deliveryId, String buyerId, ReturnRequestDto returnRequest) {
         log.info("Buyer {} requesting return for delivery {} with reason: {}", buyerId, deliveryId, returnRequest.getReason());
         Delivery delivery = deliveryRepository.findById(deliveryId)
-                .orElseThrow(() -> new NoSuchElementException("Delivery not found: " + deliveryId));
+                .orElseThrow(() -> new NoSuchElementException("Delivery not found with ID: " + deliveryId));
 
         if (!delivery.getBuyerId().equals(buyerId)) {
             throw new SecurityException("User not authorized to request return for this delivery.");
         }
-        if (delivery.getDeliveryStatus() != DeliveryStatus.AWAITING_BUYER_CONFIRMATION) {
-            // Potentially allow from DELIVERED if the window is still open and status was just DELIVERED before this flow
-            throw new IllegalStateException("Return can only be requested when delivery is awaiting buyer confirmation. Current status: " + delivery.getDeliveryStatus());
+        if (delivery.getDeliveryStatus() != DeliveryStatus.AWAITING_BUYER_CONFIRMATION && delivery.getDeliveryStatus() != DeliveryStatus.RECEIPT_CONFIRMED_BY_BUYER && delivery.getDeliveryStatus() != DeliveryStatus.COMPLETED_AUTO) {
+            throw new IllegalStateException("Return can only be requested after delivery is complete. Current status: " + delivery.getDeliveryStatus());
         }
 
+        // Add logic here to check if within the 7-day window from delivery.getDeliveredAt()
+
         delivery.setDeliveryStatus(DeliveryStatus.RETURN_REQUESTED_BY_BUYER);
-        // Store return reason/notes on Delivery entity or a separate ReturnRequest entity
-        String note = "Return requested by buyer. Reason: " + returnRequest.getReason() + (returnRequest.getComments() != null ? " Comments: " + returnRequest.getComments() : "");
-        delivery.setNotes(delivery.getNotes() == null ? note : delivery.getNotes() + "; " + note);
+        delivery.setReturnReason(returnRequest.getReason());
+        delivery.setReturnComments(returnRequest.getComments());
+        delivery.setReturnCourier(returnRequest.getReturnCourier());
+        delivery.setReturnTrackingNumber(returnRequest.getReturnTrackingNumber());
+
+        // Convert image URL list to a JSON string to store in the TEXT column
+        if (returnRequest.getImageUrls() != null && !returnRequest.getImageUrls().isEmpty()) {
+            try {
+                delivery.setReturnImageUrls(objectMapper.writeValueAsString(returnRequest.getImageUrls()));
+            } catch (JsonProcessingException e) {
+                log.error("Error serializing image URLs to JSON for deliveryId {}: {}", deliveryId, e.getMessage());
+                // Decide if this should throw an exception or just log
+            }
+        }
 
         Delivery savedDelivery = deliveryRepository.save(delivery);
         log.info("Delivery {} return requested by buyer {}. Status: {}", savedDelivery.getDeliveryId(), buyerId, savedDelivery.getDeliveryStatus());
@@ -258,6 +273,60 @@ public class DeliveryServiceImpl implements DeliveryService {
 
         publishDeliveryIssueReportedEvent(updatedDelivery);
         return updatedDelivery;
+    }
+
+    @Override
+    @Transactional
+    public Delivery approveReturnBySeller(UUID deliveryId, String sellerId) {
+        log.info("Seller {} is approving the return for delivery {}", sellerId, deliveryId);
+        Delivery delivery = deliveryRepository.findById(deliveryId)
+                .orElseThrow(() -> new NoSuchElementException("Delivery not found: " + deliveryId));
+
+        if (!delivery.getSellerId().equals(sellerId)) {
+            throw new SecurityException("User not authorized to approve returns for this delivery.");
+        }
+        if (delivery.getDeliveryStatus() != DeliveryStatus.RETURN_REQUESTED_BY_BUYER) {
+            throw new IllegalStateException("Delivery is not awaiting return approval.");
+        }
+
+        delivery.setDeliveryStatus(DeliveryStatus.RETURN_APPROVED_AWAITING_ITEM);
+        delivery.setReturnApprovedAt(LocalDateTime.now());
+        Delivery savedDelivery = deliveryRepository.save(delivery);
+
+        // Publish event to notify buyer that their return request was approved
+        // and they should now ship the item back.
+        publishDeliveryReturnApprovedEvent(savedDelivery);
+
+        log.info("Delivery {} return approved by seller. Status: {}", savedDelivery.getDeliveryId(), savedDelivery.getDeliveryStatus());
+        return savedDelivery;
+    }
+
+    @Override
+    @Transactional
+    public Delivery confirmReturnItemReceived(UUID deliveryId, String sellerId) {
+        log.info("Seller {} confirms receipt of returned item for delivery {}", sellerId, deliveryId);
+        Delivery delivery = deliveryRepository.findById(deliveryId)
+                .orElseThrow(() -> new NoSuchElementException("Delivery not found: " + deliveryId));
+
+        if (!delivery.getSellerId().equals(sellerId)) {
+            throw new SecurityException("User not authorized for this action.");
+        }
+        if (delivery.getDeliveryStatus() != DeliveryStatus.RETURN_REQUESTED_BY_BUYER) {
+            throw new IllegalStateException("Delivery is not in the correct state to confirm return receipt. Expected RETURN_REQUESTED_BY_BUYER but was " + delivery.getDeliveryStatus());
+        }
+
+        delivery.setDeliveryStatus(DeliveryStatus.RETURN_ITEM_RECEIVED);
+        delivery.setReturnItemReceivedAt(LocalDateTime.now());
+        Delivery savedDelivery = deliveryRepository.save(delivery);
+
+        // --- THIS IS THE KEY TRIGGER ---
+        // Now that the seller has the item, we publish an event to tell
+        // the PaymentService (via OrderService or directly) to issue the refund.
+        publishDeliveryReturnApprovedEvent(savedDelivery);
+        publishRefundRequiredForReturnEvent(savedDelivery);
+
+        log.info("Delivery {} return item received. Refund process initiated.", savedDelivery.getDeliveryId());
+        return savedDelivery;
     }
 
     @Override
@@ -461,4 +530,50 @@ public class DeliveryServiceImpl implements DeliveryService {
             log.error("Error publishing DeliveryIssueReportedEvent for deliveryId {}: {}", delivery.getDeliveryId(), e.getMessage(), e);
         }
     }
+
+    private void publishDeliveryReturnApprovedEvent(Delivery delivery) {
+        DeliveryReturnApprovedEventDto event = DeliveryReturnApprovedEventDto.builder()
+                .eventId(UUID.randomUUID())
+                .eventTimestamp(LocalDateTime.now())
+                .deliveryId(delivery.getDeliveryId())
+                .orderId(delivery.getOrderId())
+                .buyerId(delivery.getBuyerId())
+                .sellerId(delivery.getSellerId())
+                .productInfoSnapshot(delivery.getProductInfoSnapshot())
+                .returnApprovedAt(delivery.getReturnApprovedAt())
+                .build();
+        try {
+            rabbitTemplate.convertAndSend(
+                    RabbitMqConfig.DELIVERIES_EVENTS_EXCHANGE,
+                    RabbitMqConfig.DELIVERY_EVENT_RETURN_APPROVED_ROUTING_KEY,
+                    event
+            );
+            log.info("Published DeliveryReturnApprovedEvent for deliveryId {}", delivery.getDeliveryId());
+        } catch (Exception e) {
+            log.error("Error publishing DeliveryReturnApprovedEvent for deliveryId {}: {}", delivery.getDeliveryId(), e.getMessage(), e);
+        }
+    }
+
+    private void publishRefundRequiredForReturnEvent(Delivery delivery) {
+        RefundRequiredForReturnEventDto event = RefundRequiredForReturnEventDto.builder()
+                .eventId(UUID.randomUUID())
+                .eventTimestamp(LocalDateTime.now())
+                .deliveryId(delivery.getDeliveryId())
+                .orderId(delivery.getOrderId())
+                .buyerId(delivery.getBuyerId())
+                .sellerId(delivery.getSellerId())
+                .reason("Return completed for delivery " + delivery.getDeliveryId())
+                .build();
+        try {
+            rabbitTemplate.convertAndSend(
+                    RabbitMqConfig.DELIVERIES_EVENTS_EXCHANGE,
+                    RabbitMqConfig.DELIVERY_EVENT_REFUND_REQUIRED_ROUTING_KEY,
+                    event
+            );
+            log.info("Published RefundRequiredForReturnEvent for orderId {}", delivery.getOrderId());
+        } catch (Exception e) {
+            log.error("Error publishing RefundRequiredForReturnEvent for orderId {}: {}", delivery.getOrderId(), e.getMessage(), e);
+        }
+    }
+
 }

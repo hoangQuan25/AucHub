@@ -11,6 +11,12 @@ export const orderStatusMap = {
   AWAITING_SHIPMENT: 'Chờ Giao Hàng', // Buyer: Chờ Giao | Seller: Chờ Giao Đi
   COMPLETED: 'Hoàn Thành', // Buyer & Seller
 
+  RETURN_REQUESTED_BY_BUYER: 'Yêu Cầu Trả Hàng', // Buyer: Đã Y/C Trả Hàng | Seller: Khách Y/C Trả Hàng
+  RETURN_APPROVED_BY_SELLER: 'Đã Chấp Nhận Trả Hàng', // Buyer: Shop Đã Đồng Ý | Seller: Đã Đồng Ý Trả Hàng
+  REFUND_PROCESSING: 'Đang Hoàn Tiền', // A good transient status
+  REFUND_COMPLETED: 'Đã Hoàn Tiền',
+  REFUND_FAILED: 'Hoàn Tiền Thất Bại',
+
   // --- Seller Specific States (primarily for seller's view/action) ---
   AWAITING_SELLER_DECISION: 'Cần Quyết Định Bán', // Seller view
 
@@ -39,6 +45,7 @@ export const buyerOrderStatusFilters = {
   PAYMENT_SUCCESSFUL: 'Đã Thanh Toán',
   AWAITING_SHIPMENT: 'Chờ Giao Hàng', // This covers AWAITING_FULFILLMENT_CONFIRMATION and AWAITING_SHIPMENT
   COMPLETED: 'Hoàn Thành',
+  ORDER_RETURNED: 'Trả Hàng / Hoàn Tiền',
   CANCELLED: 'Đã Huỷ', // This can cover all ORDER_CANCELLED_... types
 };
 
@@ -50,6 +57,7 @@ export const sellerOrderStatusFilters = {
   PAYMENT_SUCCESSFUL: 'Khách Đã Thanh Toán',
   AWAITING_SHIPMENT: 'Chờ Giao Đi', // Covers AWAITING_FULFILLMENT_CONFIRMATION and AWAITING_SHIPMENT
   COMPLETED: 'Hoàn Thành',
+  ORDER_RETURNED: 'Yêu Cầu Trả Hàng',
   ORDER_SUPERSEDED_BY_REOPEN: 'Đã Mở Lại Đấu Giá', // Seller might want to see these
   CANCELLED: 'Đã Huỷ', // Covers all ORDER_CANCELLED_... types
   // AUCTION_REOPEN_INITIATED can be removed as a filter if it's transient and leads to SUPERSEDED

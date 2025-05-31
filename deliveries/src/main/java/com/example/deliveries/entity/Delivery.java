@@ -70,6 +70,21 @@ public class Delivery {
     @Column(columnDefinition = "TEXT")
     private String notes; // For seller updates, reasons for status changes, etc.
 
+    @Column(length = 255)
+    private String returnReason;
+
+    @Column(columnDefinition = "TEXT")
+    private String returnComments;
+
+    // To store URLs of uploaded images, perhaps as a JSON string or in a separate table
+    @Column(columnDefinition = "TEXT")
+    private String returnImageUrls; // e.g., ["url1.jpg", "url2.jpg"]
+
+    private String returnCourier;
+    private String returnTrackingNumber;
+    private LocalDateTime returnApprovedAt;
+    private LocalDateTime returnItemReceivedAt;
+
     @CreationTimestamp
     @Column(nullable = false, updatable = false)
     private LocalDateTime createdAt;
@@ -77,8 +92,4 @@ public class Delivery {
     @UpdateTimestamp
     @Column(nullable = false)
     private LocalDateTime updatedAt;
-
-    // Consider adding a version field for optimistic locking if needed
-    // @Version
-    // private Long version;
 }

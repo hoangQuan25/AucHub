@@ -24,6 +24,8 @@ import MarkAsDeliveredFormModal from "../components/delivery/MarkAsDeliveredForm
 import SubmitReviewModal from "../components/SubmitReviewModal";
 import SellerDecisionModal from "../components/SellerDecisionModal";
 import StartAuctionModal from "../components/StartAuctionModal";
+import RequestReturnModal from "../components/order/RequestReturnModal";
+import OrderReturnDetails from "../components/order/OrderReturnDetails";
 
 const STRIPE_PUBLISHABLE_KEY =
   "pk_test_51RN788QoAglQPjjvhupJXkisXj7R7wt7epc8hYTUbDBTCxumwAownPBKNMM8NfNVza13yVVf6SrfAnmAxoiJtfRw00cIVf2LIl";
@@ -85,6 +87,10 @@ function OrderDetailPage() {
     type: "",
     text: "",
   });
+
+  const [isReturnModalOpen, setIsReturnModalOpen] = useState(false);
+  const [returnRequestError, setReturnRequestError] = useState("");
+  const [isSubmittingReturn, setIsSubmittingReturn] = useState(false);
 
   const fetchUserProfile = useCallback(async () => {
     if (initialized && keycloak.authenticated) {
@@ -581,52 +587,6 @@ function OrderDetailPage() {
     }
   };
 
-  const handleRequestReturnByBuyer = async () => {
-    if (!deliveryDetails?.deliveryId || !isBuyer) {
-      setBuyerActionError(
-        "Cannot request return. Delivery details missing or not authorized."
-      );
-      return;
-    }
-    // For now, this is a placeholder. A real return request would likely open a new form/modal
-    // to collect reason, photos, etc., and then make an API call.
-    // Let's simulate the API call part for now.
-    setIsRequestingReturn(true); // Use a separate loading state if the action is complex
-    setBuyerActionError("");
-    console.log(
-      "Buyer requesting return for delivery:",
-      deliveryDetails.deliveryId
-    );
-
-    // Example: Open a new page or a more complex modal for return details
-    // navigate(`/orders/${order.id}/return/create`, { state: { deliveryId: deliveryDetails.deliveryId } });
-    // For now, just an alert and potential backend call:
-    try {
-      // Dummy request DTO for now
-      const returnRequestData = {
-        reason: "Item not as described (placeholder)",
-        comments: "Details...",
-      };
-      // API Call: POST /deliveries/{deliveryDetails.deliveryId}/request-return
-      await apiClient.post(
-        `/deliveries/${deliveryDetails.deliveryId}/request-return`,
-        returnRequestData
-      );
-      alert(
-        "Your return request has been submitted. We will contact you shortly."
-      );
-      await refreshAllDetails();
-    } catch (err) {
-      console.error("Error submitting return request:", err);
-      setBuyerActionError(
-        err.response?.data?.message || "Failed to submit return request."
-      );
-      alert(err.response?.data?.message || "Failed to submit return request.");
-    } finally {
-      setIsRequestingReturn(false);
-    }
-  };
-
   const handleOpenReviewModal = () => {
     setReviewSubmissionMessage({ type: "", text: "" }); // Clear previous messages
     setIsReviewModalOpen(true);
@@ -642,11 +602,6 @@ function OrderDetailPage() {
       type: "success",
       text: "Thank you for your review!",
     });
-    // Optionally, you might want to mark something locally so the "Leave Review" button disappears or changes
-    // For instance, add a state like: const [hasReviewed, setHasReviewed] = useState(false);
-    // and setHasReviewed(true) here. Then use `hasReviewed` to hide the button.
-    // Or, simply rely on the backend to prevent further reviews for this order.
-    // Refreshing details might not show the review immediately unless the order page itself shows reviews for its items/seller.
   };
 
   const handleReviewError = (errorMessage) => {
@@ -655,17 +610,83 @@ function OrderDetailPage() {
     console.error("Review submission failed:", errorMessage);
   };
 
+  const handleOpenReturnModal = () => {
+    setReturnRequestError("");
+    setIsReturnModalOpen(true);
+  };
+
+  const handleSubmitReturnRequest = async (returnData) => {
+    // Ensure deliveryDetails and deliveryId are available
+    if (!deliveryDetails?.deliveryId || !isBuyer) {
+      setReturnRequestError(
+        "Cannot request return. Delivery details missing or not authorized."
+      );
+      return;
+    }
+    setIsSubmittingReturn(true);
+    setReturnRequestError("");
+    try {
+      // --- CORRECTED API CALL to Deliveries Service ---
+      await apiClient.post(
+        `/deliveries/${deliveryDetails.deliveryId}/request-return`, // Uses deliveryId
+        returnData
+      );
+      alert(
+        "Your return request has been submitted. The seller will be notified."
+      );
+      setIsReturnModalOpen(false);
+      await refreshAllDetails();
+    } catch (err) {
+      console.error("Error submitting return request:", err);
+      const errorMsg =
+        err.response?.data?.message || "Failed to submit return request.";
+      setReturnRequestError(errorMsg);
+    } finally {
+      setIsSubmittingReturn(false);
+    }
+  };
+
+  const handleConfirmReturnReceived = async () => {
+    // Ensure deliveryDetails and deliveryId are available
+    if (!deliveryDetails?.deliveryId || !isSeller) {
+      alert("Action not authorized or delivery details missing.");
+      return;
+    }
+    setIsProcessing(true); 
+    try {
+      // --- CORRECTED API CALL to Deliveries Service ---
+      await apiClient.post(
+        `/deliveries/${deliveryDetails.deliveryId}/confirm-return-received` // Uses deliveryId
+      );
+      alert(
+        "Confirmation successful. A refund will now be processed for the buyer."
+      );
+      await refreshAllDetails();
+    } catch (err) {
+      console.error("Failed to confirm return received:", err);
+      alert(
+        err.response?.data?.message || "An error occurred. Please try again."
+      );
+    } finally {
+      setIsProcessing(false);
+    }
+  };
+
   // Derived states
-  const isSeller =
-    initialized &&
-    keycloak.authenticated &&
-    order &&
-    keycloak.subject === order.sellerId;
-  const isBuyer =
-    initialized &&
-    keycloak.authenticated &&
-    order &&
-    keycloak.subject === order.currentBidderId;
+  const isSeller = order && keycloak.subject === order.sellerId;
+  const isBuyer = order && keycloak.subject === order.currentBidderId;
+
+  // CLARIFIED: A return is "in progress" if the DELIVERY status says so.
+  const isReturnInProgress = deliveryDetails?.deliveryStatus?.startsWith("RETURN_");
+
+  // CLARIFIED: The order is "commercially returned" if the ORDER status says so.
+  const isOrderReturnedOrRefunding = order?.status === 'ORDER_RETURNED' || order?.status === 'RETURN_APPROVED_BY_SELLER' || order?.status === 'REFUND_FAILED';
+
+  // CLARIFIED: Buyer can request a return if the item has been delivered and is awaiting confirmation.
+  const canRequestReturn = isBuyer && deliveryDetails?.deliveryStatus === "AWAITING_BUYER_CONFIRMATION";
+
+  // CLARIFIED: Show buyer actions (Confirm/Return) only in the specific delivery state.
+  const showBuyerDeliveryActions = isBuyer && deliveryDetails?.deliveryStatus === "AWAITING_BUYER_CONFIRMATION";
 
   const isAwaitingBuyerPayment =
     order &&
@@ -697,11 +718,6 @@ function OrderDetailPage() {
       // Show even for these if we want to display "Preparing" type statuses
       deliveryDetails.deliveryStatus === "PENDING_PREPARATION" ||
       deliveryDetails.deliveryStatus === "READY_FOR_SHIPMENT");
-
-  const showBuyerDeliveryActions =
-    isBuyer &&
-    deliveryDetails &&
-    deliveryDetails.deliveryStatus === "AWAITING_BUYER_CONFIRMATION";
 
   const showAlternateBidders =
     order &&
@@ -791,6 +807,16 @@ function OrderDetailPage() {
       <OrderHeader order={order} />
       <OrderItems items={order?.items} currency={order?.currency} />
 
+      {(isReturnInProgress || isOrderReturnedOrRefunding) && deliveryDetails && (
+        <OrderReturnDetails
+          order={order}
+          deliveryDetails={deliveryDetails}
+          isSeller={isSeller}
+          onConfirmReturnReceived={handleConfirmReturnReceived}
+          isProcessing={isProcessing}
+        />
+      )}
+
       {isAwaitingBuyerPayment && (
         <OrderPaymentDetails
           order={order}
@@ -810,7 +836,7 @@ function OrderDetailPage() {
         <BuyerDeliveryActions
           deliveryDetails={deliveryDetails}
           onConfirmReceipt={handleConfirmReceiptByBuyer}
-          onRequestReturn={handleRequestReturnByBuyer}
+          onOpenReturnModal={handleOpenReturnModal}
           isLoadingConfirm={isConfirmingReceipt}
           isLoadingReturn={isRequestingReturn}
           // You could also pass buyerActionError to display in the component
@@ -1041,6 +1067,14 @@ function OrderDetailPage() {
             onStartAuctionSubmit={handleStartAuctionSubmitOnDetail}
           />
         )}
+      <RequestReturnModal
+        isOpen={isReturnModalOpen}
+        onClose={() => setIsReturnModalOpen(false)}
+        onSubmit={handleSubmitReturnRequest}
+        isLoading={isSubmittingReturn}
+        apiError={returnRequestError}
+        orderId={order?.id}
+      />
     </div>
   );
 }

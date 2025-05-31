@@ -247,8 +247,8 @@ function UserInfoPage() {
 
       if (profileData && (profileData.isSeller || profileData.seller)) {
         // Check if sellerDescription was part of formDataFromModal (it will be if the field was rendered)
-        if (typeof formDataFromModal.sellerDescription === "string") {
-          payload.sellerDescription = formDataFromModal.sellerDescription;
+        if (typeof updatedData.sellerDescription === "string") {
+          payload.sellerDescription = updatedData.sellerDescription;
         }
       }
       

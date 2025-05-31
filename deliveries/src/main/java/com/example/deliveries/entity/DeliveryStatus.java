@@ -13,5 +13,10 @@ public enum DeliveryStatus {
     RETURN_REQUESTED_BY_BUYER,   // Buyer initiated a return/refund request
     // --- End New Statuses ---
     ISSUE_REPORTED,       // General issue reported (can be by seller or system)
-    CANCELLED             // Delivery cancelled (rare, usually before shipment)
+    CANCELLED,             // Delivery cancelled (rare, usually before shipment)
+
+    RETURN_APPROVED_AWAITING_ITEM,  // Seller acknowledges the return, waits for physical item
+    RETURN_ITEM_RECEIVED,           // Seller confirms they have received the returned item
+    RETURN_COMPLETED,               // The entire return & refund process is complete from Delivery's perspective
+    RETURN_REJECTED_BY_SELLER;
 }

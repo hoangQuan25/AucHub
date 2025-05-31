@@ -577,31 +577,65 @@ function LiveAuctionDetailPage() {
 
       {/* MIDDLE */}
       <div className="lg:col-span-4 flex flex-col gap-4 max-h-screen overflow-hidden">
-        <div className="text-xs text-right text-gray-500">
-          WebSocket: {wsStatus}
-        </div>
-        <div className="flex items-center justify-end text-xs text-gray-500 space-x-1">
-          <FaEye />
-          <span>{viewerCount}</span>
-          {viewerError && (
-            <span className="text-red-600 ml-2">
-              (disconnected—please reload)
-            </span>
-          )}
+        <div className="flex items-center gap-3 mb-1">
+          {/* LIVE badge */}
+          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full bg-red-600 text-white text-xs font-bold tracking-widest shadow-sm animate-pulse">
+            LIVE
+          </span>
+          {/* WebSocket status */}
+          <span
+            className={`text-xs font-semibold ${
+              wsStatus === "Connected"
+                ? "text-green-500"
+                : wsStatus.startsWith("Error") || wsStatus.startsWith("Closed")
+                ? "text-red-500"
+                : "text-gray-400"
+            }`}
+            title="WebSocket connection status"
+          >
+            {wsStatus}
+          </span>
+          {/* Viewer count */}
+          <span className="flex items-center gap-1 text-xs text-indigo-700 font-medium ml-2">
+            <FaEye className="text-indigo-500" />
+            {viewerCount}
+            {viewerError && (
+              <span className="text-red-500 ml-2 font-normal">
+                (disconnected)
+              </span>
+            )}
+          </span>
         </div>
 
         <div className="bg-white p-4 rounded shadow border flex-shrink-0">
           <div className="flex justify-between items-start border-b pb-2">
             <span
-              className={`text-sm font-medium ${
-                auctionDetails.reserveMet ? "text-green-600" : "text-orange-600"
-              }`}
+              className={`inline-flex items-center gap-2 text-sm font-semibold px-3 py-1 rounded-full
+    ${
+      auctionDetails.reserveMet
+        ? "bg-green-100 text-green-700 border border-green-300"
+        : auctionDetails.reservePrice
+        ? "bg-orange-100 text-orange-700 border border-orange-300"
+        : "bg-gray-100 text-gray-600 border border-gray-300"
+    }
+  `}
             >
-              {auctionDetails.reserveMet
-                ? "✔ Reserve Met"
-                : auctionDetails.reservePrice
-                ? "Reserve Not Met"
-                : "No Reserve"}
+              {auctionDetails.reserveMet ? (
+                <>
+                  <span className="text-green-500 text-lg">✔</span>
+                  Reserve Met
+                </>
+              ) : auctionDetails.reservePrice ? (
+                <>
+                  <span className="text-orange-400 text-lg">!</span>
+                  Reserve Not Met
+                </>
+              ) : (
+                <>
+                  <span className="text-gray-400 text-lg">—</span>
+                  No Reserve
+                </>
+              )}
             </span>
             <div className="text-right">
               <div className="text-xs text-gray-500">

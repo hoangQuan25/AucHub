@@ -97,4 +97,23 @@ public class DeliveriesController {
         Delivery delivery = deliveryService.getDeliveryById(deliveryId, userId);
         return ResponseEntity.ok(deliveryMapper.toDeliveryDetailDto(delivery));
     }
+
+    @PostMapping("/{deliveryId}/approve-return")
+    public ResponseEntity<DeliveryDetailDto> approveReturnRequest(
+            @PathVariable UUID deliveryId,
+            @RequestHeader(USER_ID_HEADER) String sellerId) {
+        log.info("Seller {} approving return request for delivery {}", sellerId, deliveryId);
+        Delivery updatedDelivery = deliveryService.approveReturnBySeller(deliveryId, sellerId);
+        return ResponseEntity.ok(deliveryMapper.toDeliveryDetailDto(updatedDelivery));
+    }
+
+    // NEW: Endpoint for Seller to confirm they have RECEIVED the returned item
+    @PostMapping("/{deliveryId}/confirm-return-received")
+    public ResponseEntity<DeliveryDetailDto> confirmReturnReceived(
+            @PathVariable UUID deliveryId,
+            @RequestHeader(USER_ID_HEADER) String sellerId) {
+        log.info("Seller {} confirming receipt of returned item for delivery {}", sellerId, deliveryId);
+        Delivery updatedDelivery = deliveryService.confirmReturnItemReceived(deliveryId, sellerId);
+        return ResponseEntity.ok(deliveryMapper.toDeliveryDetailDto(updatedDelivery));
+    }
 }

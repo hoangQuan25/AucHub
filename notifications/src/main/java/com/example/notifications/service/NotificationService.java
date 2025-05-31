@@ -63,6 +63,10 @@ public interface NotificationService {
 
     void processUserBanned(NotificationEvents.UserBannedEvent event);
 
+    void processDeliveryReturnRequested(DeliveryEvents.DeliveryReturnRequestedEventDto event);
+
+    void processDeliveryReturnApproved(DeliveryEvents.DeliveryReturnApprovedEventDto event);
+
     /**
      * Retrieves a paginated list of notifications for a specific user.
      * @param userId The ID of the user whose notifications are being fetched.

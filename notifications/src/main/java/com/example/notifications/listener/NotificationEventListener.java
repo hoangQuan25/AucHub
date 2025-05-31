@@ -243,4 +243,27 @@ public class NotificationEventListener {
             log.error("Error processing UserBannedEvent for user {}: {}", event.getUserId(), e.getMessage(), e);
         }
     }
+
+    @RabbitListener(queues = RabbitMqConfig.DELIVERY_RETURN_REQUESTED_QUEUE)
+    public void handleDeliveryReturnRequested(@Payload DeliveryEvents.DeliveryReturnRequestedEventDto event) {
+        log.info("Received DeliveryReturnRequestedEvent: deliveryId={}, orderId={}, buyerId={}",
+                event.getDeliveryId(), event.getOrderId(), event.getBuyerId());
+        try {
+            notificationService.processDeliveryReturnRequested(event);
+        } catch (Exception e) {
+            log.error("Error processing DeliveryReturnRequestedEvent for delivery {}: {}", event.getDeliveryId(), e.getMessage(), e);
+        }
+    }
+
+    @RabbitListener(queues = RabbitMqConfig.DELIVERY_RETURN_APPROVED_QUEUE)
+    public void handleDeliveryReturnApproved(@Payload DeliveryEvents.DeliveryReturnApprovedEventDto event) {
+        log.info("Received DeliveryReturnApprovedEvent: deliveryId={}, orderId={}, sellerId={}",
+                event.getDeliveryId(), event.getOrderId(), event.getSellerId());
+        try {
+            // This event notifies the buyer that their return request was approved by the seller.
+            notificationService.processDeliveryReturnApproved(event);
+        } catch (Exception e) {
+            log.error("Error processing DeliveryReturnApprovedEvent for delivery {}: {}", event.getDeliveryId(), e.getMessage(), e);
+        }
+    }
 }

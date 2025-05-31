@@ -1,8 +1,6 @@
 package com.example.orders.service; // Suggested package
 
-import com.example.orders.dto.event.AuctionSoldEventDto;
-import com.example.orders.dto.event.PaymentFailedEventDto;
-import com.example.orders.dto.event.PaymentSucceededEventDto;
+import com.example.orders.dto.event.*;
 import com.example.orders.dto.request.SellerDecisionDto;
 import com.example.orders.dto.response.OrderDetailDto;
 import com.example.orders.dto.response.OrderSummaryDto;
@@ -106,4 +104,25 @@ public interface OrderService {
      * @param confirmationTimestamp The timestamp of when the confirmation was made.
      */
     void processOrderCompletionByBuyer(UUID orderId, String buyerId, LocalDateTime confirmationTimestamp);
+
+    /**
+     * Processes an event indicating that an order has been returned.
+     * This is typically triggered when a buyer returns an item after receiving it.
+     * @param event The event data containing details about the returned order.
+     */
+    void processRefundRequiredForReturnEvent(RefundRequiredForReturnEventDto event);
+
+    /**
+     * Processes a successful refund event.
+     * This is typically triggered when a refund is successfully processed for an order.
+     * @param event The event data containing details about the successful refund.
+     */
+    void processRefundSuccess(RefundSucceededEventDto event);
+
+    /**
+     * Processes a failed refund event.
+     * This is typically triggered when a refund attempt fails for an order.
+     * @param event The event data containing details about the failed refund.
+     */
+    void processRefundFailure(RefundFailedEventDto event);
 }

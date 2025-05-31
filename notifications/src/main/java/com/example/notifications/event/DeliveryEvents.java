@@ -79,4 +79,31 @@ public final class DeliveryEvents {
         String newStatus;
         String productInfoSnapshot; // Added for notification context
     }
+
+    @Value
+    @Builder
+    public static class DeliveryReturnRequestedEventDto {
+        UUID eventId;
+        LocalDateTime eventTimestamp;
+        UUID deliveryId;
+        UUID orderId;
+        String buyerId;
+        String sellerId;
+        String reason;
+        String comments;
+        String productInfoSnapshot;
+    }
+
+    @Value
+    @Builder
+    public static class DeliveryReturnApprovedEventDto {
+        UUID eventId;
+        LocalDateTime eventTimestamp;
+        UUID deliveryId;
+        UUID orderId;
+        String buyerId;
+        String sellerId;
+        String productInfoSnapshot;
+        LocalDateTime returnApprovedAt;
+    }
 }

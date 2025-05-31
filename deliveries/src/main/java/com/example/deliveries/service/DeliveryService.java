@@ -73,6 +73,23 @@ public interface DeliveryService {
     Delivery reportDeliveryIssue(UUID deliveryId, String sellerId, ReportDeliveryIssueRequestDto requestDto);
 
     /**
+     * Approves a return request by the seller, indicating they will accept the return.
+     * @param deliveryId The ID of the delivery.
+     * @param sellerId The ID of the seller approving the return.
+     * @return The updated Delivery entity or a DTO.
+     */
+    Delivery approveReturnBySeller(UUID deliveryId, String sellerId);
+
+    /**
+     * Confirms that the returned item has been received by the seller.
+     * This is typically called after the buyer has returned the item.
+     * @param deliveryId The ID of the delivery.
+     * @param sellerId The ID of the seller confirming receipt of the returned item.
+     * @return The updated Delivery entity or a DTO.
+     */
+    Delivery confirmReturnItemReceived(UUID deliveryId, String sellerId);
+
+    /**
      * Retrieves a delivery record by its associated order ID.
      * @param orderId The ID of the order.
      * @param userId The ID of the user requesting the information (for authorization).

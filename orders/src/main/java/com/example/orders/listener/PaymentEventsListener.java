@@ -5,6 +5,8 @@ package com.example.orders.listener;
 import com.example.orders.config.RabbitMqConfig;
 import com.example.orders.dto.event.PaymentSucceededEventDto;
 import com.example.orders.dto.event.PaymentFailedEventDto;
+import com.example.orders.dto.event.RefundFailedEventDto;
+import com.example.orders.dto.event.RefundSucceededEventDto;
 import com.example.orders.service.OrderService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -41,6 +43,28 @@ public class PaymentEventsListener {
         } catch (Exception e) {
             log.error("Error processing PaymentFailedEvent for order {}: {}", eventDto.getOrderId(), e.getMessage(), e);
             // Consider DLQ strategy
+            throw e;
+        }
+    }
+
+    @RabbitListener(queues = RabbitMqConfig.ORDERS_REFUND_SUCCEEDED_QUEUE) // Add this queue to RabbitMqConfig
+    public void handleRefundSuccess(RefundSucceededEventDto event) {
+        log.info("Received RefundSucceededEvent for orderId: {}", event.getOrderId());
+        try {
+            orderService.processRefundSuccess(event);
+        } catch (Exception e) {
+            log.error("Error processing RefundSucceededEvent for order {}: {}", event.getOrderId(), e.getMessage(), e);
+            throw e;
+        }
+    }
+
+    @RabbitListener(queues = RabbitMqConfig.ORDERS_REFUND_FAILED_QUEUE) // Add this queue to RabbitMqConfig
+    public void handleRefundFailure(RefundFailedEventDto event) {
+        log.info("Received RefundFailedEvent for orderId: {}", event.getOrderId());
+        try {
+            orderService.processRefundFailure(event);
+        } catch (Exception e) {
+            log.error("Error processing RefundFailedEvent for order {}: {}", event.getOrderId(), e.getMessage(), e);
             throw e;
         }
     }

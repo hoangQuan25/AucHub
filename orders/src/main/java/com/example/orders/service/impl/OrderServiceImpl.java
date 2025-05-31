@@ -744,6 +744,87 @@ public class OrderServiceImpl implements OrderService {
         }
     }
 
+    @Override
+    @Transactional
+    public void processRefundRequiredForReturnEvent(RefundRequiredForReturnEventDto event) {
+        Order order = orderRepository.findById(event.getOrderId())
+                .orElseThrow(() -> new NoSuchElementException("Order not found for refund processing: " + event.getOrderId()));
+
+        order.setOrderStatus(OrderStatus.RETURN_APPROVED_BY_SELLER); // Or REFUND_PROCESSING
+        orderRepository.save(order);
+
+        publishRefundRequestedEvent(
+                order.getId(),
+                order.getCurrentBidderId(),
+                order.getPaymentTransactionRef(),
+                order.getCurrentAmountDue(),
+                order.getCurrency(),
+                event.getReason()
+        );
+        log.info("Refund request published for order {} as per delivery return completion.", order.getId());
+    }
+
+    @Override
+    @Transactional
+    public void processRefundSuccess(RefundSucceededEventDto event) {
+        log.info("Processing successful refund outcome for order ID: {}", event.getOrderId());
+        Order order = orderRepository.findById(event.getOrderId())
+                .orElseThrow(() -> new NoSuchElementException("Order not found for refund success event: " + event.getOrderId()));
+
+        // Check if the order is in the correct state to prevent duplicate processing
+        if (order.getOrderStatus() != OrderStatus.RETURN_APPROVED_BY_SELLER) {
+            log.warn("Order {} is not in RETURN_APPROVED_BY_SELLER state. Current status: {}. Ignoring refund success event.",
+                    order.getId(), order.getOrderStatus());
+            return;
+        }
+
+        // Set the FINAL status for a returned order
+        order.setOrderStatus(OrderStatus.ORDER_RETURNED);
+        String note = String.format("Refund successful. Stripe Refund ID: %s", event.getRefundId());
+        order.setInternalNotes(order.getInternalNotes() == null ? note : order.getInternalNotes() + "; " + note);
+        orderRepository.save(order);
+        log.info("Order {} status updated to ORDER_RETURNED.", order.getId());
+
+        // Publish a final event to notify everyone the loop is closed.
+        publishOrderReturnedEvent(order);
+    }
+
+    // --- NEW METHOD to handle FAILED refund outcome ---
+    @Override
+    @Transactional
+    public void processRefundFailure(RefundFailedEventDto event) {
+        log.error("CRITICAL: Processing FAILED refund outcome for order ID: {}. Reason: {}", event.getOrderId(), event.getFailureReason());
+        Order order = orderRepository.findById(event.getOrderId())
+                .orElseThrow(() -> new NoSuchElementException("Order not found for refund failure event: " + event.getOrderId()));
+
+        order.setOrderStatus(OrderStatus.REFUND_FAILED);
+        String note = String.format("CRITICAL: Refund failed. Reason: %s", event.getFailureReason());
+        order.setInternalNotes(order.getInternalNotes() == null ? note : order.getInternalNotes() + "; " + note);
+        orderRepository.save(order);
+        log.info("Order {} status updated to REFUND_FAILED. Manual intervention required.", order.getId());
+    }
+
+    // --- NEW Private Publisher for the final OrderReturnedEvent ---
+    private void publishOrderReturnedEvent(Order order) {
+        // You'll need an OrderReturnedEventDto class
+        OrderReturnedEventDto event = OrderReturnedEventDto.builder()
+                .eventId(UUID.randomUUID())
+                .eventTimestamp(LocalDateTime.now())
+                .orderId(order.getId())
+                .auctionId(order.getAuctionId())
+                .productId(order.getProductId())
+                .sellerId(order.getSellerId())
+                .buyerId(order.getCurrentBidderId())
+                .finalOrderStatus(order.getOrderStatus())
+                .build();
+        try {
+            rabbitTemplate.convertAndSend(RabbitMqConfig.ORDERS_EVENTS_EXCHANGE, "order.event.returned", event);
+            log.info("Published OrderReturnedEvent for order {}", order.getId());
+        } catch (Exception e) {
+            log.error("Error publishing OrderReturnedEvent for order {}: {}", order.getId(), e.getMessage(), e);
+        }
+    }
+
 
     // --- Private Helper Methods for Publishing Events and Scheduling ---
 

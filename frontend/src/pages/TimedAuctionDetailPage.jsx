@@ -757,19 +757,32 @@ function TimedAuctionDetailPage() {
             {/* Status and Timer */}
             <div className="flex justify-between items-start border-b pb-2">
               <span
-                className={`text-sm font-medium ${
-                  auctionDetails.reserveMet
-                    ? "text-green-600"
-                    : auctionDetails.reservePrice
-                    ? "text-orange-600"
-                    : "text-gray-500"
-                }`}
+                className={`inline-flex items-center gap-2 text-sm font-semibold px-3 py-1 rounded-full
+    ${
+      auctionDetails.reserveMet
+        ? "bg-green-100 text-green-700 border border-green-300"
+        : auctionDetails.reservePrice
+        ? "bg-orange-100 text-orange-700 border border-orange-300"
+        : "bg-gray-100 text-gray-600 border border-gray-300"
+    }
+  `}
               >
-                {auctionDetails.reserveMet
-                  ? "✔ Reserve Met"
-                  : auctionDetails.reservePrice
-                  ? "Reserve Not Met"
-                  : "No Reserve"}
+                {auctionDetails.reserveMet ? (
+                  <>
+                    <span className="text-green-500 text-lg">✔</span>
+                    Reserve Met
+                  </>
+                ) : auctionDetails.reservePrice ? (
+                  <>
+                    <span className="text-orange-400 text-lg">!</span>
+                    Reserve Not Met
+                  </>
+                ) : (
+                  <>
+                    <span className="text-gray-400 text-lg">—</span>
+                    No Reserve
+                  </>
+                )}
               </span>
               <div className="text-right">
                 <div className="text-xs text-gray-500">

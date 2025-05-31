@@ -21,6 +21,13 @@ public enum OrderStatus {
     // ORDER_DELIVERED,
     COMPLETED,
 
+    // --- Final State for a Successful Return ---
+    ORDER_RETURNED, // Final state when an order was completed via a successful return and refund
+
+    // --- States for handling the return process ---
+    RETURN_APPROVED_BY_SELLER, // Seller has approved, refund is being processed
+    REFUND_FAILED,
+
     // Order cancellation states
     ORDER_CANCELLED_NO_PAYMENT_FINAL, // No one paid after all attempts
     ORDER_CANCELLED_BY_SELLER,

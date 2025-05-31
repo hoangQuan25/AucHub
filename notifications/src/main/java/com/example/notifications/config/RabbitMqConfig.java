@@ -48,6 +48,8 @@ public class RabbitMqConfig {
     public static final String DELIVERY_ISSUE_REPORTED_NOTIFICATION_QUEUE = "q.notification.delivery.issue.reported";
     public static final String DELIVERY_AWAITING_BUYER_CONFIRMATION_NOTIFICATION_QUEUE = "q.notification.delivery.awaiting_buyer_confirmation";
     public static final String USER_BANNED_NOTIFICATION_QUEUE = "q.notification.user.banned";
+    public static final String DELIVERY_RETURN_REQUESTED_QUEUE = "q.notification.delivery.return.requested";
+    public static final String DELIVERY_RETURN_APPROVED_QUEUE = "q.notification.delivery.return.approved";
 
     // --- Routing Keys for Order & User Event Notifications (New - must match publisher in OrderService) ---
     public static final String ORDER_EVENT_CREATED_ROUTING_KEY = "order.event.created";
@@ -65,6 +67,8 @@ public class RabbitMqConfig {
     public static final String DELIVERY_EVENT_ISSUE_REPORTED_ROUTING_KEY = "delivery.event.issue.reported";
     public static final String DELIVERY_EVENT_AWAITING_BUYER_CONFIRMATION_ROUTING_KEY = "delivery.event.awaiting.buyer.confirmation";
     public static final String USER_EVENT_BANNED_ROUTING_KEY = "user.event.banned";
+    public static final String DELIVERY_EVENT_RETURN_REQUESTED_ROUTING_KEY = "delivery.event.return.requested";
+    public static final String DELIVERY_EVENT_RETURN_APPROVED_ROUTING_KEY = "delivery.event.return.approved";
 
     // --- Dead Letter Exchange and Queue ---
     public static final String MAIN_DLX_EXCHANGE = "dlx.main_exchange"; // Dead Letter Exchange
@@ -262,6 +266,22 @@ public class RabbitMqConfig {
     }
 
     @Bean
+    Queue deliveryReturnRequestedQueue() {
+        return QueueBuilder.durable(DELIVERY_RETURN_REQUESTED_QUEUE)
+                .withArgument("x-dead-letter-exchange", MAIN_DLX_EXCHANGE)
+                .withArgument("x-dead-letter-routing-key", MAIN_DLQ_ROUTING_KEY)
+                .build();
+    }
+
+    @Bean
+    Queue deliveryReturnApprovedQueue() {
+        return QueueBuilder.durable(DELIVERY_RETURN_APPROVED_QUEUE)
+                .withArgument("x-dead-letter-exchange", MAIN_DLX_EXCHANGE)
+                .withArgument("x-dead-letter-routing-key", MAIN_DLQ_ROUTING_KEY)
+                .build();
+    }
+
+    @Bean
     public Queue mainDeadLetterQueue() {
         return QueueBuilder.durable(MAIN_DEAD_LETTER_QUEUE)
                 .build();
@@ -401,6 +421,20 @@ public class RabbitMqConfig {
         return BindingBuilder.bind(userBannedNotificationQueue)
                 .to(userEventsExchange) // Listen on the USER_EVENTS_EXCHANGE
                 .with(USER_EVENT_BANNED_ROUTING_KEY);
+    }
+
+    @Bean
+    Binding deliveryReturnRequestedBinding(Queue deliveryReturnRequestedQueue, TopicExchange deliveriesEventsExchange) {
+        return BindingBuilder.bind(deliveryReturnRequestedQueue)
+                .to(deliveriesEventsExchange)
+                .with(DELIVERY_EVENT_RETURN_REQUESTED_ROUTING_KEY);
+    }
+
+    @Bean
+    Binding deliveryReturnApprovedBinding(Queue deliveryReturnApprovedQueue, TopicExchange deliveriesEventsExchange) {
+        return BindingBuilder.bind(deliveryReturnApprovedQueue)
+                .to(deliveriesEventsExchange)
+                .with(DELIVERY_EVENT_RETURN_APPROVED_ROUTING_KEY);
     }
 
     @Bean

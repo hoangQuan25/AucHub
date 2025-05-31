@@ -11,5 +11,6 @@ public class ReviewDto {
     private String buyerAvatarUrl; // Optional: if you want to show buyer's avatar
     private Integer rating;
     private String comment;
+    private String orderId; // Link to the specific order
     private LocalDateTime createdAt;
 }

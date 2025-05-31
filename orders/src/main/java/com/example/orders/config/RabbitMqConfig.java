@@ -36,6 +36,10 @@ public class RabbitMqConfig {
     public static final String ORDERS_DELIVERY_RECEIPT_CONFIRMED_QUEUE = "orders_delivery_receipt_confirmed_queue";
     public static final String ORDERS_FINALIZE_REOPENED_TIMED_AUCTION_QUEUE = "orders_finalize_reopened_timed_auction_queue";
     public static final String ORDERS_FINALIZE_REOPENED_LIVE_AUCTION_QUEUE = "orders_finalize_reopened_live_auction_queue";
+    public static final String ORDERS_REFUND_REQUIRED_QUEUE = "q.orders.refund.required";
+    public static final String ORDERS_REFUND_SUCCEEDED_QUEUE = "q.orders.refund.succeeded";
+    public static final String ORDERS_REFUND_FAILED_QUEUE = "q.orders.refund.failed";
+
     // === Routing Keys ===
     // For commands/messages to the schedule exchange
     public static final String ORDER_PAYMENT_TIMEOUT_SCHEDULE_ROUTING_KEY = "order.schedule.check-payment-timeout";
@@ -58,6 +62,9 @@ public class RabbitMqConfig {
     public static final String TIMED_AUCTION_REOPENED_ORDER_CREATED_ROUTING_KEY = "auction.timed.reopened_order.created";
     public static final String LIVE_AUCTION_REOPENED_ORDER_CREATED_ROUTING_KEY = "auction.live.reopened_order.created";
     public static final String ORDER_EVENT_COMPLETED_ROUTING_KEY = "order.event.completed";
+    public static final String DELIVERY_EVENT_REFUND_REQUIRED_ROUTING_KEY = "delivery.event.refund.required";
+    public static final String PAYMENT_EVENT_REFUND_SUCCEEDED_ROUTING_KEY = "payment.event.refund.succeeded";
+    public static final String PAYMENT_EVENT_REFUND_FAILED_ROUTING_KEY = "payment.event.refund.failed";
 
     // --- Dead Letter Exchange and Queue ---
     public static final String MAIN_DLX_EXCHANGE = "dlx.main_exchange"; // Dead Letter Exchange
@@ -194,6 +201,30 @@ public class RabbitMqConfig {
     }
 
     @Bean
+    Queue ordersRefundRequiredQueue() {
+        return QueueBuilder.durable(ORDERS_REFUND_REQUIRED_QUEUE)
+                .withArgument("x-dead-letter-exchange", MAIN_DLX_EXCHANGE)
+                .withArgument("x-dead-letter-routing-key", MAIN_DLQ_ROUTING_KEY)
+                .build();
+    }
+
+    @Bean
+    Queue ordersRefundSucceededQueue() {
+        return QueueBuilder.durable(ORDERS_REFUND_SUCCEEDED_QUEUE)
+                .withArgument("x-dead-letter-exchange", MAIN_DLX_EXCHANGE)
+                .withArgument("x-dead-letter-routing-key", MAIN_DLQ_ROUTING_KEY)
+                .build();
+    }
+
+    @Bean
+    Queue ordersRefundFailedQueue() {
+        return QueueBuilder.durable(ORDERS_REFUND_FAILED_QUEUE)
+                .withArgument("x-dead-letter-exchange", MAIN_DLX_EXCHANGE)
+                .withArgument("x-dead-letter-routing-key", MAIN_DLQ_ROUTING_KEY)
+                .build();
+    }
+
+    @Bean
     public Queue mainDeadLetterQueue() {
         return QueueBuilder.durable(MAIN_DEAD_LETTER_QUEUE)
                 .build();
@@ -260,6 +291,30 @@ public class RabbitMqConfig {
                 .bind(ordersFinalizeReopenedLiveAuctionQueue)
                 .to(liveAuctionsEventsExchange)
                 .with(LIVE_AUCTION_REOPENED_ORDER_CREATED_ROUTING_KEY);
+    }
+
+    @Bean
+    Binding ordersRefundRequiredBinding(Queue ordersRefundRequiredQueue, TopicExchange deliveriesEventsExchange) {
+        return BindingBuilder
+                .bind(ordersRefundRequiredQueue)
+                .to(deliveriesEventsExchange) // Bind to the exchange where Delivery service publishes
+                .with(DELIVERY_EVENT_REFUND_REQUIRED_ROUTING_KEY);
+    }
+
+    @Bean
+    Binding ordersRefundSucceededBinding(Queue ordersRefundSucceededQueue, TopicExchange paymentsEventsExchange) {
+        return BindingBuilder
+                .bind(ordersRefundSucceededQueue)
+                .to(paymentsEventsExchange) // Listen to the exchange where Payments service publishes
+                .with(PAYMENT_EVENT_REFUND_SUCCEEDED_ROUTING_KEY);
+    }
+
+    @Bean
+    Binding ordersRefundFailedBinding(Queue ordersRefundFailedQueue, TopicExchange paymentsEventsExchange) {
+        return BindingBuilder
+                .bind(ordersRefundFailedQueue)
+                .to(paymentsEventsExchange)
+                .with(PAYMENT_EVENT_REFUND_FAILED_ROUTING_KEY);
     }
 
     @Bean

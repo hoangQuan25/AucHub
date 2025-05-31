@@ -76,6 +76,9 @@ public class NotificationServiceImpl implements NotificationService {
 
     private static final String TYPE_USER_BANNED = "USER_BANNED";
 
+    private static final String TYPE_DELIVERY_RETURN_REQUESTED = "DELIVERY_RETURN_REQUESTED";
+    private static final String TYPE_DELIVERY_RETURN_APPROVED = "DELIVERY_RETURN_APPROVED";
+
 
     private static final DateTimeFormatter SHORT_DATE_TIME_FORMATTER = DateTimeFormatter.ofLocalizedDateTime(FormatStyle.SHORT);
 
@@ -594,6 +597,48 @@ public class NotificationServiceImpl implements NotificationService {
 
         log.info("Processed UserBannedEvent for user {}, notified about ban until {}.",
                 event.getUserId(), formattedBanEndsAt);
+    }
+
+    @Override
+    @Transactional
+    public void processDeliveryReturnRequested(DeliveryEvents.DeliveryReturnRequestedEventDto event) {
+        log.debug("Processing DeliveryReturnRequestedEvent for order ID: {}", event.getOrderId());
+        String productInfo = truncate(event.getProductInfoSnapshot(), 50);
+        String orderIdShort = event.getOrderId().toString().substring(0, 8);
+
+        // Fetch buyer's username for a friendlier message
+        Map<String, String> userNames = getUsernamesFromIds(Collections.singletonList(event.getBuyerId()));
+        String buyerUsername = userNames.getOrDefault(event.getBuyerId(), "A buyer");
+
+        // Notify the SELLER that a return has been requested.
+        String sellerMessage = String.format(
+                "Return Request for order #%s: Buyer %s has requested to return '%s'. Reason: %s. Please go to the order page to manage this return.",
+                orderIdShort,
+                buyerUsername,
+                productInfo,
+                truncate(event.getReason(), 60)
+        );
+
+        saveAndSendNotification(event.getSellerId(), TYPE_DELIVERY_RETURN_REQUESTED, sellerMessage, null, null, event.getOrderId(), null);
+        log.info("Processed DeliveryReturnRequestedEvent for order {}, notified seller {}.", event.getOrderId(), event.getSellerId());
+    }
+
+    @Override
+    @Transactional
+    public void processDeliveryReturnApproved(DeliveryEvents.DeliveryReturnApprovedEventDto event) {
+        log.debug("Processing DeliveryReturnApprovedEvent for order ID: {}", event.getOrderId());
+        String productInfo = truncate(event.getProductInfoSnapshot(), 50);
+        String orderIdShort = event.getOrderId().toString().substring(0, 8);
+
+        // Notify the BUYER that their return has been approved.
+        String buyerMessage = String.format(
+                "Your return request for order #%s ('%s') has been approved by the seller. They are now awaiting the item's arrival to process your refund.",
+                orderIdShort,
+                productInfo
+        );
+
+        saveAndSendNotification(event.getBuyerId(), TYPE_DELIVERY_RETURN_APPROVED, buyerMessage, null, null, event.getOrderId(), null);
+        log.info("Processed DeliveryReturnApprovedEvent for order {}, notified buyer {}.", event.getOrderId(), event.getBuyerId());
     }
 
 
