@@ -18,7 +18,7 @@ spring:
       ddl-auto: update # 'update' for dev, 'validate' or 'none' for prod (use migrations)
     show-sql: true # Useful for dev, disable in prod
   rabbitmq:
-    host: localhost
+    host: ${RABBITMQ_HOST:localhost} # Use environment variable or default to localhost
     port: 5672
     username: hoangquan
     password: quan5691
@@ -64,7 +64,7 @@ eureka: # Standard Eureka client config
     fetchRegistry: true
     registerWithEureka: true
     serviceUrl:
-      defaultZone: http://localhost:8070/eureka/ # Point to your Eureka Server
+      defaultZone: http://${HOSTNAME}:8070/eureka/ # Point to your Eureka Server
 
 logging: # Standard Logging config
   level:

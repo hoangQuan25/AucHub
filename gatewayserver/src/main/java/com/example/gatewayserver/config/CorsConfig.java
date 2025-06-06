@@ -1,6 +1,7 @@
 // src/main/java/com/example/gatewayserver/config/CorsConfig.java
 package com.example.gatewayserver.config;
 
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.web.cors.CorsConfiguration;
@@ -12,13 +13,16 @@ import java.util.List;
 @Configuration
 public class CorsConfig {
 
+    @Value("${FRONTEND_ORIGIN_URL}")
+    private String allowedOrigin;
+
     @Bean
     public CorsWebFilter corsWebFilter() {
         CorsConfiguration config = new CorsConfiguration();
 
         config.setAllowCredentials(true);
         // config.setAllowCredentials(true); // Usually needed with Authentication
-        config.setAllowedOrigins(List.of("http://localhost:5173")); // Your FE origin ONLY
+        config.setAllowedOrigins(List.of(allowedOrigin)); // Your FE origin ONLY
         config.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS", "HEAD"));
         config.setAllowedHeaders(List.of("*")); // Allow all standard/custom headers
         // Optional: config.setMaxAge(3600L);

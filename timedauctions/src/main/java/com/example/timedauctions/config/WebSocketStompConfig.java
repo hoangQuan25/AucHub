@@ -1,5 +1,6 @@
 package com.example.timedauctions.config;
 
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.messaging.simp.config.MessageBrokerRegistry;
 import org.springframework.web.socket.config.annotation.EnableWebSocketMessageBroker;
@@ -10,12 +11,15 @@ import org.springframework.web.socket.config.annotation.WebSocketMessageBrokerCo
 @EnableWebSocketMessageBroker // Enables WebSocket message handling, backed by a message broker
 public class WebSocketStompConfig implements WebSocketMessageBrokerConfigurer {
 
+    @Value("${FRONTEND_ORIGIN_URL}")
+    private String allowedOrigin;
+
     @Override
     public void registerStompEndpoints(StompEndpointRegistry registry) {
 
         registry.addEndpoint("/ws") // The endpoint clients connect to (e.g., ws://localhost:8003/ws)
                 .addInterceptors(new UserIdHandshakeInterceptor())
-                .setAllowedOrigins("http://localhost:5173") // Your frontend origin
+                .setAllowedOrigins(allowedOrigin) // Your frontend origin
                 .withSockJS(); // Use SockJS fallback options
     }
 

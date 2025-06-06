@@ -20,7 +20,7 @@ spring:
       ddl-auto: update # 'update' for dev, switch to 'validate' or 'none' later
     show-sql: true # Log SQL for dev
   rabbitmq:
-    host: localhost
+    host: ${RABBITMQ_HOST:localhost} # Use placeholder for RabbitMQ host
     port: 5672      # Default RabbitMQ port
     username: hoangquan
     password: quan5691
@@ -31,17 +31,13 @@ spring:
   # === Redis Configuration ===
   data:
     redis:
-      host: localhost
+      host: ${REDIS_HOST:localhost} # Use placeholder for Redis host
       port: 6379
       redisson:
         # Single node example
         single-server-config:
           address: "redis://127.0.0.1:6379"
       # password: ${REDIS_PASSWORD:} # Uncomment and set via placeholder if your Redis requires a password
-
-  # === Configuration Server ===
-  config:
-    import: "optional:configserver:http://localhost:8071/" # Point to your Config Server
 
 # === Eureka Client Configuration ===
 eureka:
@@ -51,7 +47,7 @@ eureka:
     fetchRegistry: true
     registerWithEureka: true
     serviceUrl:
-      defaultZone: http://localhost:8070/eureka/ # Point to your Eureka Server
+      defaultZone: http://${HOSTNAME}:8070/eureka/ # Point to your Eureka Server
 
 # === Management & Actuator ===
 management:

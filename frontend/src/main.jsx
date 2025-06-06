@@ -7,7 +7,7 @@ import './index.css'; // Import Tailwind CSS
 
 // Khởi tạo instance Keycloak
 const keycloak = new Keycloak({
-  url: 'http://localhost:7080', // Thay bằng URL Keycloak của bạn
+  url: 'https://localhost:8443', // Thay bằng URL Keycloak của bạn
   realm: 'auction-realm',
   clientId: 'auction-react-client',
 });

@@ -20,7 +20,7 @@ spring:
       ddl-auto: update # 'update' for dev, 'validate' or 'none' for prod
     show-sql: true
   rabbitmq:
-    host: localhost
+    host: ${RABBITMQ_HOST:localhost} # Use environment variable or default to localhost
     port: 5672
     username: hoangquan
     password: quan5691
@@ -31,7 +31,7 @@ spring:
   # === Redis Configuration (if needed by Orders Service) ===
   data:
     redis:
-      host: localhost
+      host: ${REDIS_HOST:localhost} # Use environment variable or default to localhost
       port: 6379
       redisson:
         single-server-config:
@@ -46,7 +46,7 @@ eureka:
     fetchRegistry: true
     registerWithEureka: true
     serviceUrl:
-      defaultZone: http://localhost:8070/eureka/
+      defaultZone: http://${HOSTNAME}:8070/eureka/
 
 # === Management & Actuator ===
 management:

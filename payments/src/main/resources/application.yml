@@ -23,7 +23,7 @@ spring:
 
   # === RabbitMQ Configuration (for publishing payment events) ===
   rabbitmq:
-    host: localhost
+    host: ${RABBITMQ_HOST:localhost} # Use environment variable or default to localhost
     port: 5672
     username: hoangquan
     password: quan5691
@@ -40,17 +40,17 @@ eureka:
     fetchRegistry: true
     registerWithEureka: true
     serviceUrl:
-      defaultZone: http://localhost:8070/eureka/
+      defaultZone: http://${HOSTNAME}:8070/eureka/
 
 # === Stripe Configuration ===
 stripe:
   api:
     # IMPORTANT: Load these from environment variables or a secure config server.
     # DO NOT hardcode your actual secret keys here in a committed file.
-    secret-key: ${STRIPE_SECRET_KEY_TEST:} # Example placeholder
+    secret-key: ${STRIPE_SECRET_KEY_TEST} # Example placeholder
   webhook:
     # IMPORTANT: This is the signing secret for your webhook endpoint.
-    signing-secret: ${STRIPE_WEBHOOK_SIGNING_SECRET_TEST:} # Example placeholder
+    signing-secret: ${STRIPE_WEBHOOK_SIGNING_SECRET_TEST} # Example placeholder
 
 # === Management & Actuator ===
 management:

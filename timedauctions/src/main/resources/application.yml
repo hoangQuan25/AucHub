@@ -23,7 +23,7 @@ spring:
 
   # === RabbitMQ (Likely same instance) ===
   rabbitmq:
-    host: localhost
+    host: ${RABBITMQ_HOST:localhost} # Use placeholder for RabbitMQ host
     port: 5672
     username: hoangquan
     password: quan5691
@@ -34,7 +34,7 @@ spring:
   # === Redis (Likely same instance) ===
   data:
     redis:
-      host: localhost
+      host: ${REDIS_HOST:localhost} # Use placeholder for Redis host
       port: 6379
       # password: ${REDIS_PASSWORD:} # If needed
 
@@ -49,7 +49,7 @@ eureka:
     fetchRegistry: true
     registerWithEureka: true
     serviceUrl:
-      defaultZone: http://localhost:8070/eureka/
+      defaultZone: http://${HOSTNAME}:8070/eureka/
 
 # === Management & Actuator ===
 management:
