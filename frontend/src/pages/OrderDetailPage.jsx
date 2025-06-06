@@ -139,6 +139,7 @@ function OrderDetailPage() {
             `/deliveries/by-order/${orderId}`
           );
           setDeliveryDetails(deliveryResponse.data);
+          console.log("Fetched delivery details:", deliveryResponse.data);
         } catch (deliveryErr) {
           // It's okay if delivery details are not found initially (e.g., PENDING_PREPARATION in DeliveriesService)
           if (deliveryErr.response?.status === 404) {

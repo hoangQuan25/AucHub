@@ -20,8 +20,11 @@ spring:
   rabbitmq:
     host: localhost
     port: 5672
-    username: guest
-    password: guest
+    username: hoangquan
+    password: quan5691
+    listener:
+      simple:
+        missing-queues-fatal: false
 
   # === Redis Configuration (if needed by Orders Service) ===
   data:
@@ -32,10 +35,6 @@ spring:
         single-server-config:
           address: "redis://127.0.0.1:6379"
       # password: ${REDIS_PASSWORD:}
-
-  # === Configuration Server ===
-  config:
-    import: "optional:configserver:http://localhost:8071/"
 
 # === Eureka Client Configuration ===
 eureka:

@@ -15,6 +15,7 @@ import com.example.orders.mapper.OrderMapper;
 import com.example.orders.repository.OrderRepository;
 import com.example.orders.service.OrderService;
 import com.example.orders.dto.request.SellerDecisionDto; // Import for processSellerDecision
+import com.example.orders.utils.DateTimeUtil;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.amqp.rabbit.core.RabbitTemplate;
@@ -47,6 +48,8 @@ public class OrderServiceImpl implements OrderService {
     public void processAuctionSoldEvent(AuctionSoldEventDto eventDto) {
         log.info("Processing AuctionSoldEvent for auction ID: {}", eventDto.getAuctionId());
 
+        LocalDateTime roundedNow = DateTimeUtil.roundToMicrosecond(LocalDateTime.now());
+
         if (orderRepository.findByAuctionId(eventDto.getAuctionId()).isPresent()) {
             log.warn("Order for auction ID {} already exists. Skipping event processing. Event ID: {}",
                     eventDto.getAuctionId(), eventDto.getEventId());
@@ -63,7 +66,7 @@ public class OrderServiceImpl implements OrderService {
                     eventDto.getAuctionType(), eventDto.getAuctionId());
             paymentDuration = paymentProperties.getTimedAuctionWinnerDuration();
         }
-        LocalDateTime paymentDeadline = LocalDateTime.now().plus(paymentDuration);
+        LocalDateTime paymentDeadline = DateTimeUtil.roundToMicrosecond(roundedNow.plus(paymentDuration));
         int currentPaymentOfferAttempt = 1;
 
         BigDecimal winningBid = eventDto.getWinningBid();
@@ -243,7 +246,8 @@ public class OrderServiceImpl implements OrderService {
                     order.setCurrentAmountDue(totalDueForThirdBid);
                     order.setPaymentOfferAttempt(3); // <<< This is now for the 3rd bidder's attempt
                     Duration nextBidderPaymentDuration = paymentProperties.getNextBidderDuration(); // Or a different duration for 3rd?
-                    LocalDateTime newDeadline = LocalDateTime.now().plus(nextBidderPaymentDuration);
+                    LocalDateTime roundedNow = DateTimeUtil.roundToMicrosecond(LocalDateTime.now());
+                    LocalDateTime newDeadline = DateTimeUtil.roundToMicrosecond(roundedNow.plus(nextBidderPaymentDuration));
                     order.setPaymentDeadline(newDeadline);
                     order.setOrderStatus(OrderStatus.AWAITING_NEXT_BIDDER_PAYMENT);
 
@@ -368,6 +372,8 @@ public class OrderServiceImpl implements OrderService {
         log.info("Processing order completion by buyer {} for order ID: {}. Confirmation time: {}",
                 buyerId, orderId, confirmationTimestamp);
 
+        LocalDateTime roundedConfirmationTimestamp = DateTimeUtil.roundToMicrosecond(confirmationTimestamp);
+
         Order order = orderRepository.findById(orderId)
                 .orElseThrow(() -> {
                     log.error("Order not found for completion: {}", orderId);
@@ -391,7 +397,7 @@ public class OrderServiceImpl implements OrderService {
         order.setOrderStatus(OrderStatus.COMPLETED);
         String note = String.format("Order completed. Buyer (%s) confirmed receipt at %s.",
                 buyerId,
-                confirmationTimestamp.toString());
+                roundedConfirmationTimestamp.toString());
         order.setInternalNotes(order.getInternalNotes() == null ? note : order.getInternalNotes() + "; " + note);
 
         Order savedOrder = orderRepository.save(order);
@@ -809,7 +815,7 @@ public class OrderServiceImpl implements OrderService {
         // You'll need an OrderReturnedEventDto class
         OrderReturnedEventDto event = OrderReturnedEventDto.builder()
                 .eventId(UUID.randomUUID())
-                .eventTimestamp(LocalDateTime.now())
+                .eventTimestamp(DateTimeUtil.roundToMicrosecond(LocalDateTime.now()))
                 .orderId(order.getId())
                 .auctionId(order.getAuctionId())
                 .productId(order.getProductId())
@@ -829,7 +835,9 @@ public class OrderServiceImpl implements OrderService {
     // --- Private Helper Methods for Publishing Events and Scheduling ---
 
     private void schedulePaymentTimeoutCheck(UUID orderId, LocalDateTime deadline, int attemptNumber) {
-        long delayMillis = Duration.between(LocalDateTime.now(), deadline).toMillis();
+        LocalDateTime roundedNow = DateTimeUtil.roundToMicrosecond(LocalDateTime.now());
+        long delayMillis = Duration.between(roundedNow, deadline).toMillis();
+
         if (delayMillis > 0) {
             CheckPaymentTimeoutCommand timeoutCommand = new CheckPaymentTimeoutCommand(orderId, deadline, attemptNumber);
             log.info("Scheduling payment timeout check for order {} (attempt {}) in {} ms. Deadline: {}",
@@ -858,7 +866,7 @@ public class OrderServiceImpl implements OrderService {
     private void publishOrderCreatedEvent(Order order) {
         OrderCreatedEventDto event = OrderCreatedEventDto.builder()
                 .eventId(UUID.randomUUID())
-                .eventTimestamp(LocalDateTime.now())
+                .eventTimestamp(DateTimeUtil.roundToMicrosecond(LocalDateTime.now()))
                 .orderId(order.getId())
                 .auctionId(order.getAuctionId())
                 .productId(order.getProductId())
@@ -888,7 +896,7 @@ public class OrderServiceImpl implements OrderService {
     private void publishPaymentDueEvent(Order order) {
         OrderCreatedEventDto event = OrderCreatedEventDto.builder() // Using OrderCreatedEventDto as the structure
                 .eventId(UUID.randomUUID())
-                .eventTimestamp(LocalDateTime.now())
+                .eventTimestamp(DateTimeUtil.roundToMicrosecond(LocalDateTime.now()))
                 .orderId(order.getId())
                 .auctionId(order.getAuctionId())
                 .productId(order.getProductId())
@@ -917,7 +925,7 @@ public class OrderServiceImpl implements OrderService {
     private void publishUserPaymentDefaultedEvent(Order order) {
         UserPaymentDefaultedEventDto event = UserPaymentDefaultedEventDto.builder()
                 .eventId(UUID.randomUUID())
-                .eventTimestamp(LocalDateTime.now())
+                .eventTimestamp(DateTimeUtil.roundToMicrosecond(LocalDateTime.now()))
                 .defaultedUserId(order.getCurrentBidderId())
                 .orderId(order.getId())
                 .auctionId(order.getAuctionId())
@@ -977,7 +985,7 @@ public class OrderServiceImpl implements OrderService {
 
         SellerDecisionRequiredEventDto event = SellerDecisionRequiredEventDto.builder()
                 .eventId(UUID.randomUUID())
-                .eventTimestamp(LocalDateTime.now())
+                .eventTimestamp(DateTimeUtil.roundToMicrosecond(LocalDateTime.now()))
                 .orderId(order.getId())
                 .auctionId(order.getAuctionId())
                 .productId(order.getProductId())
@@ -1006,7 +1014,7 @@ public class OrderServiceImpl implements OrderService {
     private void publishOrderAwaitingFulfillmentConfirmationEvent(Order order) {
         OrderAwaitingFulfillmentConfirmationEventDto event = OrderAwaitingFulfillmentConfirmationEventDto.builder()
                 .eventId(UUID.randomUUID())
-                .eventTimestamp(LocalDateTime.now())
+                .eventTimestamp(DateTimeUtil.roundToMicrosecond(LocalDateTime.now()))
                 .orderId(order.getId())
                 .sellerId(order.getSellerId())
                 .buyerId(order.getCurrentBidderId()) // Current bidder is the buyer
@@ -1026,7 +1034,7 @@ public class OrderServiceImpl implements OrderService {
     private void publishRefundRequestedEvent(UUID orderId, String buyerId, String paymentTransactionRef, BigDecimal amount, String currency, String reasonText) {
         RefundRequestedEventDto event = RefundRequestedEventDto.builder()
                 .eventId(UUID.randomUUID())
-                .eventTimestamp(LocalDateTime.now())
+                .eventTimestamp(DateTimeUtil.roundToMicrosecond(LocalDateTime.now()))
                 .orderId(orderId)
                 .buyerId(buyerId)
                 .paymentTransactionRef(paymentTransactionRef)
@@ -1081,7 +1089,7 @@ public class OrderServiceImpl implements OrderService {
 
         OrderReadyForShippingEventDto event = OrderReadyForShippingEventDto.builder()
                 .eventId(UUID.randomUUID())
-                .eventTimestamp(LocalDateTime.now())
+                .eventTimestamp(DateTimeUtil.roundToMicrosecond(LocalDateTime.now()))
                 .orderId(order.getId())
                 .auctionId(order.getAuctionId())
                 .productId(order.getProductId()) // This should be Long
@@ -1116,7 +1124,7 @@ public class OrderServiceImpl implements OrderService {
     private void publishOrderCancelledEvent(Order order, String reason) {
         OrderCancelledEventDto event = OrderCancelledEventDto.builder()
                 .eventId(UUID.randomUUID())
-                .eventTimestamp(LocalDateTime.now())
+                .eventTimestamp(DateTimeUtil.roundToMicrosecond(LocalDateTime.now()))
                 .orderId(order.getId())
                 .auctionId(order.getAuctionId())
                 .productId(order.getProductId())
@@ -1145,7 +1153,7 @@ public class OrderServiceImpl implements OrderService {
 
         OrderCompletedEventDto event = OrderCompletedEventDto.builder()
                 .eventId(UUID.randomUUID())
-                .eventTimestamp(LocalDateTime.now())
+                .eventTimestamp(DateTimeUtil.roundToMicrosecond(LocalDateTime.now()))
                 .orderId(order.getId())
                 .productId(order.getProductId())
                 .sellerId(order.getSellerId())
@@ -1168,7 +1176,7 @@ public class OrderServiceImpl implements OrderService {
     private void publishAuctionReopenRequestedEvent(Order order) {
         AuctionReopenRequestedEventDto event = AuctionReopenRequestedEventDto.builder()
                 .eventId(UUID.randomUUID())
-                .eventTimestamp(LocalDateTime.now())
+                .eventTimestamp(DateTimeUtil.roundToMicrosecond(LocalDateTime.now()))
                 .orderId(order.getId())
                 .auctionId(order.getAuctionId())
                 .sellerId(order.getSellerId())

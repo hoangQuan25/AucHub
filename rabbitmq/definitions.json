@@ -1,0 +1,23 @@
+{
+  "users": [
+    {
+      "name": "hoangquan",
+      "password": "quan5691",
+      "tags": "administrator"
+    }
+  ],
+  "vhosts": [
+    {
+      "name": "/"
+    }
+  ],
+  "permissions": [
+    {
+      "user": "hoangquan",
+      "vhost": "/",
+      "configure": ".*",
+      "write": ".*",
+      "read": ".*"
+    }
+  ]
+}

@@ -20,16 +20,17 @@ spring:
       ddl-auto: update # 'update' for dev, switch to 'validate' or 'none' later
     show-sql: true # Log SQL for dev
   rabbitmq:
-    host: localhost # Or 'rabbitmq' if using docker-compose service name
+    host: localhost
     port: 5672      # Default RabbitMQ port
-    username: guest
-    password: guest
+    username: hoangquan
+    password: quan5691
+    listener:
+      simple:
+        missing-queues-fatal: false
 
   # === Redis Configuration ===
   data:
     redis:
-      # Use 'localhost' if Redis container port 6379 is mapped to host
-      # Use 'auction-redis' (or your container/service name) if on same Docker network
       host: localhost
       port: 6379
       redisson:

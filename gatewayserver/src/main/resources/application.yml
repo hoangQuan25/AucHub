@@ -1,8 +1,9 @@
+server:
+  port: 8072
+
 spring:
   application:
     name: "gatewayserver"
-  config:
-    import: "optional:configserver:http://localhost:8071/"
   cloud:
     gateway:
       discovery:
@@ -17,6 +18,15 @@ spring:
       resourceserver:
         jwt:
           jwk-set-uri: "http://localhost:7080/realms/auction-realm/protocol/openid-connect/certs"
+
+eureka:
+  instance:
+    preferIpAddress: true
+  client:
+    registerWithEureka: true
+    fetchRegistry: true
+    serviceUrl:
+      defaultZone: http://localhost:8070/eureka/
 
 management:
   endpoints:

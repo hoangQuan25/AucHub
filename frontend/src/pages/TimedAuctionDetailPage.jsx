@@ -96,6 +96,8 @@ function CommentDisplay({ comment, onReply }) {
 
 function TimedAuctionDetailPage() {
   const { auctionId } = useParams();
+  const prevAuctionIdRef = useRef();
+
   const { keycloak, initialized } = useKeycloak();
   const [isNavigatingToPayment, setIsNavigatingToPayment] = useState(false);
   const [navigationError, setNavigationError] = useState("");
@@ -150,7 +152,8 @@ function TimedAuctionDetailPage() {
   const [isHammering, setIsHammering] = useState(false); // Renamed for clarity
   const [hammerError, setHammerError] = useState("");
 
-  const [userInfo, setUserInfo] = useState(null);
+  // const [userInfo, setUserInfo] = useState(null);
+  const [isAddressModalOpen, setIsAddressModalOpen] = useState(false);
 
   // Image Carousel State
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
@@ -178,15 +181,6 @@ function TimedAuctionDetailPage() {
   const isAuctionScheduled = auctionDetails?.status === "SCHEDULED"; // <<< NEW
   const isAuctionSold = auctionDetails?.status === "SOLD";
 
-  useEffect(() => {
-    if (initialized && keycloak.authenticated) {
-      apiClient
-        .get("/users/me")
-        .then((res) => setUserInfo(res.data))
-        .catch(() => setUserInfo(null));
-    }
-  }, [initialized, keycloak.authenticated]);
-
   const isUserBanned =
     userProfile &&
     userProfile.banEndsAt &&
@@ -195,26 +189,38 @@ function TimedAuctionDetailPage() {
   const fetchUserProfileForBidding = useCallback(async () => {
     if (
       initialized &&
-      keycloak.authenticated &&
-      !userProfile &&
-      !isProfileLoading
+      keycloak.authenticated && // Use the actual authentication status
+      !userProfile && // Check current userProfile state from component scope
+      !isProfileLoading // Check current isProfileLoading state from component scope
     ) {
-      // Fetch only if not already fetched or loading
       setIsProfileLoading(true);
-      console.log("Fetching user profile for bidding check...");
+      console.log("Fetching user profile for bidding check (useCallback)...");
       try {
-        await keycloak.updateToken(5); // Ensure token is fresh
-        const response = await apiClient.get("/users/me"); // Endpoint for current user's full profile
-        setUserProfile(response.data);
+        await keycloak.updateToken(5); // Depends on keycloak.updateToken function
+        const response = await apiClient.get("/users/me");
+        setUserProfile(response.data); // Depends on setUserProfile setter
       } catch (err) {
         console.error("Failed to fetch user profile for bidding check:", err);
-        // Handle error - user might not be able to bid if profile can't be checked
-        // For now, we just log it. Bidding attempt will fail gracefully if userProfile is still null.
+        setUserProfile(null);
       } finally {
-        setIsProfileLoading(false);
+        setIsProfileLoading(false); // Depends on setIsProfileLoading setter
+      }
+    } else if (!keycloak.authenticated) {
+      // If user is no longer authenticated, ensure profile is cleared
+      if (userProfile !== null) {
+        // only call setter if profile exists
+        setUserProfile(null);
       }
     }
-  }, [initialized, keycloak, userProfile, isProfileLoading]);
+  }, [
+    initialized,
+    keycloak.authenticated, // Use the boolean value
+    keycloak.updateToken, // This is a function from keycloak, its reference should be stable
+    // userProfile IS NOT a dependency here (this was a major source of loops before)
+    // isProfileLoading IS NOT a dependency here (this prevents loops when it toggles)
+    setUserProfile, // State setters are stable
+    setIsProfileLoading, // State setters are stable
+  ]);
 
   // --- Fetching Functions with Corrected useCallback Dependencies ---
   const fetchAuctionDetails = useCallback(async () => {
@@ -331,57 +337,59 @@ function TimedAuctionDetailPage() {
 
   // --- Initial Fetch & Polling Setup (useEffect) ---
   useEffect(() => {
-    // Clear previous intervals if auctionId changes
-    clearInterval(detailsIntervalRef.current);
-    clearInterval(commentsIntervalRef.current);
+  // Only clear state if auctionId actually changed
+  const prevAuctionId = prevAuctionIdRef.current;
+  const auctionIdChanged = prevAuctionId !== auctionId;
+  prevAuctionIdRef.current = auctionId;
 
-    if (auctionId && initialized) {
-      // Set initial loading states *ONCE* when dependencies change
+  clearInterval(detailsIntervalRef.current);
+  clearInterval(commentsIntervalRef.current);
+
+  if (auctionId && initialized) {
+    if (auctionIdChanged) {
       setIsLoadingDetails(true);
       setIsLoadingComments(true);
       setErrorDetails("");
       setCommentError("");
       setAuctionDetails(null);
       setComments([]);
-
-      // Initial fetch
-      fetchAuctionDetails();
-      fetchComments();
-
-      // Setup polling intervals
-      // Use the stable function references from useCallback
-      detailsIntervalRef.current = setInterval(fetchAuctionDetails, 15 * 1000);
-      commentsIntervalRef.current = setInterval(fetchComments, 30 * 1000);
-
-      if (keycloak.authenticated) {
-        // Only fetch profile if authenticated
-        fetchUserProfileForBidding();
-        fetchMyMaxBid(); // Fetch max bid for the user
-      } else {
-        setUserProfile(null); // Clear profile if user logs out
-        setMyMaxBid(null); // Clear max bid if user logs out
-      }
-    } else {
-      setIsLoadingDetails(false);
-      setIsLoadingComments(false);
-      setUserProfile(null); // Clear profile if auctionId or auth changes
-      setMyMaxBid(null);
     }
 
-    // Cleanup
-    return () => {
-      console.log("Clearing auction detail/comment intervals");
-      clearInterval(detailsIntervalRef.current);
-      clearInterval(commentsIntervalRef.current);
-    };
-    // Dependencies remain the same, but fetchAuctionDetails/fetchComments are now stable
-  }, [
-    auctionId,
-    initialized,
-    fetchAuctionDetails,
-    fetchComments,
-    fetchUserProfileForBidding,
-  ]);
+    fetchAuctionDetails();
+    fetchComments();
+
+    detailsIntervalRef.current = setInterval(fetchAuctionDetails, 15 * 1000);
+    commentsIntervalRef.current = setInterval(fetchComments, 30 * 1000);
+
+    if (keycloak.authenticated) {
+      fetchUserProfileForBidding();
+      fetchMyMaxBid();
+    } else {
+      if (userProfile !== null) setUserProfile(null);
+      if (myMaxBid !== null) setMyMaxBid(null);
+    }
+  } else {
+    setIsLoadingDetails(false);
+    setIsLoadingComments(false);
+    if (userProfile !== null) setUserProfile(null);
+    if (myMaxBid !== null) setMyMaxBid(null);
+    if (auctionDetails !== null) setAuctionDetails(null);
+    if (comments.length > 0) setComments([]);
+  }
+
+  return () => {
+    clearInterval(detailsIntervalRef.current);
+    clearInterval(commentsIntervalRef.current);
+  };
+}, [
+  auctionId,
+  initialized,
+  keycloak.authenticated,
+  fetchAuctionDetails,
+  fetchComments,
+  fetchUserProfileForBidding,
+  fetchMyMaxBid,
+]);
 
   useEffect(() => {
     if (auctionDetails?.nextBidAmount != null) {
@@ -403,70 +411,96 @@ function TimedAuctionDetailPage() {
   }, [auctionDetails?.nextBidAmount, auctionDetails?.startPrice]);
 
   // --- Place Max Bid Handler ---
-  const handlePlaceBid = async () => {
+  const initiateBidProcess = () => {
     if (!initialized || !keycloak.authenticated) {
       setBidError("Please log in to place a bid.");
-      // Could also open login modal/redirect: keycloak.login();
       return;
     }
 
-    // --- NEW: Check for payment method BEFORE proceeding ---
-    if (!userProfile || !userProfile.hasDefaultPaymentMethod) {
-      // If profile is still loading, user might need to click again once loaded.
-      // Or disable bid button while profileLoading is true.
-      if (isProfileLoading) {
-        setBidError(
-          "Verifying payment method status, please wait and try again."
-        );
-        return;
-      }
+    if (!userProfile) {
+      // Check if userInfo is loaded
+      setBidError("User details are still loading. Please try again shortly.");
+      // Optionally, trigger a re-fetch or rely on the initial fetch.
+      // You might also want to disable bid buttons while userInfo is null.
+      return;
+    }
+
+    // 1. Address Check (using userInfo)
+    const { firstName, lastName, streetAddress, city, postalCode, country } =
+      userProfile;
+    const isAddressComplete =
+      firstName &&
+      firstName.trim() !== "" &&
+      lastName &&
+      lastName.trim() !== "" &&
+      streetAddress &&
+      streetAddress.trim() !== "" &&
+      city &&
+      city.trim() !== "" &&
+      postalCode &&
+      postalCode.trim() !== "" &&
+      country &&
+      country.trim() !== "";
+
+    if (!isAddressComplete) {
+      setIsAddressModalOpen(true); // Open the address modal
+      return;
+    }
+
+    // 2. Payment Method Check (using userInfo.hasDefaultPaymentMethod from UserDto)
+    if (!userProfile.hasDefaultPaymentMethod) {
+      // This check now uses userInfo, assuming UserDto includes hasDefaultPaymentMethod
       console.log(
         "User has no default payment method. Prompting to update profile."
       );
-      setIsPaymentMethodModalOpen(true); // Open the modal
-      return; // Stop the bid placement
-    }
-    // --- END OF NEW CHECK ---
-
-    if (
-      !auctionDetails ||
-      isBidding ||
-      !keycloak.authenticated ||
-      !selectedMaxBid
-    )
+      setIsPaymentMethodModalOpen(true); // Open the payment method modal
       return;
+    }
 
-    setBidError(""); // Clear previous error
+    // If all checks pass, open the bid confirmation modal
+    if (!selectedMaxBid) {
+      setBidError("Please select a bid amount.");
+      return;
+    }
+    setBidError(""); // Clear any previous bid error
+    setIsBidConfirmOpen(true);
+  };
+
+  // Simplified handlePlaceBid (actual API call)
+  const handlePlaceBid = async () => {
+    // Pre-checks (auth, selectedMaxBid, auction status) are good to keep here as a final validation
+    if (
+      !initialized ||
+      !keycloak.authenticated ||
+      !selectedMaxBid ||
+      auctionDetails?.status !== "ACTIVE"
+    ) {
+      setBidError(
+        "Cannot place bid at this time. Ensure you are logged in, an amount is selected, and auction is active."
+      );
+      return;
+    }
+    if (isBidding) return;
+
+    setBidError("");
     const maxBidNum = Number(selectedMaxBid);
 
-    // Validation
     if (isNaN(maxBidNum) || maxBidNum <= 0) {
-      setBidError("Invalid bid amount selected."); // Should ideally not happen
-      return;
-    }
-    if (auctionDetails.status !== "ACTIVE") {
-      setBidError("Auction is not currently active.");
+      setBidError("Invalid bid amount selected.");
       return;
     }
 
     setIsBidding(true);
     const payload = { maxBid: maxBidNum };
-    console.log(
-      `Attempting to place max bid: ${maxBidNum} for auction ${auctionId}`
-    );
-
     try {
       await apiClient.post(`/timedauctions/${auctionId}/bids`, payload);
-      console.log(
-        `Max bid placement request for ${maxBidNum} sent successfully.`
-      );
-      fetchAuctionDetails();
-      fetchMyMaxBid();
+      fetchAuctionDetails(); // Refresh auction details
+      fetchMyMaxBid(); // Refresh user's max bid info
     } catch (err) {
       console.error("Failed to place max bid:", err);
-      const message =
-        err.response?.data?.message || err.message || "Failed to place bid.";
-      setBidError(message);
+      setBidError(
+        err.response?.data?.message || err.message || "Failed to place bid."
+      );
     } finally {
       setIsBidding(false);
     }
@@ -906,7 +940,7 @@ function TimedAuctionDetailPage() {
                     {/* --- END DROPDOWN --- */}
 
                     <button
-                      onClick={() => setIsBidConfirmOpen(true)}
+                      onClick={initiateBidProcess}
                       disabled={
                         !canBid || isBidding || !selectedMaxBid || isUserBanned
                       }
@@ -1237,6 +1271,19 @@ function TimedAuctionDetailPage() {
         confirmButtonClass="bg-indigo-600 hover:bg-indigo-700" // Style as needed
         // No isLoading or error props specifically for this informational modal,
         // unless you want to add them for some reason.
+      />
+      <ConfirmationModal
+        isOpen={isAddressModalOpen}
+        onClose={() => setIsAddressModalOpen(false)}
+        onConfirm={() => {
+          navigate("/profile"); // Ensure '/profile' is your correct user profile page route
+          setIsAddressModalOpen(false);
+        }}
+        title="Shipping Address Required"
+        message="To place a bid, your shipping address (including first name, last name, street, city, postal code, and country) must be complete. Please update your profile."
+        confirmText="Go to Profile"
+        cancelText="Cancel"
+        confirmButtonClass="bg-blue-600 hover:bg-blue-700"
       />
       <ConfirmationModal
         isOpen={isBidConfirmOpen}

@@ -101,11 +101,40 @@ public class LiveAuctionLifecycleListener {
         /* Stale Check (using truncated comparison) */
         LocalDateTime fireAtFromCommand = command.fireAt();
         LocalDateTime endTimeFromDb = auction.getEndTime();
-        if (fireAtFromCommand == null || endTimeFromDb == null) { log.warn("Stale check failed for {}: null time(s)", auctionId); return; }
+
+// Add these logs
+        log.info("[StaleCheckDebug] AuctionID: {}, Initial Command fireAt: {}, Initial DB endTime: {}",
+                auctionId,
+                (fireAtFromCommand != null ? fireAtFromCommand.toString() : "null"),
+                (endTimeFromDb != null ? endTimeFromDb.toString() : "null"));
+
+        if (fireAtFromCommand == null || endTimeFromDb == null) {
+            log.warn("[StaleCheck] Stale check failed for auction {}: One or both timestamps are null. Command fireAt: {}, DB endTime: {}. Ignoring command.",
+                    auctionId,
+                    (fireAtFromCommand != null ? fireAtFromCommand.toString() : "null"),
+                    (endTimeFromDb != null ? endTimeFromDb.toString() : "null"));
+            return;
+        }
+
         LocalDateTime truncatedFireAt = fireAtFromCommand.truncatedTo(ChronoUnit.MICROS);
         LocalDateTime truncatedEndTime = endTimeFromDb.truncatedTo(ChronoUnit.MICROS);
-        if (!truncatedFireAt.isEqual(truncatedEndTime)) { log.info("Stale END cmd for {} ignored.", auctionId); return; }
-        log.info("Stale check passed for auction {}.", command.auctionId());
+
+        log.info("[StaleCheckDebug] AuctionID: {}, Truncated Command fireAt: {}, Truncated DB endTime: {}",
+                auctionId,
+                truncatedFireAt,
+                truncatedEndTime);
+
+        if (!truncatedFireAt.isEqual(truncatedEndTime)) {
+            log.info("[StaleCheck] Stale END cmd for auction {} IGNORED. Command fireAt (µs): {} != DB endTime (µs): {}.",
+                    auctionId,
+                    truncatedFireAt,
+                    truncatedEndTime);
+            return;
+        }
+        log.info("[StaleCheck] Stale check PASSED for auction {}. Command fireAt (µs): {} == DB endTime (µs): {}",
+                auctionId,
+                truncatedFireAt,
+                truncatedEndTime);
         /* End Stale Check */
 
         if (auction.getStatus() == AuctionStatus.ACTIVE) {

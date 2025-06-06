@@ -358,6 +358,7 @@ Start Time:      ${auctionDataToConfirm.formatted.startTime}`
                 <option value={30}>30 Minutes</option>
                 <option value={45}>45 Minutes</option>
                 <option value={60}>1 Hour</option>
+                <option value={5}>5 Minutes (Test)</option>
                 <option value={1}>1 Minute (Test)</option>
               </select>
             </div>

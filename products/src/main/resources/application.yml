@@ -17,9 +17,14 @@ spring:
     hibernate:
       ddl-auto: update # 'update' for dev, 'validate' or 'none' for prod (use migrations)
     show-sql: true # Useful for dev, disable in prod
-  config:
-    import: "optional:configserver:http://localhost:8071/" # Get config from Config Server
-
+  rabbitmq:
+    host: localhost
+    port: 5672
+    username: hoangquan
+    password: quan5691
+    listener:
+      simple:
+        missing-queues-fatal: false
   # === OAUTH2 Resource Server config (for validating tokens IF service needs to call others) ===
   # If User Service ONLY receives calls from Gateway (which validates), this might not be strictly needed
   # But good practice to include if it might call other protected services later.

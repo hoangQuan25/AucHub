@@ -1,8 +1,18 @@
+server:
+  port: 8070
+
 spring:
   application:
     name: "eurekaserver"
-  config:
-    import: "optional:configserver:http://localhost:8071/"
+
+eureka:
+  client:
+    registerWithEureka: false
+    fetchRegistry: false
+    serviceUrl:
+      defaultZone: http://localhost:8070/eureka/
+  server:
+    waitTimeInMsWhenSyncEmpty: 0
 
 management:
   endpoints:

@@ -22,6 +22,7 @@ import com.example.timedauctions.repository.BidRepository;
 import com.example.timedauctions.repository.TimedAuctionRepository;
 import com.example.timedauctions.service.AuctionSchedulingService;
 import com.example.timedauctions.service.TimedAuctionService;
+import com.example.timedauctions.utils.DateTimeUtil;
 import jakarta.persistence.criteria.JoinType;
 import jakarta.persistence.criteria.Predicate;
 import jakarta.persistence.criteria.SetJoin;
@@ -76,22 +77,39 @@ public class TimedAuctionServiceImpl implements TimedAuctionService {
 
         // 1. Fetch Product & Seller Details (Blocking calls - consider async later if needed)
         ProductDto product = fetchProductDetails(createDto.getProductId());
-        UserBasicInfoDto sellerInfo = fetchUserDetails(sellerId); // Fetch full user info if needed, or just basic
+        UserBasicInfoDto sellerInfo = fetchUserDetails(sellerId);
 
-        // 2. Determine Timing & Status
-        LocalDateTime now = LocalDateTime.now();
-        LocalDateTime effectiveStartTime = createDto.getStartTime() != null ? createDto.getStartTime() : now;
-        // Calculate end time based on duration in days
-        LocalDateTime endTime = createDto.getEndTime();
-        AuctionStatus initialStatus = effectiveStartTime.isAfter(now) ? AuctionStatus.SCHEDULED : AuctionStatus.ACTIVE;
+        LocalDateTime now = DateTimeUtil.roundToMicrosecond(LocalDateTime.now()); // Round current time for consistent comparisons
+        LocalDateTime effectiveStartTimeInput = createDto.getStartTime();
+        LocalDateTime endTimeInput = createDto.getEndTime(); // User provides this directly for timed auctions
 
-        // Prevent scheduling in the past if startTime was provided but already passed
-        if (initialStatus == AuctionStatus.SCHEDULED && effectiveStartTime.isBefore(now)) {
-            log.warn("Provided start time {} for product {} is in the past. Starting auction now.", effectiveStartTime, product.getId());
-            effectiveStartTime = now;
-            // NOTE: endTime remains as provided by the user, the duration just shrinks if start is pulled forward.
+        // Round inputs first if they are not null
+        LocalDateTime roundedEffectiveStartTime = (effectiveStartTimeInput != null) ? DateTimeUtil.roundToMicrosecond(effectiveStartTimeInput) : now;
+        LocalDateTime roundedEndTime = DateTimeUtil.roundToMicrosecond(endTimeInput); // EndTime is mandatory and provided
+
+        if (roundedEndTime == null) {
+            // This should ideally be validated at DTO level.
+            log.error("EndTime cannot be null for timed auction creation. Product ID: {}", createDto.getProductId());
+            throw new IllegalArgumentException("End time must be provided for a timed auction.");
+        }
+
+        AuctionStatus initialStatus = roundedEffectiveStartTime.isAfter(now) ? AuctionStatus.SCHEDULED : AuctionStatus.ACTIVE;
+
+        if (initialStatus == AuctionStatus.SCHEDULED && roundedEffectiveStartTime.isBefore(now)) {
+            log.warn("Provided start time {} (rounded from {}) for product {} is in the past. Starting auction now.",
+                    roundedEffectiveStartTime, effectiveStartTimeInput, product.getId());
+            roundedEffectiveStartTime = now; // Already rounded
+            // End time remains as user-defined and rounded. Duration just shortens.
             initialStatus = AuctionStatus.ACTIVE;
         }
+
+        // Ensure startTime is not after endTime
+        if (roundedEffectiveStartTime.isAfter(roundedEndTime)) {
+            log.error("Start time {} cannot be after end time {} for timed auction. Product ID: {}",
+                    roundedEffectiveStartTime, roundedEndTime, createDto.getProductId());
+            throw new IllegalArgumentException("Auction start time cannot be after its end time.");
+        }
+
 
         // 3. Calculate Initial Increment (based on start price)
         BigDecimal initialIncrement = getIncrement(createDto.getStartPrice());
@@ -117,8 +135,8 @@ public class TimedAuctionServiceImpl implements TimedAuctionService {
                 .highestBidderId(null)
                 .highestBidderUsernameSnapshot(null)
                 .currentBidIncrement(initialIncrement) // Set initial increment
-                .startTime(effectiveStartTime)
-                .endTime(endTime)
+                .startTime(roundedEffectiveStartTime)
+                .endTime(roundedEndTime)
                 .status(initialStatus)
                 .reserveMet(false)
                 // .softCloseEnabled(true) // Set based on global config or future DTO field
@@ -412,6 +430,7 @@ public class TimedAuctionServiceImpl implements TimedAuctionService {
         BigDecimal originalVisibleBid = auction.getCurrentBid();
         String originalLeaderId = auction.getHighestBidderId();
         LocalDateTime originalEndTime = auction.getEndTime(); // For soft-close check
+        LocalDateTime roundedNow = DateTimeUtil.roundToMicrosecond(LocalDateTime.now());
 
         // --- 1. Find/Update Current Bidder's Proxy Bid ---
         AuctionProxyBid currentProxy = auctionProxyBidRepository
@@ -575,13 +594,14 @@ public class TimedAuctionServiceImpl implements TimedAuctionService {
                 long millisLeft = Duration.between(LocalDateTime.now(), originalEndTime).toMillis();
 
                 if (millisLeft > 0 && millisLeft <= thresholdMillis) {
-                    LocalDateTime newEndTime = LocalDateTime.now().plusMinutes(timingProperties.getSoftClose().getExtensionMinutes());
-                    // Ensure extension doesn't shorten the auction if threshold is large
-                    if (newEndTime.isAfter(originalEndTime)) {
-                        auction.setEndTime(newEndTime);
-                        log.info("Soft-close triggered for auction {}. New end time: {}", auction.getId(), newEndTime);
-                        // Reschedule the end task via RabbitMQ
-                        auctionSchedulingService.scheduleAuctionEnd(auction); // Reschedule with new end time
+                    // Calculate newEndTime based on roundedNow
+                    LocalDateTime potentialNewEndTime = roundedNow.plusMinutes(timingProperties.getSoftClose().getExtensionMinutes());
+                    LocalDateTime newEndTimeRounded = DateTimeUtil.roundToMicrosecond(potentialNewEndTime); // Explicitly round the new potential end time
+
+                    if (newEndTimeRounded.isAfter(originalEndTime)) { // Compare rounded with (already rounded) original
+                        auction.setEndTime(newEndTimeRounded);
+                        log.info("Soft-close triggered for auction {}. New end time: {}", auction.getId(), auction.getEndTime());
+                        auctionSchedulingService.scheduleAuctionEnd(auction); // Will use the new rounded endTime
                     }
                 }
             }
@@ -638,12 +658,17 @@ public class TimedAuctionServiceImpl implements TimedAuctionService {
     }
 
 
-    private long calculateTimeLeftMs(TimedAuction auction) {
+    private long calculateTimeLeftMs(TimedAuction auction, LocalDateTime roundedNow) {
         if (auction.getStatus() == AuctionStatus.ACTIVE && auction.getEndTime() != null) {
-            long timeLeft = Duration.between(LocalDateTime.now(), auction.getEndTime()).toMillis();
-            return Math.max(0, timeLeft); // Ensure non-negative
+            // auction.getEndTime() should already be rounded if entity setter or save logic handles it
+            long timeLeft = Duration.between(roundedNow, auction.getEndTime()).toMillis();
+            return Math.max(0, timeLeft);
         }
         return 0;
+    }
+    // Adjust the other calculateTimeLeftMs or ensure it uses a rounded 'now' internally
+    private long calculateTimeLeftMs(TimedAuction auction) {
+        return calculateTimeLeftMs(auction, DateTimeUtil.roundToMicrosecond(LocalDateTime.now()));
     }
 
     // Calculates the minimum amount required for the *next* valid manual bid

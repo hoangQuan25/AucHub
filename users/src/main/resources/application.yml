@@ -17,17 +17,14 @@ spring:
     hibernate:
       ddl-auto: update # 'update' for dev, 'validate' or 'none' for prod (use migrations)
     show-sql: true # Useful for dev, disable in prod
-  config:
-    import: "optional:configserver:http://localhost:8071/" # Get config from Config Server
-
-  # === OAUTH2 Resource Server config (for validating tokens IF service needs to call others) ===
-  # If User Service ONLY receives calls from Gateway (which validates), this might not be strictly needed
-  # But good practice to include if it might call other protected services later.
-  # security:
-  #   oauth2:
-  #     resourceserver:
-  #       jwt:
-  #         jwk-set-uri: "http://localhost:7080/realms/auction-realm/protocol/openid-connect/certs" # Point to Keycloak JWKS
+  rabbitmq:
+    host: localhost
+    port: 5672
+    username: hoangquan
+    password: quan5691
+    listener:
+      simple:
+        missing-queues-fatal: false
 
 management: # Standard Actuator/Monitoring config
   endpoints:
@@ -82,4 +79,4 @@ keycloak:
   auth-server-url: http://localhost:7080
   resource: userservice-admin-client # Client ID for THIS service account in Keycloak
   credentials:
-    secret: jRFpwICd7VbOOq1IBnqlNp40ygmt6wLA
+    secret: I0tSG65A4BwVlVmOq7InhuXwY0F1OGwc

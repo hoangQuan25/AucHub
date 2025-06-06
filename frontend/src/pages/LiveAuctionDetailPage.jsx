@@ -62,6 +62,8 @@ function LiveAuctionDetailPage() {
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
 
   const [userInfo, setUserInfo] = useState(null);
+  const [isAddressModalOpen, setIsAddressModalOpen] = useState(false);
+  const [isPaymentMethodModalOpen, setIsPaymentMethodModalOpen] = useState(false);
 
   useEffect(() => {
     if (initialized && keycloak.authenticated) {
@@ -316,11 +318,41 @@ function LiveAuctionDetailPage() {
 
   // --- Place Bid Handler (handlePlaceBid) ---
   // ─── Handlers to open/close the bid-confirmation modal ────────────
-  const promptBid = (amount) => {
+   const promptBid = (amount) => {
+    if (!keycloak.authenticated || !userInfo) {
+        alert("User information is not available. Please ensure you are logged in and try again.");
+        return;
+    }
+
+    // 1. Address Check (already added previously, using userInfo)
+    const { firstName, lastName, streetAddress, city, postalCode, country } = userInfo;
+    const isAddressComplete = 
+        firstName && firstName.trim() !== "" &&
+        lastName && lastName.trim() !== "" &&
+        streetAddress && streetAddress.trim() !== "" &&
+        city && city.trim() !== "" &&
+        postalCode && postalCode.trim() !== "" &&
+        country && country.trim() !== "";
+
+    if (!isAddressComplete) {
+      setIsAddressModalOpen(true);
+      return; 
+    }
+
+    // 2. Payment Method Check (using userInfo.hasDefaultPaymentMethod from UserDto)
+    // UserDto.java includes: hasDefaultPaymentMethod
+    if (!userInfo.hasDefaultPaymentMethod) { // <<< ADD THIS CHECK
+      setIsPaymentMethodModalOpen(true); // Open the payment method modal
+      return; // Stop bid process
+    }
+
+    // Original logic if all checks pass
     setBidConfirmError("");
     setPendingBidAmount(amount);
     setIsBidConfirmOpen(true);
   };
+
+
   const handleCloseBidConfirm = () => {
     setIsBidConfirmOpen(false);
     setPendingBidAmount(null);
@@ -1017,6 +1049,33 @@ function LiveAuctionDetailPage() {
         confirmButtonClass="bg-blue-600 hover:bg-blue-700"
         isLoading={isHammering}
         error={hammerError}
+      />
+      <ConfirmationModal
+        isOpen={isPaymentMethodModalOpen}
+        onClose={() => setIsPaymentMethodModalOpen(false)}
+        onConfirm={() => {
+          navigate('/profile'); // Ensure '/profile' leads to payment method management or general profile
+          setIsPaymentMethodModalOpen(false);
+        }}
+        title="Payment Method Required"
+        message="To place a bid, you need a default payment method saved to your profile. Please update your payment information."
+        confirmText="Go to Profile"
+        cancelText="Cancel"
+        confirmButtonClass="bg-blue-600 hover:bg-blue-700"
+      />
+      <ConfirmationModal
+        isOpen={isAddressModalOpen}
+        onClose={() => setIsAddressModalOpen(false)}
+        onConfirm={() => {
+          navigate('/profile'); // Make sure '/profile' is your correct user profile page route
+          setIsAddressModalOpen(false);
+        }}
+        title="Shipping Address Required"
+        message="To place a bid, your shipping address (including first name, last name, street, city, postal code, and country) must be complete. Please update your profile."
+        confirmText="Go to Profile"
+        cancelText="Cancel"
+        confirmButtonClass="bg-blue-600 hover:bg-blue-700"
+        // You can add isLoading or error props if needed for this modal, though likely not for this simple prompt
       />
     </div>
   );

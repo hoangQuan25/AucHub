@@ -20,6 +20,7 @@ import com.example.liveauctions.repository.BidRepository;
 import com.example.liveauctions.repository.LiveAuctionRepository;
 import com.example.liveauctions.service.LiveAuctionService;
 import com.example.liveauctions.service.WebSocketEventPublisher; // For WebSocket events
+import com.example.liveauctions.utils.DateTimeUtil;
 import jakarta.persistence.criteria.JoinType;
 import jakarta.persistence.criteria.Predicate;
 import jakarta.persistence.criteria.SetJoin;
@@ -75,11 +76,22 @@ public class LiveAuctionServiceImpl implements LiveAuctionService {
         // 2. Determine Timing & Status (No change)
         LocalDateTime now = LocalDateTime.now();
         LocalDateTime startTime = createDto.getStartTime() != null ? createDto.getStartTime() : now;
-        LocalDateTime endTime = startTime.plusMinutes(createDto.getDurationMinutes());
+        // Calculate endTime
+        LocalDateTime calculatedEndTime = startTime.plusMinutes(createDto.getDurationMinutes());
+        // *** APPLY ROUNDING HERE ***
+        LocalDateTime roundedEndTime = DateTimeUtil.roundToMicrosecond(calculatedEndTime);
+
         AuctionStatus initialStatus = startTime.isAfter(now) ? AuctionStatus.SCHEDULED : AuctionStatus.ACTIVE;
-        if (initialStatus == AuctionStatus.SCHEDULED && startTime.isBefore(now)) {
-            log.warn("Provided start time {} for product {} is in the past. Starting auction now.", startTime, product.getId());
-            startTime = now; endTime = startTime.plusMinutes(createDto.getDurationMinutes()); initialStatus = AuctionStatus.ACTIVE;
+
+        if (initialStatus == AuctionStatus.SCHEDULED && startTime.isBefore(now.plusSeconds(1))) { // Added a small buffer for "now"
+            log.warn("Provided start time {} for product {} is in the past or too close to now. Starting auction now.", startTime, product.getId());
+            startTime = DateTimeUtil.roundToMicrosecond(now); // Also round 'now' if used as startTime
+            // Recalculate and round endTime if startTime changed to now
+            roundedEndTime = DateTimeUtil.roundToMicrosecond(startTime.plusMinutes(createDto.getDurationMinutes()));
+            initialStatus = AuctionStatus.ACTIVE;
+        } else if (initialStatus == AuctionStatus.SCHEDULED) {
+            startTime = DateTimeUtil.roundToMicrosecond(startTime); // Round scheduled start time
+            // roundedEndTime is already calculated and rounded based on original or adjusted startTime
         }
 
         // 3. Calculate Initial Increment (No change)
@@ -94,7 +106,7 @@ public class LiveAuctionServiceImpl implements LiveAuctionService {
                 .productImageUrlSnapshot(product.getImageUrls() != null && !product.getImageUrls().isEmpty() ? product.getImageUrls().get(0) : null)
                 .sellerUsernameSnapshot(sellerUsername).startPrice(createDto.getStartPrice()).reservePrice(createDto.getReservePrice())
                 .currentBid(null).highestBidderId(null).highestBidderUsernameSnapshot(null).currentBidIncrement(initialIncrement)
-                .startTime(startTime).endTime(endTime).status(initialStatus).reserveMet(false)
+                .startTime(startTime).endTime(roundedEndTime).status(initialStatus).reserveMet(false)
                 .productCategoryIdsSnapshot(categoryIdsSnapshot)
                 .build();
 
@@ -338,8 +350,10 @@ public class LiveAuctionServiceImpl implements LiveAuctionService {
             boolean reserveJustMet = !auction.isReserveMet() && auction.getReservePrice() != null && auction.getCurrentBid().compareTo(auction.getReservePrice()) >= 0;
             AuctionTimingProperties.SoftClose sc = timing.getSoftClose();
             AuctionTimingProperties.FastFinish ff = timing.getFastFinish();
-            long millisLeft = Duration.between(LocalDateTime.now(), originalEndTime).toMillis(); // Compare against original end time for trigger condition
-            boolean endTimeChanged = false; // Flag if end time needs rescheduling
+            LocalDateTime roundedNow = DateTimeUtil.roundToMicrosecond(LocalDateTime.now());
+            long millisLeft = Duration.between(roundedNow, auction.getEndTime()).toMillis();
+            boolean endTimeChanged = false;
+
 
             // 4-a Soft-close anti-sniping
             if (sc.isEnabled() && millisLeft > 0 && millisLeft <= sc.getThresholdSeconds() * 1_000L) {

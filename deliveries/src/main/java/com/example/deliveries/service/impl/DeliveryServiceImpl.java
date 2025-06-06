@@ -12,6 +12,7 @@ import com.example.deliveries.entity.Delivery;
 import com.example.deliveries.entity.DeliveryStatus;
 import com.example.deliveries.repository.DeliveryRepository;
 import com.example.deliveries.service.DeliveryService;
+import com.example.deliveries.utils.DateTimeUtil;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
@@ -93,7 +94,7 @@ public class DeliveryServiceImpl implements DeliveryService {
         delivery.setDeliveryStatus(DeliveryStatus.SHIPPED_IN_TRANSIT);
         delivery.setCourierName(requestDto.getCourierName());
         delivery.setTrackingNumber(requestDto.getTrackingNumber());
-        delivery.setShippedAt(LocalDateTime.now());
+        delivery.setShippedAt(DateTimeUtil.roundToMicrosecond(LocalDateTime.now()));
         if (requestDto.getNotes() != null && !requestDto.getNotes().isBlank()) {
             delivery.setNotes(requestDto.getNotes());
         }
@@ -127,7 +128,7 @@ public class DeliveryServiceImpl implements DeliveryService {
         }
 
         delivery.setDeliveryStatus(DeliveryStatus.AWAITING_BUYER_CONFIRMATION); // NEW State
-        delivery.setDeliveredAt(LocalDateTime.now()); // Physical delivery time
+        delivery.setDeliveredAt(DateTimeUtil.roundToMicrosecond(LocalDateTime.now())); // Physical delivery time
         if (requestDto.getNotes() != null && !requestDto.getNotes().isBlank()) {
             String newNote = "Marked delivered by " + actorId + ": " + requestDto.getNotes();
             delivery.setNotes(delivery.getNotes() == null ? newNote : delivery.getNotes() + "; " + newNote);
@@ -290,7 +291,7 @@ public class DeliveryServiceImpl implements DeliveryService {
         }
 
         delivery.setDeliveryStatus(DeliveryStatus.RETURN_APPROVED_AWAITING_ITEM);
-        delivery.setReturnApprovedAt(LocalDateTime.now());
+        delivery.setReturnApprovedAt(DateTimeUtil.roundToMicrosecond(LocalDateTime.now()));
         Delivery savedDelivery = deliveryRepository.save(delivery);
 
         // Publish event to notify buyer that their return request was approved
@@ -316,7 +317,7 @@ public class DeliveryServiceImpl implements DeliveryService {
         }
 
         delivery.setDeliveryStatus(DeliveryStatus.RETURN_ITEM_RECEIVED);
-        delivery.setReturnItemReceivedAt(LocalDateTime.now());
+        delivery.setReturnItemReceivedAt(DateTimeUtil.roundToMicrosecond(LocalDateTime.now()));
         Delivery savedDelivery = deliveryRepository.save(delivery);
 
         // --- THIS IS THE KEY TRIGGER ---
@@ -364,7 +365,7 @@ public class DeliveryServiceImpl implements DeliveryService {
         String addressSummary = delivery.getShippingCity() + ", " + delivery.getShippingCountry();
         DeliveryCreatedEventDto event = DeliveryCreatedEventDto.builder()
                 .eventId(UUID.randomUUID())
-                .eventTimestamp(LocalDateTime.now())
+                .eventTimestamp(DateTimeUtil.roundToMicrosecond(LocalDateTime.now()))
                 .deliveryId(delivery.getDeliveryId())
                 .orderId(delivery.getOrderId())
                 .buyerId(delivery.getBuyerId())
@@ -384,7 +385,7 @@ public class DeliveryServiceImpl implements DeliveryService {
     private void publishDeliveryShippedEvent(Delivery delivery) {
         DeliveryShippedEventDto event = DeliveryShippedEventDto.builder()
                 .eventId(UUID.randomUUID())
-                .eventTimestamp(LocalDateTime.now())
+                .eventTimestamp(DateTimeUtil.roundToMicrosecond(LocalDateTime.now()))
                 .deliveryId(delivery.getDeliveryId())
                 .orderId(delivery.getOrderId())
                 .buyerId(delivery.getBuyerId())
@@ -405,7 +406,7 @@ public class DeliveryServiceImpl implements DeliveryService {
     private void publishDeliveryAwaitingBuyerConfirmationEvent(Delivery delivery) {
         DeliveryAwaitingBuyerConfirmationEventDto event = DeliveryAwaitingBuyerConfirmationEventDto.builder()
                 .eventId(UUID.randomUUID())
-                .eventTimestamp(LocalDateTime.now())
+                .eventTimestamp(DateTimeUtil.roundToMicrosecond(LocalDateTime.now()))
                 .deliveryId(delivery.getDeliveryId())
                 .orderId(delivery.getOrderId())
                 .buyerId(delivery.getBuyerId())
@@ -432,15 +433,26 @@ public class DeliveryServiceImpl implements DeliveryService {
     }
 
     private void scheduleAutoCompletionCheck(Delivery delivery) {
-        LocalDateTime confirmationDeadline = LocalDateTime.now().plus(BUYER_CONFIRMATION_WINDOW);
-        // If you use delivery.getDeliveredAt() as the base for the deadline:
-        // LocalDateTime confirmationDeadline = delivery.getDeliveredAt().plus(BUYER_CONFIRMATION_WINDOW);
+        LocalDateTime roundedNow = DateTimeUtil.roundToMicrosecond(LocalDateTime.now());
+        LocalDateTime confirmationDeadline;
 
-        long delayMillis = Duration.between(LocalDateTime.now(), confirmationDeadline).toMillis();
+        // If basing deadline on when the item was marked delivered (AWAITING_BUYER_CONFIRMATION status set)
+        if (delivery.getDeliveredAt() != null) {
+            // delivery.getDeliveredAt() should already be rounded if set correctly in updateDeliveryStatusToDelivered
+            confirmationDeadline = delivery.getDeliveredAt().plus(BUYER_CONFIRMATION_WINDOW);
+        } else {
+            // Fallback or if logic dictates using 'now' as base
+            log.warn("Delivery {} has null deliveredAt timestamp when scheduling auto-completion. Using current time as base.", delivery.getDeliveryId());
+            confirmationDeadline = roundedNow.plus(BUYER_CONFIRMATION_WINDOW);
+        }
+        // Ensure the deadline itself is also rounded for the command
+        LocalDateTime roundedConfirmationDeadline = DateTimeUtil.roundToMicrosecond(confirmationDeadline);
+
+        long delayMillis = Duration.between(roundedNow, roundedConfirmationDeadline).toMillis();
 
         if (delayMillis > 0) {
             DeliveryWorkflowCommands.AutoCompleteDeliveryCommand command =
-                    new DeliveryWorkflowCommands.AutoCompleteDeliveryCommand(delivery.getDeliveryId(), confirmationDeadline);
+                    new DeliveryWorkflowCommands.AutoCompleteDeliveryCommand(delivery.getDeliveryId(), roundedConfirmationDeadline);
 
             log.info("Scheduling auto-completion check for delivery {} in {} ms (Deadline: {})",
                     delivery.getDeliveryId(), delayMillis, confirmationDeadline);
@@ -468,10 +480,10 @@ public class DeliveryServiceImpl implements DeliveryService {
 
     private void publishDeliveryReceiptConfirmedByBuyerEvent(Delivery delivery) {
         DeliveryReceiptConfirmedByBuyerEventDto event = DeliveryReceiptConfirmedByBuyerEventDto.builder()
-                .eventId(UUID.randomUUID()).eventTimestamp(LocalDateTime.now())
+                .eventId(UUID.randomUUID()).eventTimestamp(DateTimeUtil.roundToMicrosecond(LocalDateTime.now()))
                 .deliveryId(delivery.getDeliveryId()).orderId(delivery.getOrderId())
                 .buyerId(delivery.getBuyerId()).sellerId(delivery.getSellerId())
-                .confirmationTimestamp(LocalDateTime.now()) // Or use a field from delivery if you add it
+                .confirmationTimestamp(DateTimeUtil.roundToMicrosecond(LocalDateTime.now())) // Or use a field from delivery if you add it
                 .productInfoSnapshot(delivery.getProductInfoSnapshot())
                 .build();
         rabbitTemplate.convertAndSend(RabbitMqConfig.DELIVERIES_EVENTS_EXCHANGE, RabbitMqConfig.DELIVERY_EVENT_RECEIPT_CONFIRMED_ROUTING_KEY, event);
@@ -480,10 +492,10 @@ public class DeliveryServiceImpl implements DeliveryService {
 
     private void publishDeliveryReturnRequestedEvent(Delivery delivery, String reason, String comments) {
         DeliveryReturnRequestedEventDto event = DeliveryReturnRequestedEventDto.builder()
-                .eventId(UUID.randomUUID()).eventTimestamp(LocalDateTime.now())
+                .eventId(UUID.randomUUID()).eventTimestamp(DateTimeUtil.roundToMicrosecond(LocalDateTime.now()))
                 .deliveryId(delivery.getDeliveryId()).orderId(delivery.getOrderId())
                 .buyerId(delivery.getBuyerId()).sellerId(delivery.getSellerId())
-                .reason(reason).comments(comments).requestTimestamp(LocalDateTime.now())
+                .reason(reason).comments(comments).requestTimestamp(DateTimeUtil.roundToMicrosecond(LocalDateTime.now()))
                 .productInfoSnapshot(delivery.getProductInfoSnapshot())
                 .build();
         rabbitTemplate.convertAndSend(RabbitMqConfig.DELIVERIES_EVENTS_EXCHANGE, RabbitMqConfig.DELIVERY_EVENT_RETURN_REQUESTED_ROUTING_KEY, event);
@@ -492,10 +504,10 @@ public class DeliveryServiceImpl implements DeliveryService {
 
     private void publishDeliveryAutoCompletedEvent(Delivery delivery) {
         DeliveryAutoCompletedEventDto event = DeliveryAutoCompletedEventDto.builder()
-                .eventId(UUID.randomUUID()).eventTimestamp(LocalDateTime.now())
+                .eventId(UUID.randomUUID()).eventTimestamp(DateTimeUtil.roundToMicrosecond(LocalDateTime.now()))
                 .deliveryId(delivery.getDeliveryId()).orderId(delivery.getOrderId())
                 .buyerId(delivery.getBuyerId()).sellerId(delivery.getSellerId())
-                .autoCompletionTimestamp(LocalDateTime.now())
+                .autoCompletionTimestamp(DateTimeUtil.roundToMicrosecond(LocalDateTime.now()))
                 .productInfoSnapshot(delivery.getProductInfoSnapshot())
                 .build();
         try {
@@ -513,7 +525,7 @@ public class DeliveryServiceImpl implements DeliveryService {
     private void publishDeliveryIssueReportedEvent(Delivery delivery) {
         DeliveryIssueReportedEventDto event = DeliveryIssueReportedEventDto.builder()
                 .eventId(UUID.randomUUID())
-                .eventTimestamp(LocalDateTime.now())
+                .eventTimestamp(DateTimeUtil.roundToMicrosecond(LocalDateTime.now()))
                 .deliveryId(delivery.getDeliveryId())
                 .orderId(delivery.getOrderId())
                 .buyerId(delivery.getBuyerId()) // Or based on who can report
@@ -534,7 +546,7 @@ public class DeliveryServiceImpl implements DeliveryService {
     private void publishDeliveryReturnApprovedEvent(Delivery delivery) {
         DeliveryReturnApprovedEventDto event = DeliveryReturnApprovedEventDto.builder()
                 .eventId(UUID.randomUUID())
-                .eventTimestamp(LocalDateTime.now())
+                .eventTimestamp(DateTimeUtil.roundToMicrosecond(LocalDateTime.now()))
                 .deliveryId(delivery.getDeliveryId())
                 .orderId(delivery.getOrderId())
                 .buyerId(delivery.getBuyerId())
@@ -557,7 +569,7 @@ public class DeliveryServiceImpl implements DeliveryService {
     private void publishRefundRequiredForReturnEvent(Delivery delivery) {
         RefundRequiredForReturnEventDto event = RefundRequiredForReturnEventDto.builder()
                 .eventId(UUID.randomUUID())
-                .eventTimestamp(LocalDateTime.now())
+                .eventTimestamp(DateTimeUtil.roundToMicrosecond(LocalDateTime.now()))
                 .deliveryId(delivery.getDeliveryId())
                 .orderId(delivery.getOrderId())
                 .buyerId(delivery.getBuyerId())

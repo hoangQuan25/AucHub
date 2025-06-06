@@ -25,12 +25,12 @@ spring:
   rabbitmq:
     host: localhost
     port: 5672
-    username: guest # Use environment variables in production
-    password: guest # Use environment variables in production
+    username: hoangquan
+    password: quan5691
+    listener:
+      simple:
+        missing-queues-fatal: false
 
-  # === Configuration Server (if used) ===
-  config:
-    import: "optional:configserver:http://localhost:8071/"
 
 # === Eureka Client Configuration ===
 eureka:
