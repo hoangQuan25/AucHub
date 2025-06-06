@@ -2,7 +2,7 @@
 import axios from 'axios';
 
 const apiClient = axios.create({
-  baseURL: 'http://localhost:8072/api/', // Adjust to your API Gateway base path if needed
+  baseURL: import.meta.env.VITE_API_BASE_URL, // Adjust to your API Gateway base path if needed
   // Other Axios configurations
 });
 
