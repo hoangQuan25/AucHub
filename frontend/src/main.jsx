@@ -1,3 +1,4 @@
+// src/index.js
 import React from 'react';
 import ReactDOM from 'react-dom/client';
 import { ReactKeycloakProvider } from '@react-keycloak/web';
@@ -25,8 +26,8 @@ root.render(
     <ReactKeycloakProvider
       authClient={keycloak}
       initOptions={{
-         onLoad: 'login-required', // 'check-sso' hoặc 'login-required'
-        //  silentCheckSsoRedirectUri: window.location.origin + '/silent-check-sso.html',
+         onLoad: 'check-sso', // MODIFIED: Changed from 'login-required'
+         silentCheckSsoRedirectUri: window.location.origin + '/silent-check-sso.html',
          pkceMethod: 'S256',
       }}
       onTokens={handleTokens}
