@@ -1,4 +1,4 @@
-package com.example.users.dto.event; // Or a suitable package
+package com.example.users.dto.event;
 
 import lombok.AllArgsConstructor;
 import lombok.Builder;

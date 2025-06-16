@@ -14,7 +14,7 @@ import java.util.Set; // For categories
 import java.util.UUID;
 
 @Value
-@Builder(toBuilder = true) // toBuilder=true allows easy modification if needed post-fetch
+@Builder(toBuilder = true)
 public class LiveAuctionDetailsDto {
 
     // --- Core Auction Info (from LiveAuctions Service) ---
@@ -50,8 +50,6 @@ public class LiveAuctionDetailsDto {
     // --- Seller Info (Snapshot + potentially fetched) ---
     String sellerId;
     String sellerUsernameSnapshot; // Snapshot
-    // --- Potentially enriched seller details if needed ---
-    // String sellerFullName; // Fetched via Users service Feign client?
 
     // --- Bid History (from LiveAuctions Service) ---
     List<BidDto> recentBids;

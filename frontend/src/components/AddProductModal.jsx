@@ -2,7 +2,6 @@
 import React, { useState, useEffect } from "react";
 import CategorySelector from "./CategorySelector"; // Adjust path as needed
 import { FaTimesCircle } from 'react-icons/fa';
-// Make sure you have axios installed and apiClient configured if you switch fetch to axios
 import apiClient from "../api/apiClient";
 
 const productConditions = [
@@ -296,11 +295,8 @@ function AddProductModal({ isOpen, onClose, onSuccess, editingProduct }) {
               isLoading={categoryLoading}
               error={categoryError}
             />
-            {/* Display error related to categories specifically if needed */}
           </div>
-          {/* --- End Category Selector --- */}
-
-          {/* --- IMAGE SECTION --- */}
+          
           <div>
                 <label className="block mb-1 font-medium text-sm text-gray-700">Images (up to 10 total):</label>
 

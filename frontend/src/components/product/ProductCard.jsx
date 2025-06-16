@@ -1,6 +1,5 @@
 // src/components/ProductCard.jsx
 import React from 'react';
-// Link is removed as we don't want general card click to navigate in THIS context
 import { FaEdit, FaTrash, FaGavel, FaCheckCircle } from 'react-icons/fa';
 
 function ProductCard({ product, isOwner, onEdit, onDelete, onStartAuction, onClick }) {
@@ -42,7 +41,6 @@ function ProductCard({ product, isOwner, onEdit, onDelete, onStartAuction, onCli
       tabIndex={0} // Make it focusable for accessibility
       onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') onClick && onClick(); }} // Keyboard accessibility
     >
-      {/* Image section - NOT a Link anymore */}
       <div className="w-full h-48 bg-gray-200 overflow-hidden">
         <img
           src={(product.imageUrls && product.imageUrls.length > 0) ? product.imageUrls[0] : '/placeholder.png'}
@@ -54,7 +52,6 @@ function ProductCard({ product, isOwner, onEdit, onDelete, onStartAuction, onCli
       </div>
 
       <div className="p-4 flex flex-col flex-grow">
-        {/* Title section - NOT a Link anymore */}
         <h3
           className="font-semibold text-md text-gray-800 mb-1 truncate hover:text-indigo-600"
           title={product.title}

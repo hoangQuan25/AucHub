@@ -1,4 +1,4 @@
-package com.example.timedauctions.client.dto; // Adjust package
+package com.example.timedauctions.client.dto;
 
 import lombok.Data;
 import java.time.LocalDateTime;

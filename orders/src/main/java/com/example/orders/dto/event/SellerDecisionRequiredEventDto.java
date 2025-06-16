@@ -31,9 +31,5 @@ public class SellerDecisionRequiredEventDto {
     private String eligibleSecondBidderId; // Populated if canOfferToSecondBidder is true
     private BigDecimal eligibleSecondBidAmount; // Populated if canOfferToSecondBidder is true
 
-    // We might not need to look ahead to the third bidder at this stage,
-    // as the seller first decides about the second.
-    // private boolean canOfferToThirdBidder; (Can be omitted for now)
-
     private int paymentOfferAttemptOfDefaultingBidder; // Should be 1 in this scenario
 }

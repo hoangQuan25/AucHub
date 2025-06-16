@@ -67,16 +67,10 @@ public class AuctionSchedulingServiceImpl implements AuctionSchedulingService {
             );
         } else {
             log.warn("[Scheduler] Attempted to schedule end for auction {} but delay ({}) was not positive. It might end immediately or has passed.", auction.getId(), delayMillis);
-            // Maybe send an immediate (non-delayed) EndAuctionCommand if delay <=0 ?
-            // Or let the listener handle the state if it's already past due.
-            // Sending immediate command if already past end time:
             if (delayMillis <= 0) {
                 log.info("[Scheduler] End time for auction {} is past. Sending immediate EndAuctionCommand.", auction.getId());
                 AuctionLifecycleCommands.EndAuctionCommand command = new AuctionLifecycleCommands.EndAuctionCommand(auction.getId());
-                // Send to the command queue directly or let the schedule exchange handle immediate routing if delay=0?
-                // Sending directly to command queue is clearer:
                 rabbitTemplate.convertAndSend(RabbitMqConfig.TD_AUCTION_COMMAND_EXCHANGE, RabbitMqConfig.TD_END_ROUTING_KEY, command);
-                // NOTE: This requires a binding from TD_AUCTION_COMMAND_EXCHANGE/TD_END_ROUTING_KEY to TD_AUCTION_END_QUEUE in RabbitMqConfig
             }
         }
     }

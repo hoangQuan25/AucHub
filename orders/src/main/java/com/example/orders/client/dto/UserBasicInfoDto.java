@@ -10,6 +10,7 @@ public class UserBasicInfoDto {
     private String id;
     private String username;
     private String email;
+    private String avatarUrl; // <-- NEW FIELD
     private String phoneNumber; // Included
 
     // Full Address fields (for DeliveriesService and others)
@@ -27,5 +28,4 @@ public class UserBasicInfoDto {
     private String defaultCardBrand; // e.g., "Visa", "Mastercard"
     private String defaultCardLast4; // e.g., "4242"
 
-    // firstName and lastName are intentionally excluded as per your request.
 }

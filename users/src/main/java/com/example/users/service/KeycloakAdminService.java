@@ -19,16 +19,10 @@ import java.util.List;
 @Slf4j
 public class KeycloakAdminService {
 
-    private final Keycloak keycloakAdminClient; // Inject the configured Admin Client Bean
-    // Consider making these configurable via KeycloakAdminClientProperties
+    private final Keycloak keycloakAdminClient;
     private final String realmName = "auction-realm";
     private final String sellerRoleName = "ROLE_SELLER";
 
-    /**
-     * Adds the configured seller role to a specific user in Keycloak.
-     * Requires the service account to have 'manage-users' permission.
-     * @param userId The ID of the user in Keycloak.
-     */
     public void addSellerRoleToUser(String userId) {
         log.info("Attempting to add role '{}' to user '{}' in realm '{}'", sellerRoleName, userId, realmName);
         try {
@@ -69,15 +63,6 @@ public class KeycloakAdminService {
         }
     }
 
-    // --- NEW METHOD ---
-    /**
-     * Fetches the user representation (details like username, email, first/last name)
-     * from Keycloak using the Admin API.
-     * Requires the service account to have 'view-users' permission.
-     * @param userId The Keycloak User ID (sub claim)
-     * @return UserRepresentation containing user details from Keycloak
-     * @throws RuntimeException if user not found or other Keycloak error occurs
-     */
     public UserRepresentation getKeycloakUserById(String userId) {
         log.debug("Attempting to fetch Keycloak user representation for ID: {}", userId);
         try {
@@ -99,8 +84,6 @@ public class KeycloakAdminService {
 
         } catch (NotFoundException nfe) {
             log.warn("User with ID '{}' not found in Keycloak realm '{}' during fetch.", userId, realmName);
-            // Let the caller (UserServiceImpl) handle this specific case if needed,
-            // or rethrow a more specific application exception.
             throw new RuntimeException("Keycloak user not found for ID: " + userId, nfe);
         } catch (WebApplicationException e) {
             // Catch other Keycloak/HTTP errors (like permission denied - 403)
@@ -113,5 +96,4 @@ public class KeycloakAdminService {
             throw new RuntimeException("Unexpected error during Keycloak user fetch", e);
         }
     }
-    // --- END NEW METHOD ---
 }

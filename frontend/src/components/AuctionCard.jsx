@@ -1,5 +1,5 @@
 import React from "react";
-import CountdownTimer from "./CountdownTimer"; // Assuming you have a CountdownTimer component
+import CountdownTimer from "./CountdownTimer"; 
 
 function AuctionCard({ auction, type, onClick }) {
   return (

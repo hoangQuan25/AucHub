@@ -1,10 +1,9 @@
 package com.example.liveauctions.service.impl; // Or a dedicated publisher package
 
 import com.example.liveauctions.config.RabbitMqConfig;
-import com.example.liveauctions.dto.LiveAuctionStateDto; // Use this for structure consistency
 import com.example.liveauctions.entity.AuctionStatus;
 import com.example.liveauctions.entity.Bid;
-import com.example.liveauctions.event.AuctionStateUpdateEvent;
+import com.example.liveauctions.dto.event.AuctionStateUpdateEvent;
 import com.example.liveauctions.entity.LiveAuction;
 import com.example.liveauctions.mapper.AuctionMapper;
 import com.example.liveauctions.service.WebSocketEventPublisher;
@@ -25,8 +24,6 @@ public class WebSocketEventPublisherImpl implements WebSocketEventPublisher {
 
     private final RabbitTemplate rabbitTemplate;
     private final AuctionMapper auctionMapper;
-    // Assuming getIncrement logic is accessible, maybe via a helper bean
-    // private final AuctionHelper auctionHelper;
 
     @Override
     public void publishAuctionStateUpdate(LiveAuction auction, @Nullable Bid newBidEntity) {
@@ -53,16 +50,12 @@ public class WebSocketEventPublisherImpl implements WebSocketEventPublisher {
                     // Otherwise, it's current + increment
                     nextBidAmount = currentBid.add(auction.getCurrentBidIncrement());
                 } else {
-                    // Fallback if increment somehow null - maybe recalculate?
                     log.warn("currentBidIncrement is null for active auction {}", auction.getId());
-                    // BigDecimal increment = getIncrement(currentBid); // Recalculate if necessary
-                    // nextBidAmount = currentBid.add(increment);
                     nextBidAmount = currentBid; // Or provide a sensible default/error indicator
                 }
             }
 
 
-            // Build the event payload (can reuse LiveAuctionStateDto structure or dedicated event DTO)
             AuctionStateUpdateEvent event = AuctionStateUpdateEvent.builder()
                     .auctionId(auction.getId())
                     .status(auction.getStatus())
@@ -76,7 +69,6 @@ public class WebSocketEventPublisherImpl implements WebSocketEventPublisher {
                     .newBid(newBidEntity == null ? null : auctionMapper.mapToBidDto(newBidEntity))
                     .winnerId(auction.getStatus() == AuctionStatus.SOLD ? auction.getWinnerId() : null)
                     .winningBid(auction.getStatus() == AuctionStatus.SOLD ? auction.getWinningBid() : null)
-                    // -------------------------
                     .build();
 
             log.info("EVENT: {}", event);
@@ -94,13 +86,6 @@ public class WebSocketEventPublisherImpl implements WebSocketEventPublisher {
 
         } catch (Exception e) {
             log.error("Failed to publish auction state update event for auction {}", auction.getId(), e);
-            // Consider adding metrics/alerts here
         }
-    }
-
-    // Placeholder for getIncrement logic
-    private BigDecimal getIncrement(BigDecimal currentBid) {
-        // ... implement the tiered logic ...
-        return BigDecimal.valueOf(5000);
     }
 }

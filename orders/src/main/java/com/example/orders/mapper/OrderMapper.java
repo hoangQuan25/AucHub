@@ -23,15 +23,12 @@
              } else if (order.getCurrentBidderId().equals(order.getEligibleThirdBidderId()) && order.getEligibleThirdBidAmount() != null) {
                  return order.getEligibleThirdBidAmount();
              }
-             // If currentBidderId is set, but their specific amount is null, this is an issue.
-             // Fallback to initial winning bid if available, otherwise log a warning.
              log.warn("Could not determine specific bid amount for current bidder {} in order {}. Defaulting or using initial.",
                      order.getCurrentBidderId(), order.getId());
              if (order.getInitialWinningBidAmount() != null) {
                  return order.getInitialWinningBidAmount(); // Fallback
              }
          } else if (order.getInitialWinningBidAmount() != null) {
-             // No current bidder (e.g. before any payment attempt), or some other state. Use initial.
              return order.getInitialWinningBidAmount();
          }
 
@@ -78,7 +75,6 @@
              .currency(order.getCurrency())
              .initialWinnerId(order.getInitialWinnerId())
              .initialWinningBidAmount(order.getInitialWinningBidAmount())
-             // .buyerPremium(buyerPremium.compareTo(BigDecimal.ZERO) > 0 ? buyerPremium : null)
              .currentBidderId(order.getCurrentBidderId())
              .paymentOfferAttempt(order.getPaymentOfferAttempt())
              .auctionType(order.getAuctionType())
@@ -88,7 +84,6 @@
                      .imageUrl(order.getProductImageUrlSnapshot())
                      .quantity(1)
                      .price(currentItemPrice) // Base price of item
-                     // .variation(...) // If you store this on Order
                      .build()))
              .createdAt(order.getCreatedAt())
              .updatedAt(order.getUpdatedAt())

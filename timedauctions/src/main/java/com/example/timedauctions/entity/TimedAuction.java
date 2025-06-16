@@ -13,7 +13,7 @@ import java.util.Set;
 import java.util.UUID;
 
 @Entity
-@Table(name = "timed_auctions", schema = "timed_auction_schema") // Use a different schema/table
+@Table(name = "timed_auctions", schema = "timed_auction_schema")
 @Getter @Setter @NoArgsConstructor @AllArgsConstructor @Builder
 public class TimedAuction {
 
@@ -81,7 +81,6 @@ public class TimedAuction {
     @Column(nullable = false)
     private boolean reserveMet = false;
 
-    // --- Final Outcome ---
     private String winnerId;
 
     @Column(precision = 19, scale = 2)
@@ -90,10 +89,6 @@ public class TimedAuction {
     @Column(nullable = false)
     private int bidCount = 0; // Total number of bids placed
 
-    // Flag for timed auction specific behaviour if needed (e.g., different rules)
-    // private String auctionType = "TIMED"; // Or dedicated field
-
-    // Soft-close configuration might be stored per-auction or globally
     private boolean softCloseEnabled = true; // Example default
 
     @CreationTimestamp

@@ -25,6 +25,7 @@ public class RabbitMqConfig { // Renamed to avoid conflict if in same project
     public static final String DELIVERY_EVENT_AUTO_COMPLETED_ROUTING_KEY = "delivery.event.auto.completed";
     public static final String USER_EVENT_PAYMENT_DEFAULTED_ROUTING_KEY = "user.event.payment.defaulted";
     public static final String USER_EVENT_BANNED_ROUTING_KEY = "user.event.banned";
+    public static final String USER_EVENT_PROFILE_UPDATED_ROUTING_KEY = "user.event.profile.updated";
 
 
     // --- Dead Letter Exchange and Queue ---
@@ -109,7 +110,6 @@ public class RabbitMqConfig { // Renamed to avoid conflict if in same project
                 .with(MAIN_DLQ_ROUTING_KEY); // Bind the DLQ with the specific routing key
     }
 
-    // Message converter (can be shared if RabbitTemplate is also in this service)
     @Bean
     public MessageConverter jsonMessageConverter() {
         return new Jackson2JsonMessageConverter();

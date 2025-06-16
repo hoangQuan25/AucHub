@@ -1,4 +1,4 @@
-package com.example.liveauctions.entity; // Adjust package as needed
+package com.example.liveauctions.entity;
 
 import jakarta.persistence.*;
 import lombok.*;

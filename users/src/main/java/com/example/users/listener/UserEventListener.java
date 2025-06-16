@@ -27,8 +27,6 @@ public class UserEventListener {
             } catch (Exception e) {
                 log.error("Error processing first winner payment default for user {}: {}",
                         event.getDefaultedUserId(), e.getMessage(), e);
-                // Depending on error, might throw to NACK and send to DLQ
-                // For now, log and ack.
             }
         } else {
             log.info("Ignoring payment default for user {} as it was not the first winner (attempt={})",

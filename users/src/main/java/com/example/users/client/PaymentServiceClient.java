@@ -12,11 +12,11 @@ import org.springframework.web.bind.annotation.RequestBody;
 @FeignClient(name = "payments")
 public interface PaymentServiceClient {
 
-    @PostMapping("/setup-intent") // Matches endpoint in PaymentsService's PaymentController
+    @PostMapping("/setup-intent")
     ResponseEntity<CreateStripeSetupIntentResponseClientDto> createStripeSetupIntent(
             @RequestBody CreateStripeSetupIntentRequestClientDto requestDto);
 
-    @PostMapping("/confirm-payment-method") // Matches endpoint in PaymentsService's PaymentController
+    @PostMapping("/confirm-payment-method")
     ResponseEntity<StripePaymentMethodDetailsClientDto> confirmAndSaveStripePaymentMethod(
             @RequestBody ConfirmStripePaymentMethodRequestClientDto requestDto);
 }

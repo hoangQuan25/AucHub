@@ -30,8 +30,6 @@ public class DeliveryEventListener {
             orderService.processOrderCompletionByBuyer(event.getOrderId(), event.getBuyerId(), event.getConfirmationTimestamp());
         } catch (Exception e) {
             log.error("Error processing DeliveryReceiptConfirmedByBuyerEvent for order {}: {}", event.getOrderId(), e.getMessage(), e);
-            // Implement appropriate error handling (e.g., DLQ)
-            // For now, rethrowing might leverage default Spring AMQP retry/DLQ if configured.
             throw e; // Or handle more gracefully
         }
     }

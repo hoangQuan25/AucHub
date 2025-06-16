@@ -1,7 +1,7 @@
 // src/components/StartAuctionModal.jsx
 import React, { useState, useEffect } from "react";
 import ConfirmationModal from "./ConfirmationModal";
-import apiClient from "../api/apiClient"; // Ensure path is correct
+import apiClient from "../api/apiClient"; 
 
 // Helper function to get minimum date string for input fields
 const getMinDateTimeLocal = (offsetMillis = 0) => {
@@ -22,7 +22,6 @@ function StartAuctionModal({ isOpen, onClose, product, onStartAuctionSubmit }) {
   // State for auction configuration
   const [durationMinutes, setDurationMinutes] = useState(30); // Default for LIVE
 
-  // --- NEW: State for Timed Auction End Time ---
   const [timedAuctionEndTime, setTimedAuctionEndTime] = useState(""); // Store YYYY-MM-DDTHH:mm string
 
   const [startPrice, setStartPrice] = useState("");
@@ -300,7 +299,6 @@ Start Time:      ${auctionDataToConfirm.formatted.startTime}`
             </p>
           )}
 
-          {/* Auction Type Selection (No change) */}
           <div>
             <label className="block mb-1 font-medium text-sm text-gray-700">
               Auction Type:
@@ -387,7 +385,6 @@ Start Time:      ${auctionDataToConfirm.formatted.startTime}`
             </div>
           )}
 
-          {/* Pricing Inputs (No change) */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
               <label
@@ -430,7 +427,6 @@ Start Time:      ${auctionDataToConfirm.formatted.startTime}`
             </div>
           </div>
 
-          {/* Start Time Options (Added min attribute) */}
           <div>
             <label className="block mb-1 font-medium text-sm text-gray-700">
               Start Time:
@@ -488,7 +484,6 @@ Start Time:      ${auctionDataToConfirm.formatted.startTime}`
             )}
           </div>
 
-          {/* Action Buttons (No change) */}
           <div className="flex justify-end space-x-3 pt-4 border-t border-gray-200 mt-6">
             <button
               type="button"
@@ -509,7 +504,6 @@ Start Time:      ${auctionDataToConfirm.formatted.startTime}`
         </form>
       </div>
 
-      {/* Final Confirmation Modal (No change) */}
       {auctionDataToConfirm && (
         <ConfirmationModal
           isOpen={isConfirmingSubmit}

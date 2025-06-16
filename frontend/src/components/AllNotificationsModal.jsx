@@ -116,7 +116,6 @@ function AllNotificationsModal({ isOpen, onClose }) {
   if (!isOpen) return null;
   const hasUnreadOnPage = notifications.some((n) => !n.isRead);
 
-  // ...existing imports...
 
 return (
   <div

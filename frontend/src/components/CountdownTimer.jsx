@@ -1,11 +1,6 @@
 // src/components/CountdownTimer.jsx – MODIFIED again to handle days/months (approx)
 import React, { useState, useEffect, useMemo } from "react";
 
-/**
- * CountdownTimer - Displays time remaining, adapting format for long durations.
- * @param {number} endTimeMillis – absolute epoch‑ms when the countdown should reach 0
- * @param {function} onEnd – optional callback fired exactly once when 0 is reached
- */
 function CountdownTimer({ endTimeMillis, onEnd }) { // Removed endedText again
   // Ensure endTimeMillis is treated as a number
   const validEndTime = Number(endTimeMillis);
@@ -46,8 +41,6 @@ function CountdownTimer({ endTimeMillis, onEnd }) { // Removed endedText again
         if (newMsLeft <= 0 && !hasFiredEnd) {
              onEnd?.();
              setHasFiredEnd(true);
-             // Let the interval clear itself via the cleanup function below
-             // by stopping the effect dependency change
         }
     }, 200); // User's preferred 200ms interval
 

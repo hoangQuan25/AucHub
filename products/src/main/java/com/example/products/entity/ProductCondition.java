@@ -1,4 +1,3 @@
-// src/main/java/com/example/productservice/entity/ProductCondition.java
 package com.example.products.entity; // Use your package
 
 import lombok.Getter;
@@ -18,5 +17,4 @@ public enum ProductCondition {
         this.displayName = displayName;
     }
 
-    // Optional: Method to find enum by display name if needed
 }

@@ -27,7 +27,7 @@ import java.util.UUID;
 public class TimedAuctionController {
 
     private final TimedAuctionService timedAuctionService;
-    private static final String USER_ID_HEADER = "X-User-ID"; // Assume Gateway provides this
+    private static final String USER_ID_HEADER = "X-User-ID";
 
     @PostMapping("/timed-auctions") // Maps to POST /api/timed-auctions
     public ResponseEntity<TimedAuctionDetailsDto> createAuction(
@@ -110,8 +110,6 @@ public class TimedAuctionController {
         if (activeOnly) { // If client requests activeOnly, override other status/ended filters
             effectiveStatus = AuctionStatus.ACTIVE; // Or combine ACTIVE and SCHEDULED if that's what "activeOnly" means
             effectiveEnded = false; // Explicitly not ended
-            // You might want to default sort to startTime ASC for active/scheduled
-            // pageable = PageRequest.of(pageable.getPageNumber(), pageable.getPageSize(), Sort.by(Sort.Direction.ASC, "startTime"));
         } else {
             if (Boolean.TRUE.equals(effectiveEnded) && effectiveStatus != null) {
                 log.warn("Both 'status' and 'ended=true' provided for public seller auctions, ignoring 'status'.");
@@ -193,8 +191,6 @@ public class TimedAuctionController {
             @Valid @RequestBody PlaceMaxBidDto bidDto) {
         log.info("Received max bid placement request for auction: {} from bidder: {}", auctionId, bidderId);
         timedAuctionService.placeMaxBid(auctionId, bidderId, bidDto);
-        // Return 200 OK on success (or potentially return updated auction state?)
-        // For now, just return OK. Client will poll for updates.
         return ResponseEntity.ok().build();
     }
 
@@ -227,5 +223,26 @@ public class TimedAuctionController {
         }
         List<TimedAuctionSummaryDto> summaries = timedAuctionService.getAuctionSummariesByIds(auctionIds);
         return ResponseEntity.ok(summaries);
+    }
+
+    @PutMapping("/{auctionId}/comments/{commentId}")
+    public ResponseEntity<CommentDto> editComment(
+            @PathVariable UUID auctionId,
+            @PathVariable Long commentId,
+            @RequestHeader(USER_ID_HEADER) String userId,
+            @Valid @RequestBody UpdateCommentDto updateDto) {
+        log.info("User {} requesting to edit comment {} for auction {}", userId, commentId, auctionId);
+        CommentDto updatedComment = timedAuctionService.editComment(auctionId, commentId, userId, updateDto);
+        return ResponseEntity.ok(updatedComment);
+    }
+
+    @DeleteMapping("/{auctionId}/comments/{commentId}")
+    public ResponseEntity<Void> deleteComment(
+            @PathVariable UUID auctionId,
+            @PathVariable Long commentId,
+            @RequestHeader(USER_ID_HEADER) String userId) {
+        log.info("User {} requesting to delete comment {} for auction {}", userId, commentId, auctionId);
+        timedAuctionService.deleteComment(auctionId, commentId, userId);
+        return ResponseEntity.noContent().build(); // Trả về 204 No Content là chuẩn cho việc xóa thành công
     }
 }

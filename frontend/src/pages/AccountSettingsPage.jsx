@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useKeycloak } from '@react-keycloak/web';
-import apiClient from './apiClient'; // Import instance Axios đã cấu hình
+import apiClient from './apiClient';
 
 function AccountSettingsPage() {
   const { keycloak } = useKeycloak();
@@ -8,17 +8,15 @@ function AccountSettingsPage() {
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
 
-  const isSeller = keycloak.hasRealmRole('ROLE_SELLER'); // Kiểm tra role
+  const isSeller = keycloak.hasRealmRole('ROLE_SELLER'); 
 
   const handleBecomeSeller = async () => {
     setIsLoading(true);
     setError('');
     setSuccess('');
     try {
-      // Gọi API backend để yêu cầu nâng cấp role
-      await apiClient.post('users/me/activate-seller'); // Endpoint này cần được bảo vệ
+      await apiClient.post('users/me/activate-seller');
       setSuccess('Account successfully upgraded to Seller! Please refresh or re-login to see changes.');
-      // Buộc cập nhật token để lấy role mới ngay lập tức
       await keycloak.updateToken(-1);
     } catch (err) {
       setError(err.response?.data?.message || 'Failed to upgrade account.');
@@ -30,7 +28,6 @@ function AccountSettingsPage() {
   return (
     <div>
       <h2 className="text-2xl font-bold mb-4">Account Settings</h2>
-      {/* Các cài đặt khác (thông tin cá nhân, địa chỉ...) */}
 
       <div className="mt-6 border-t pt-4">
         <h3 className="text-xl font-semibold mb-2">Seller Status</h3>
@@ -41,7 +38,6 @@ function AccountSettingsPage() {
         ) : (
           <div>
             <p className="mb-2">Upgrade your account to start selling products.</p>
-            {/* Có thể thêm các điều kiện hoặc thông tin cần cung cấp trước khi nâng cấp */}
             <button
               onClick={handleBecomeSeller}
               disabled={isLoading}

@@ -23,7 +23,7 @@ public class DeliveriesController {
 
     private final DeliveryService deliveryService;
     private final DeliveryMapper deliveryMapper; // Inject mapper
-    private static final String USER_ID_HEADER = "X-User-ID"; // Assuming gateway provides this
+    private static final String USER_ID_HEADER = "X-User-ID";
 
     // Endpoint for Seller to mark a delivery as shipped
     @PostMapping("/{deliveryId}/ship")
@@ -107,7 +107,7 @@ public class DeliveriesController {
         return ResponseEntity.ok(deliveryMapper.toDeliveryDetailDto(updatedDelivery));
     }
 
-    // NEW: Endpoint for Seller to confirm they have RECEIVED the returned item
+    // Endpoint for Seller to confirm they have RECEIVED the returned item
     @PostMapping("/{deliveryId}/confirm-return-received")
     public ResponseEntity<DeliveryDetailDto> confirmReturnReceived(
             @PathVariable UUID deliveryId,

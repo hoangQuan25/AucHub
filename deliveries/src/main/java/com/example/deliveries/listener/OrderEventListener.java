@@ -15,7 +15,7 @@ import org.springframework.stereotype.Component;
 @Slf4j
 public class OrderEventListener {
 
-    private final DeliveryService deliveryService; // <<< Inject DeliveryService
+    private final DeliveryService deliveryService;
 
     @RabbitListener(queues = RabbitMqConfig.ORDER_READY_FOR_SHIPPING_DELIVERY_QUEUE)
     public void handleOrderReadyForShipping(@Payload OrderReadyForShippingEventDto event) {
@@ -33,11 +33,10 @@ public class OrderEventListener {
         }
 
         try {
-            deliveryService.createDeliveryFromOrderEvent(event); // <<< CALL THE SERVICE
+            deliveryService.createDeliveryFromOrderEvent(event);
             log.info("Successfully processed OrderReadyForShippingEvent and initiated delivery creation for orderId: {}", event.getOrderId());
         } catch (Exception e) {
             log.error("Error processing OrderReadyForShippingEvent for order {}: {}", event.getOrderId(), e.getMessage(), e);
-            // Potentially re-queue with a delay or send to DLQ
         }
     }
 }

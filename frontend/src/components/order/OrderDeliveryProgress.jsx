@@ -37,7 +37,6 @@ const getStatusIcon = (status) => {
 
 function OrderDeliveryProgress({ deliveryDetails }) {
   if (!deliveryDetails || !deliveryDetails.deliveryStatus) {
-    // This component should only be rendered if deliveryDetails are available and relevant
     return null; 
   }
 
@@ -53,8 +52,6 @@ function OrderDeliveryProgress({ deliveryDetails }) {
   const friendlyStatus = deliveryStatusMap[deliveryStatus] || deliveryStatus;
   const statusIcon = getStatusIcon(deliveryStatus);
 
-  // A simple way to make tracking number a link (assuming HTTPS for courier sites)
-  // This is a very basic example; real-world courier links are more specific.
   const trackingLink = trackingNumber && courierName ? 
     `https://www.google.com/search?q=${encodeURIComponent(courierName + ' tracking ' + trackingNumber)}` : null;
 

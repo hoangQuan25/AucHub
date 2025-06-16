@@ -43,7 +43,6 @@
          private String variation; // If applicable
          private int quantity;
          private BigDecimal price;
-         // Potentially more product details if needed
      }
  }
 

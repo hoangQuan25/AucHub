@@ -24,5 +24,5 @@ public class OrderCancelledEventDto {
     private String currentBidderIdAtCancellation; // Who was responsible when it was cancelled (if applicable)
 
     private OrderStatus finalOrderStatus; // e.g., ORDER_CANCELLED_NO_PAYMENT_FINAL, ORDER_CANCELLED_BY_SELLER
-    private String cancellationReason; // Optional: more specific reason if available
+    private String cancellationReason;
 }

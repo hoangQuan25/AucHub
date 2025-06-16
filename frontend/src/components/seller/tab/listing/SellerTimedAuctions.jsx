@@ -2,7 +2,7 @@
 import React from 'react';
 import AuctionCard from '../../../AuctionCard'; // Adjust path as needed
 import PaginationControls from '../../../PaginationControls'; // Adjust path as needed
-import { FaGavel } from 'react-icons/fa'; // Assuming you still want an icon
+import { FaGavel } from 'react-icons/fa'; 
 import InteractiveAuctionCard from '../../../InteractiveAuctionCard';
 
 const SellerTimedAuctions = ({

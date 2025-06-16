@@ -21,7 +21,6 @@ import java.util.UUID;
 public class Delivery {
 
     @Id
-    // @GeneratedValue(strategy = GenerationType.UUID) // If you want DB to generate, or set it manually
     private UUID deliveryId;
 
     @Column(nullable = false, unique = true)
@@ -33,7 +32,6 @@ public class Delivery {
     @Column(nullable = false)
     private String sellerId;
 
-    // Shipping Address (can be @Embedded if you prefer)
     @Column(nullable = false)
     private String shippingRecipientName;
 
@@ -55,7 +53,7 @@ public class Delivery {
     private String productInfoSnapshot; // e.g., "Item: Awesome T-Shirt, Qty: 1"
 
     @Enumerated(EnumType.STRING)
-    @Column(nullable = false, length = 50) // Ensure length accommodates your enum string values
+    @Column(nullable = false, length = 50)
     private DeliveryStatus deliveryStatus;
 
     @Column(length = 100) // Max length for courier name

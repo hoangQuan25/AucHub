@@ -34,7 +34,6 @@ public class DeliveryCompletionListener {
 
         if (event.getOrderId() == null || event.getBuyerId() == null || event.getSellerId() == null) {
             log.error("DeliveryCompletionEvent for order {} is missing crucial information. Cannot create review eligibility.", event.getOrderId());
-            // Consider DLQ or error handling
             return;
         }
 
@@ -64,7 +63,6 @@ public class DeliveryCompletionListener {
             log.info("Review eligibility created for orderId: {}", event.getOrderId());
         } catch (Exception e) {
             log.error("Failed to save review eligibility for orderId {}: {}", event.getOrderId(), e.getMessage(), e);
-            // Consider DLQ strategy
         }
     }
 }

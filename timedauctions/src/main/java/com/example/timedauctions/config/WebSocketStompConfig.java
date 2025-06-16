@@ -8,7 +8,7 @@ import org.springframework.web.socket.config.annotation.StompEndpointRegistry;
 import org.springframework.web.socket.config.annotation.WebSocketMessageBrokerConfigurer;
 
 @Configuration
-@EnableWebSocketMessageBroker // Enables WebSocket message handling, backed by a message broker
+@EnableWebSocketMessageBroker
 public class WebSocketStompConfig implements WebSocketMessageBrokerConfigurer {
 
     @Value("${FRONTEND_ORIGIN_URL}")
@@ -17,7 +17,7 @@ public class WebSocketStompConfig implements WebSocketMessageBrokerConfigurer {
     @Override
     public void registerStompEndpoints(StompEndpointRegistry registry) {
 
-        registry.addEndpoint("/ws") // The endpoint clients connect to (e.g., ws://localhost:8003/ws)
+        registry.addEndpoint("/ws")
                 .addInterceptors(new UserIdHandshakeInterceptor())
                 .setAllowedOrigins(allowedOrigin) // Your frontend origin
                 .withSockJS(); // Use SockJS fallback options

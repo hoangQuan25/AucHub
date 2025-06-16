@@ -42,7 +42,6 @@ public class GatewayserverApplication {
 								.addResponseHeader("X-Response-Time", responseTime.toString())
 						)
 						.uri("lb://LIVEAUCTIONS"))
-				// --- ADD THIS ROUTE FOR WEBSOCKETS ---
 
 
 				.route("timedauctions_api_route", p -> p // Specific ID for the API route
@@ -83,15 +82,12 @@ public class GatewayserverApplication {
 						.uri("lb://DELIVERIES"))
 
 				.route("notifications_ws_route", p -> p
-						.path("/ws/notifications/**") // Match the STOMP endpoint path in Notification service's WebSocketStompConfig
-						// NO rewritePath needed for WebSockets typically
-						// TODO: Ensure authentication/headers are handled correctly for WS upgrades if required
-						.uri("lb://NOTIFICATIONS")) // Route to the NOTIFICATIONS service (using its Eureka name)
+						.path("/ws/notifications/**")
+						.uri("lb://NOTIFICATIONS"))
 
 				.route("liveauctions_ws_route", p -> p // ID for the WebSocket route
-						.path("/ws/**") // Match the specific WebSocket path
-						// NO rewritePath filter here - backend expects the full path
-						.uri("lb://LIVEAUCTIONS")) // Route to the same backend service
+						.path("/ws/**")
+						.uri("lb://LIVEAUCTIONS"))
 
 				.build();
 	}

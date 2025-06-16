@@ -1,6 +1,5 @@
 // src/components/ProductDetailModal.jsx
 import React from 'react';
-// Make sure FaCheckCircle is imported if you use the prominent SOLD badge near the title
 import { FaEdit, FaTrashAlt, FaRocket, FaTimes, FaCheckCircle } from 'react-icons/fa';
 
 function ProductDetailModal({

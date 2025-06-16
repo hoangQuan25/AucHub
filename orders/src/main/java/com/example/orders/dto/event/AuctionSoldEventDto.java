@@ -14,7 +14,6 @@ import java.util.UUID;
 @AllArgsConstructor
 @Builder
 public class AuctionSoldEventDto {
-    // Fields from the enriched NotificationEvents.AuctionEndedEvent
     private UUID eventId;
     private LocalDateTime eventTimestamp;
 
@@ -37,7 +36,6 @@ public class AuctionSoldEventDto {
     private BigDecimal winningBid;
     // Currency is implicitly VND
 
-    // Reserve Price & Next Bidder Info (populated if status is SOLD and applicable)
     private BigDecimal reservePrice;
 
     private String secondHighestBidderId;

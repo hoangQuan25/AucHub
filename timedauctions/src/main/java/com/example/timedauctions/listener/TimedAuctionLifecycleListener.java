@@ -120,23 +120,16 @@ public class TimedAuctionLifecycleListener {
                         log.info("Auction {} ended. Status: RESERVE_NOT_MET.", auction.getId());
                     }
                 } else {
-                    // No bids placed
-                    // If start price acts as implicit reserve, this is RESERVE_NOT_MET
-                    // Or could have a NO_BIDS status if desired
                     auction.setStatus(AuctionStatus.RESERVE_NOT_MET); // Assuming no bids = reserve not met
                     log.info("Auction {} ended. Status: RESERVE_NOT_MET (No bids placed).", auction.getId());
                 }
                 auction.setActualEndTime(LocalDateTime.now());
                 endedAuction = timedAuctionRepository.save(auction);
 
-                // Optional: Publish internal event
-                // publishInternalEvent(auction, "ENDED");
 
             } else {
                 log.warn("Received end command for auction {} but its end time {} is still in the future? Current time {}. Ignoring/Rescheduling?",
                         auction.getId(), auction.getEndTime(), LocalDateTime.now());
-                // This might happen if clock skew is significant or if end was rescheduled.
-                // Optionally reschedule based on auction.getEndTime() again.
             }
 
         } else {
@@ -175,8 +168,6 @@ public class TimedAuctionLifecycleListener {
             auction.setActualEndTime(LocalDateTime.now()); // Record when cancelled
             cancelledAuction = timedAuctionRepository.save(auction);
             log.info("Auction {} status set to CANCELLED.", auction.getId());
-            // Optional: Publish internal "AuctionCancelled" event
-            // publishInternalEvent(auction, "CANCELLED");
         } else {
             log.warn("Cancel cmd for auction {} ignored, status was already {}.", command.auctionId(), auction.getStatus());
         }

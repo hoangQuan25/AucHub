@@ -41,7 +41,6 @@ export const NotificationProvider = ({ children }) => {
 
   const stompClientRef = useRef(null);
   const notificationSubscriptionRef = useRef(null);
-  // --- NEW: Ref for unread count subscription ---
   const countSubscriptionRef = useRef(null);
   const currentUserId = useRef(null);
 
@@ -65,8 +64,6 @@ export const NotificationProvider = ({ children }) => {
           let toastType = "info"; // Default toast type
           const notificationTypeUpper = notificationDto.type?.toUpperCase();
 
-          // Example logic to determine toast type based on notification type
-          // You can customize these keywords and logic as needed.
           if (
             notificationTypeUpper?.includes("ERROR") ||
             notificationTypeUpper?.includes("CANCELLED") ||
@@ -127,7 +124,6 @@ export const NotificationProvider = ({ children }) => {
     [navigate]
   );
 
-  // --- NEW: Function to handle incoming unread count updates ---
   const handleUnreadCountUpdate = useCallback(
     (message) => {
       try {
@@ -209,9 +205,6 @@ export const NotificationProvider = ({ children }) => {
         const sockjsUrl = `${window.location.protocol}//${gatewayHost}/ws/notifications`; // Use the correct notification endpoint path
         console.log(`Creating SockJS connection to: ${sockjsUrl}`);
         return new SockJS(sockjsUrl);
-        // Note: Authentication (Keycloak token) needs to be handled.
-        // Usually done via cookies set by the Gateway, or potentially query params if needed & secure.
-        // Sending token in connectHeaders often DOES NOT WORK with SockJS/WebSockets due to browser limitations.
       },
       reconnectDelay: 10000, // Reconnect every 10 seconds
       heartbeatIncoming: 4000,
@@ -231,7 +224,6 @@ export const NotificationProvider = ({ children }) => {
         handleIncomingNotification
       );
 
-      // --- NEW: Subscribe to unread count updates (Optional) ---
       const countDest = `/user/${userId}/queue/unread-count`;
       console.log(`Subscribing to STOMP destination: ${countDest}`);
       countSubscriptionRef.current = client.subscribe(
@@ -360,8 +352,6 @@ export const NotificationProvider = ({ children }) => {
         // if (!backend_pushes_count_updates) fetchUnreadCount();
       } catch (err) {
         console.error("Failed to mark notification(s) as read:", err);
-        // TODO: Revert optimistic update on failure? More complex state needed.
-        // For now, log the error. Might fetch count again to resync.
         fetchUnreadCount();
       }
     },
@@ -382,11 +372,8 @@ export const NotificationProvider = ({ children }) => {
 
     try {
       await apiClient.post("/notifications/mark-all-read"); // No body needed
-      // Optional: If backend doesn't push count updates, fetch count again (should be 0)
-      // if (!backend_pushes_count_updates) fetchUnreadCount(); // Should ideally result in 0
     } catch (err) {
       console.error("Failed to mark all notifications as read:", err);
-      // TODO: Revert optimistic update? Fetch real count.
       fetchUnreadCount();
     }
   }, [fetchUnreadCount]);
@@ -402,7 +389,6 @@ export const NotificationProvider = ({ children }) => {
     setFollowedAuctionIds((prev) => new Set(prev).add(auctionId));
 
     try {
-      // Ensure type is uppercase for consistency if needed by backend path param matching
       await apiClient.post(
         `/notifications/follow/${auctionType.toUpperCase()}/${auctionId}`
       );
@@ -415,7 +401,6 @@ export const NotificationProvider = ({ children }) => {
         newSet.delete(auctionId);
         return newSet;
       });
-      // TODO: Show error message to user?
     }
   }, []);
 
@@ -439,7 +424,6 @@ export const NotificationProvider = ({ children }) => {
       console.error(`Failed to unfollow auction ${auctionId}:`, err);
       // Revert optimistic update on failure
       setFollowedAuctionIds((prev) => new Set(prev).add(auctionId)); // Add it back
-      // TODO: Show error message to user?
     }
   }, []);
 

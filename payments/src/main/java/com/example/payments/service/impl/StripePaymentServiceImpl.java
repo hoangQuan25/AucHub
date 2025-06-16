@@ -41,9 +41,7 @@ public class StripePaymentServiceImpl implements PaymentService {
 
     private final StripeConfig stripeConfig; // To get the webhookSigningSecret
     private final RabbitTemplate rabbitTemplate;
-    // private final PaymentIntentRecordRepository paymentIntentRecordRepository; // If using local DB
 
-    // ... createPaymentIntent method from before ...
 
     @Override
     @Transactional
@@ -81,46 +79,33 @@ public class StripePaymentServiceImpl implements PaymentService {
             }
         }
 
-        // If no specific payment method is set, and a customer is set,
-        // Stripe will attempt to use the customer's default payment method if confirm=true.
-        // Or, if automatic_payment_methods is enabled, Stripe chooses.
-
         // Confirmation Logic
         if (Boolean.TRUE.equals(requestDto.getConfirmImmediately())) {
             paramsBuilder.setConfirm(true);
             log.debug("PaymentIntent will be attempted to confirm immediately.");
 
             if (!StringUtils.hasText(requestDto.getReturnUrl())) {
-                // This situation should ideally not happen if confirm is true and redirect is possible.
-                // Stripe might still error out if it needs to redirect and no return_url is provided.
-                // For robustness, you could throw an error or have a default configurable return_url.
+
                 log.warn("confirmImmediately is true, but no returnUrl provided in request for orderId: {}. " +
                         "Stripe might require it if redirection is needed.", requestDto.getOrderId());
-                // Consider throwing: throw new IllegalArgumentException("returnUrl is required when confirmImmediately is true and payment method might redirect.");
-                // For now, let's proceed, Stripe will error if it's mandatory for the flow.
+
             } else {
                 paramsBuilder.setReturnUrl(requestDto.getReturnUrl()); // <<< SET THE RETURN URL
                 log.debug("Setting return_url for PaymentIntent: {}", requestDto.getReturnUrl());
             }
 
             if (Boolean.TRUE.equals(requestDto.getOffSession()) && StringUtils.hasText(requestDto.getStripeCustomerId())) {
-                // For off-session with a saved card (customer must be set).
                 paramsBuilder.setOffSession(true);
-                // If you set confirm=true and off_session=true, you MUST provide a payment_method or ensure the customer has a default.
-                // If payment_method is not provided, Stripe uses the customer's default.
                 if (!StringUtils.hasText(requestDto.getStripePaymentMethodId()) && StringUtils.hasText(requestDto.getStripeCustomerId())) {
                     log.debug("Attempting off-session confirm using customer's default payment method.");
                 } else if (StringUtils.hasText(requestDto.getStripePaymentMethodId())) {
                     log.debug("Attempting off-session confirm using specific payment_method: {}", requestDto.getStripePaymentMethodId());
                 } else {
                     log.warn("Off-session confirm requested but no customer or specific payment method ID provided. This will likely fail.");
-                    // This scenario will likely lead to an error from Stripe if confirm=true.
                 }
             }
         } else {
-            // If not confirming immediately, enable automatic_payment_methods so the frontend
-            // Elements can pick payment methods. This is the typical flow for new cards.
-            // If a customer and PM are set, but confirm=false, the client_secret can be used to confirm on frontend with that PM.
+
             if (!StringUtils.hasText(requestDto.getStripePaymentMethodId())) { // Only enable auto PM if not using a specific saved one already
                 paramsBuilder.setAutomaticPaymentMethods(
                         PaymentIntentCreateParams.AutomaticPaymentMethods.builder()
@@ -129,9 +114,7 @@ public class StripePaymentServiceImpl implements PaymentService {
                 log.debug("Automatic payment methods enabled for PaymentIntent.");
             }
         }
-        // For saved payment methods where user is present, you might want to set 'setup_future_usage' to 'off_session'
-        // if the PI itself is creating/confirming a new PM that you also want to save.
-        // But if you are *using* an *already saved* PM, this is not needed here.
+
 
         PaymentIntentCreateParams params = paramsBuilder.build();
         PaymentIntent paymentIntent = PaymentIntent.create(params);
@@ -215,21 +198,15 @@ public class StripePaymentServiceImpl implements PaymentService {
                 publishPaymentFailedEvent(failedEvent);
                 break;
 
-            // Listen for refund updates from Stripe if needed, e.g., 'charge.refunded'
-            // case "charge.refunded":
-            //    Charge charge = (Charge) stripeObject;
-            //    log.info("Charge refunded event received from Stripe: {}", charge.getId());
-            //    // This can be used for reconciliation or if refunds are initiated outside your system
-            //    break;
+
 
             default:
                 log.info("Received unhandled Stripe event type via Webhook: {}", event.getType());
         }
     }
 
-    // --- NEW METHOD IMPLEMENTATION ---
     @Override
-    @Transactional // If you have local DB updates related to refunds
+    @Transactional
     public void processRefundRequest(RefundRequestedEventDto event) throws StripeException {
         log.info("Processing refund request for Order ID: {}, PaymentIntent: {}, Amount: {} {}",
                 event.getOrderId(), event.getPaymentTransactionRef(), event.getAmountToRefund(), event.getCurrency());
@@ -240,16 +217,11 @@ public class StripePaymentServiceImpl implements PaymentService {
         RefundCreateParams.Builder refundParamsBuilder = RefundCreateParams.builder()
                 .setPaymentIntent(event.getPaymentTransactionRef());
 
-        // Only set amount if you want a partial refund.
-        // If event.getAmountToRefund() represents the full amount or if Stripe should refund the full available amount,
-        // you might not need to set the amount explicitly, or ensure it matches.
-        // For explicit partial/full refund based on event:
+
         if (event.getAmountToRefund() != null && event.getAmountToRefund().compareTo(BigDecimal.ZERO) > 0) {
             refundParamsBuilder.setAmount(amountToRefundInSmallestUnit);
         }
-        // You can also add a reason or metadata to the refund if needed
-        // refundParamsBuilder.putMetadata("reason", event.getReason());
-        // refundParamsBuilder.setReason(RefundCreateParams.Reason.REQUESTED_BY_CUSTOMER); // Or other Stripe reason codes
+
 
         try {
             Refund refund = Refund.create(refundParamsBuilder.build());
@@ -286,7 +258,6 @@ public class StripePaymentServiceImpl implements PaymentService {
         }
     }
 
-    // --- NEW METHOD IMPLEMENTATIONS for SetupIntent Flow ---
     @Override
     @Transactional // Not strictly needed if not writing to local DB here, but good practice
     public CreateStripeSetupIntentResponseDto createStripeSetupIntent(CreateStripeSetupIntentRequestDto requestDto) throws StripeException {
@@ -298,11 +269,7 @@ public class StripePaymentServiceImpl implements PaymentService {
 
         // 1. Get or Create Stripe Customer
         if (!StringUtils.hasText(stripeCustomerId)) {
-            // Option: Check local DB for mapping userId -> stripeCustomerId if you store it
-            // UserStripeCustomerMapping mapping = userStripeCustomerRepository.findByUserId(requestDto.getUserId());
-            // if (mapping != null) stripeCustomerId = mapping.getStripeCustomerId();
 
-            // If still no stripeCustomerId, create a new Stripe Customer
             if (!StringUtils.hasText(stripeCustomerId)) {
                 CustomerCreateParams.Builder customerParamsBuilder = CustomerCreateParams.builder()
                         .setDescription("Customer for user_id: " + userId)
@@ -311,10 +278,7 @@ public class StripePaymentServiceImpl implements PaymentService {
                 if (StringUtils.hasText(userEmail)) {
                     customerParamsBuilder.setEmail(userEmail); // <<< USE THE PROVIDED EMAIL
                 } else {
-                    // Fallback or error if email is mandatory for Stripe Customer creation and not provided
                     log.warn("User email not provided for Stripe Customer creation for userId: {}. This might be an issue.", userId);
-                    // Stripe might require an email. If so, this creation might fail or create a less useful customer object.
-                    // Consider making userEmail mandatory in CreateStripeSetupIntentRequestDto if Stripe always needs it.
                 }
                 if (StringUtils.hasText(userName)) {
                     customerParamsBuilder.setName(userName); // <<< USE THE PROVIDED NAME
@@ -323,12 +287,9 @@ public class StripePaymentServiceImpl implements PaymentService {
                 Customer customer = Customer.create(customerParamsBuilder.build());
                 stripeCustomerId = customer.getId();
                 log.info("Created new Stripe Customer ID: {} for userId: {}", stripeCustomerId, requestDto.getUserId());
-                // Optional: Save this mapping (userId -> stripeCustomerId) locally in PaymentsService or UsersService
             }
         } else {
-            // Optionally verify the existing stripeCustomerId by retrieving it
             try {
-                // Optionally, update existing customer with new email/name if provided
                 Customer existingCustomer = Customer.retrieve(stripeCustomerId);
                 CustomerUpdateParams.Builder updateParamsBuilder = CustomerUpdateParams.builder();
                 boolean needsUpdate = false;
@@ -340,7 +301,6 @@ public class StripePaymentServiceImpl implements PaymentService {
                     updateParamsBuilder.setName(userName);
                     needsUpdate = true;
                 }
-                // Always ensure metadata user_id is present or updated
                 if(!userId.equals(existingCustomer.getMetadata().get("user_id"))){
                     updateParamsBuilder.putMetadata("user_id", userId);
                     needsUpdate = true;
@@ -356,8 +316,6 @@ public class StripePaymentServiceImpl implements PaymentService {
 
             } catch (StripeException e) {
                 log.error("Failed to retrieve or update existing Stripe Customer ID {}: {}. Check if ID is valid.", stripeCustomerId, e.getMessage());
-                // Depending on policy, you might try to create a new one or rethrow.
-                // For simplicity, rethrowing, but this path might need more robust handling.
                 throw e;
             }
         }
@@ -393,9 +351,7 @@ public class StripePaymentServiceImpl implements PaymentService {
         if (paymentMethod.getCustomer() != null && StringUtils.hasText(stripeCustomerId) && !paymentMethod.getCustomer().equals(stripeCustomerId)) {
             log.warn("PaymentMethod {} is already attached to a different customer ({}). Expected {}. This might be an issue or require detaching and reattaching.",
                     stripePaymentMethodId, paymentMethod.getCustomer(), stripeCustomerId);
-            // For simplicity, we'll proceed assuming it can be attached or is meant for this customer.
-            // Stripe might throw an error if you try to attach an already attached PM to a different customer
-            // without detaching first, or if it was a single-use PM.
+
         }
 
 
@@ -502,7 +458,7 @@ public class StripePaymentServiceImpl implements PaymentService {
                 event);
     }
 
-    // --- NEW Helper methods for publishing refund events ---
+    // --- Helper methods for publishing refund events ---
     private void publishRefundSucceededEvent(RefundSucceededEventDto event) {
         log.info("Publishing RefundSucceededEvent for Order ID: {}, RefundID: {}", event.getOrderId(), event.getRefundId());
         rabbitTemplate.convertAndSend(

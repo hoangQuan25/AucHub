@@ -67,7 +67,6 @@ public class ProductController {
             @RequestParam(name = "isSold", required = false) Boolean isSold,
             @PageableDefault(size = 12, sort = "createdAt", direction = Sort.Direction.DESC) Pageable pageable) {
         log.info("Fetching public products for sellerId: {} with pagination {}", sellerId, pageable);
-        // Optionally, add filtering by product status if applicable (e.g., only "AVAILABLE" products)
         Page<ProductDto> products = productService.getProductsBySellerAndStatus(sellerId, isSold, pageable);
         log.info("Found {} products for sellerId: {}", products.getTotalElements(), sellerId);
         return ResponseEntity.ok(products);
@@ -77,8 +76,6 @@ public class ProductController {
     public ResponseEntity<ProductDto> getProductById(
             @PathVariable Long productId) {
         log.info("Received GET /api/products/{} request", productId);
-        // Assuming ProductService has a method getProductById that returns ProductDto
-        // and throws ProductNotFoundException if not found (handled by global exception handler)
         ProductDto product = productService.getProductById(productId);
         return ResponseEntity.ok(product);
     }

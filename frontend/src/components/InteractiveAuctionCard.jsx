@@ -63,8 +63,6 @@ function InteractiveAuctionCard({ auction, type }) { // 'type' is "LIVE" or "TIM
         >
           {auction.productTitleSnapshot}
         </h3>
-        {/* You can add status here if needed, similar to your current AuctionCard */}
-        {/* <p className="text-xs text-gray-500 mb-2">Status: {auction.status}</p> */}
         <div className="mt-auto border-t pt-2 text-xs text-gray-600 grid grid-cols-2 gap-2">
           <span>Current Bid:</span>
           <span className="text-right font-medium">

@@ -1,10 +1,6 @@
 import React, { useState } from 'react';
 import { useStripe, useElements, CardElement, Elements } from '@stripe/react-stripe-js';
 
-/**
- * Renders an inline modal for setting up a Stripe payment method without relying on a generic Modal component.
- * This form uses Stripe.js to confirm a SetupIntent and returns the payment method ID on success.
- */
 const StripeSetupFormModal = ({
   isOpen,
   onClose,

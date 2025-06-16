@@ -39,6 +39,7 @@ public class RabbitMqConfig {
     public static final String ORDERS_REFUND_REQUIRED_QUEUE = "q.orders.refund.required";
     public static final String ORDERS_REFUND_SUCCEEDED_QUEUE = "q.orders.refund.succeeded";
     public static final String ORDERS_REFUND_FAILED_QUEUE = "q.orders.refund.failed";
+    public static final String USER_UPDATED_QUEUE_FOR_ORDERS = "q.orders.user.updated";
 
     // === Routing Keys ===
     // For commands/messages to the schedule exchange
@@ -65,6 +66,7 @@ public class RabbitMqConfig {
     public static final String DELIVERY_EVENT_REFUND_REQUIRED_ROUTING_KEY = "delivery.event.refund.required";
     public static final String PAYMENT_EVENT_REFUND_SUCCEEDED_ROUTING_KEY = "payment.event.refund.succeeded";
     public static final String PAYMENT_EVENT_REFUND_FAILED_ROUTING_KEY = "payment.event.refund.failed";
+    public static final String USER_UPDATED_ROUTING_KEY = "user.event.profile.updated";
 
     // --- Dead Letter Exchange and Queue ---
     public static final String MAIN_DLX_EXCHANGE = "dlx.main_exchange"; // Dead Letter Exchange
@@ -225,6 +227,14 @@ public class RabbitMqConfig {
     }
 
     @Bean
+    public Queue userUpdatedQueueForOrders() {
+        return QueueBuilder.durable(USER_UPDATED_QUEUE_FOR_ORDERS)
+                .withArgument("x-dead-letter-exchange", MAIN_DLX_EXCHANGE)
+                .withArgument("x-dead-letter-routing-key", MAIN_DLQ_ROUTING_KEY)
+                .build();
+    }
+
+    @Bean
     public Queue mainDeadLetterQueue() {
         return QueueBuilder.durable(MAIN_DEAD_LETTER_QUEUE)
                 .build();
@@ -318,6 +328,13 @@ public class RabbitMqConfig {
     }
 
     @Bean
+    public Binding userUpdatedBindingForOrders(Queue userUpdatedQueueForOrders, TopicExchange userEventsExchange) {
+        return BindingBuilder.bind(userUpdatedQueueForOrders)
+                .to(userEventsExchange)
+                .with(USER_UPDATED_ROUTING_KEY);
+    }
+
+    @Bean
     public Binding mainDeadLetterBinding(Queue mainDeadLetterQueue, DirectExchange mainDlxExchange) {
         return BindingBuilder.bind(mainDeadLetterQueue)
                 .to(mainDlxExchange)
@@ -326,15 +343,12 @@ public class RabbitMqConfig {
 
     @Bean
     public MessageConverter jsonMessageConverter() {
-        // Uses Jackson library (usually included with spring-boot-starter-web)
-        // to convert objects to/from JSON.
         return new Jackson2JsonMessageConverter();
     }
 
     @Bean
     public RabbitTemplate rabbitTemplate(final ConnectionFactory connectionFactory) {
         final RabbitTemplate rabbitTemplate = new RabbitTemplate(connectionFactory);
-        // Set the message converter to use JSON
         rabbitTemplate.setMessageConverter(jsonMessageConverter());
         return rabbitTemplate;
     }

@@ -7,13 +7,13 @@ import CountdownTimer from "../components/CountdownTimer";
 import ConfirmationModal from "../components/ConfirmationModal";
 import CollapsibleSection from "../components/CollapsibleSection";
 import AuctionRules from "../components/AuctionRules";
-// Import or create a CommentSection component later
-// import CommentSection from '../components/CommentSection';
 import {
   FaChevronLeft,
   FaChevronRight,
   FaCreditCard,
   FaUserCircle,
+  FaEdit,
+  FaTrash,
 } from "react-icons/fa";
 
 const getBidIncrement = (currentBidValue) => {
@@ -31,7 +31,6 @@ const getBidIncrement = (currentBidValue) => {
   return 500; // Default lowest increment
 };
 
-// Helper to generate dropdown options
 const generateBidOptions = (startAmount, numOptions = 20) => {
   if (isNaN(Number(startAmount)) || startAmount < 0) {
     return []; // Return empty if start amount is invalid
@@ -48,10 +47,10 @@ const generateBidOptions = (startAmount, numOptions = 20) => {
   return options;
 };
 
-// --- Helper: Simple Comment Display (replace with dedicated component later) ---
-function CommentDisplay({ comment, onReply }) {
-  // Basic display, assumes comment has id, usernameSnapshot, commentText, createdAt, replies[]
+function CommentDisplay({ comment, onReply, currentUserId, onEdit, onDelete }) {
   const canReply = onReply !== null; // Check if reply function is provided
+
+  const isOwner = currentUserId && currentUserId === comment.userId;
 
   return (
     <div
@@ -64,6 +63,24 @@ function CommentDisplay({ comment, onReply }) {
       <p className="font-semibold text-sm text-gray-800 mb-1">
         {comment.usernameSnapshot}
       </p>
+      {isOwner && (
+        <div className="flex items-center gap-3">
+          <button
+            onClick={() => onEdit(comment)}
+            className="text-gray-500 hover:text-blue-600"
+            title="Edit comment"
+          >
+            <FaEdit />
+          </button>
+          <button
+            onClick={() => onDelete(comment)}
+            className="text-gray-500 hover:text-red-600"
+            title="Delete comment"
+          >
+            <FaTrash />
+          </button>
+        </div>
+      )}
       <p className="whitespace-pre-wrap leading-relaxed text-sm">
         {comment.commentText}
       </p>
@@ -85,7 +102,14 @@ function CommentDisplay({ comment, onReply }) {
       {comment.replies && comment.replies.length > 0 && (
         <div className="mt-2 space-y-2 border-l-2 border-indigo-200 pl-4">
           {comment.replies.map((reply) => (
-            <CommentDisplay key={reply.id} comment={reply} onReply={onReply} /> // Allow replying to replies
+            <CommentDisplay
+              key={reply.id}
+              comment={reply}
+              onReply={onReply}
+              currentUserId={currentUserId}
+              onEdit={onEdit}
+              onDelete={onDelete}
+            /> // Allow replying to replies
           ))}
         </div>
       )}
@@ -112,11 +136,9 @@ function TimedAuctionDetailPage() {
   const [userProfile, setUserProfile] = useState(null);
   const [isProfileLoading, setIsProfileLoading] = useState(false); // To prevent multiple fetches or show loading
 
-  // --- NEW STATE for Payment Method Required Modal ---
   const [isPaymentMethodModalOpen, setIsPaymentMethodModalOpen] =
     useState(false);
 
-  // --- State ---
   const [auctionDetails, setAuctionDetails] = useState(null);
   const [bidHistory, setBidHistory] = useState([]); // Visible bid history
   const [comments, setComments] = useState([]); // Comments with nested replies
@@ -125,7 +147,6 @@ function TimedAuctionDetailPage() {
   const [errorDetails, setErrorDetails] = useState("");
   const [errorComments, setErrorComments] = useState("");
 
-  // Bidding State
   const [isBidding, setIsBidding] = useState(false);
   const [maxBidOptions, setMaxBidOptions] = useState([]);
   const [isBidConfirmOpen, setIsBidConfirmOpen] = useState(false);
@@ -136,34 +157,40 @@ function TimedAuctionDetailPage() {
   const [isLoadingMyMaxBid, setIsLoadingMyMaxBid] = useState(false);
   const [errorMyMaxBid, setErrorMyMaxBid] = useState("");
 
-  // Comment State
   const [commentInput, setCommentInput] = useState("");
   const [isPostingComment, setIsPostingComment] = useState(false);
   const [commentError, setCommentError] = useState("");
   const [replyingTo, setReplyingTo] = useState(null); // { id: parentId, username: parentUsername }
 
-  // Seller Actions State (Keep Cancel for now)
   const [isCancelConfirmOpen, setIsCancelConfirmOpen] = useState(false);
   const [isCancelling, setIsCancelling] = useState(false);
   const [cancelError, setCancelError] = useState("");
 
-  // --- NEW State for Hammer/End Early Action ---
   const [isHammerConfirmOpen, setIsHammerConfirmOpen] = useState(false);
   const [isHammering, setIsHammering] = useState(false); // Renamed for clarity
   const [hammerError, setHammerError] = useState("");
 
-  // const [userInfo, setUserInfo] = useState(null);
   const [isAddressModalOpen, setIsAddressModalOpen] = useState(false);
 
-  // Image Carousel State
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
 
-  // Polling Interval Refs
+  // State để quản lý việc xóa bình luận
+  const [isDeleteConfirmOpen, setIsDeleteConfirmOpen] = useState(false);
+  const [commentToDelete, setCommentToDelete] = useState(null);
+  const [isDeletingComment, setIsDeletingComment] = useState(false);
+  const [deleteCommentError, setDeleteCommentError] = useState("");
+
+  // State để quản lý việc sửa bình luận
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [commentToEdit, setCommentToEdit] = useState(null);
+  const [editedCommentText, setEditedCommentText] = useState("");
+  const [isEditingComment, setIsEditingComment] = useState(false);
+  const [editCommentError, setEditCommentError] = useState("");
+
   const detailsIntervalRef = useRef(null);
   const commentsIntervalRef = useRef(null);
 
   const loggedInUserId = initialized ? keycloak.subject : null;
-  // Derived state for rendering checks
   const isUserHighestBidder =
     loggedInUserId && auctionDetails?.highestBidderId === loggedInUserId;
 
@@ -189,7 +216,7 @@ function TimedAuctionDetailPage() {
   const fetchUserProfileForBidding = useCallback(async () => {
     if (
       initialized &&
-      keycloak.authenticated && // Use the actual authentication status
+      keycloak.authenticated &&
       !userProfile && // Check current userProfile state from component scope
       !isProfileLoading // Check current isProfileLoading state from component scope
     ) {
@@ -206,35 +233,25 @@ function TimedAuctionDetailPage() {
         setIsProfileLoading(false); // Depends on setIsProfileLoading setter
       }
     } else if (!keycloak.authenticated) {
-      // If user is no longer authenticated, ensure profile is cleared
       if (userProfile !== null) {
-        // only call setter if profile exists
         setUserProfile(null);
       }
     }
   }, [
     initialized,
     keycloak.authenticated, // Use the boolean value
-    keycloak.updateToken, // This is a function from keycloak, its reference should be stable
-    // userProfile IS NOT a dependency here (this was a major source of loops before)
-    // isProfileLoading IS NOT a dependency here (this prevents loops when it toggles)
+    keycloak.updateToken,
     setUserProfile, // State setters are stable
     setIsProfileLoading, // State setters are stable
   ]);
 
-  // --- Fetching Functions with Corrected useCallback Dependencies ---
   const fetchAuctionDetails = useCallback(async () => {
-    // Capture initial load state at the start of the function execution
     const isInitialLoad = isLoadingDetails;
 
     if (!auctionId || !initialized) {
-      // If called during polling when prerequisites fail, reset loading if it was somehow true
       if (isInitialLoad) setIsLoadingDetails(false);
       return;
     }
-
-    // Don't set loading true for polling calls
-    // setErrorDetails(""); // Maybe clear only on initial load success?
 
     try {
       console.log(
@@ -246,7 +263,6 @@ function TimedAuctionDetailPage() {
       if (response.data && response.data.id) {
         setAuctionDetails(response.data);
         setBidHistory(response.data.recentBids || []);
-        // Clear error on successful fetch/poll
         setErrorDetails("");
       } else {
         console.error("Invalid data structure received for auction details.");
@@ -264,12 +280,10 @@ function TimedAuctionDetailPage() {
       // Set loading false only AFTER the initial load completes
       if (isInitialLoad) setIsLoadingDetails(false);
     }
-    // *** REMOVE isLoadingDetails from dependency array ***
   }, [auctionId, initialized]); // Depends only on auctionId and auth readiness
 
   const fetchMyMaxBid = useCallback(async () => {
     if (!auctionId || !initialized || !keycloak.authenticated || isSeller) {
-      // Don't fetch if not logged in, no auctionId, or if user is the seller
       setMyMaxBid(null); // Clear any previous max bid if conditions aren't met
       return;
     }
@@ -292,8 +306,6 @@ function TimedAuctionDetailPage() {
         console.log("No max bid found for current user on this auction.");
       } else {
         console.error("Failed to fetch my max bid:", err);
-        // Don't show an aggressive error for this, as it's supplementary info
-        // setErrorMyMaxBid("Could not retrieve your max bid.");
       }
     } finally {
       setIsLoadingMyMaxBid(false);
@@ -307,8 +319,6 @@ function TimedAuctionDetailPage() {
       if (isInitialLoad) setIsLoadingComments(false);
       return;
     }
-    // setIsLoadingComments(true); // Don't set loading on subsequent polls
-    // setCommentError("");
 
     try {
       console.log(
@@ -332,64 +342,61 @@ function TimedAuctionDetailPage() {
     } finally {
       if (isInitialLoad) setIsLoadingComments(false);
     }
-    // *** REMOVE isLoadingComments from dependency array ***
   }, [auctionId, initialized]); // Depends only on auctionId
 
-  // --- Initial Fetch & Polling Setup (useEffect) ---
   useEffect(() => {
-  // Only clear state if auctionId actually changed
-  const prevAuctionId = prevAuctionIdRef.current;
-  const auctionIdChanged = prevAuctionId !== auctionId;
-  prevAuctionIdRef.current = auctionId;
+    const prevAuctionId = prevAuctionIdRef.current;
+    const auctionIdChanged = prevAuctionId !== auctionId;
+    prevAuctionIdRef.current = auctionId;
 
-  clearInterval(detailsIntervalRef.current);
-  clearInterval(commentsIntervalRef.current);
-
-  if (auctionId && initialized) {
-    if (auctionIdChanged) {
-      setIsLoadingDetails(true);
-      setIsLoadingComments(true);
-      setErrorDetails("");
-      setCommentError("");
-      setAuctionDetails(null);
-      setComments([]);
-    }
-
-    fetchAuctionDetails();
-    fetchComments();
-
-    detailsIntervalRef.current = setInterval(fetchAuctionDetails, 15 * 1000);
-    commentsIntervalRef.current = setInterval(fetchComments, 30 * 1000);
-
-    if (keycloak.authenticated) {
-      fetchUserProfileForBidding();
-      fetchMyMaxBid();
-    } else {
-      if (userProfile !== null) setUserProfile(null);
-      if (myMaxBid !== null) setMyMaxBid(null);
-    }
-  } else {
-    setIsLoadingDetails(false);
-    setIsLoadingComments(false);
-    if (userProfile !== null) setUserProfile(null);
-    if (myMaxBid !== null) setMyMaxBid(null);
-    if (auctionDetails !== null) setAuctionDetails(null);
-    if (comments.length > 0) setComments([]);
-  }
-
-  return () => {
     clearInterval(detailsIntervalRef.current);
     clearInterval(commentsIntervalRef.current);
-  };
-}, [
-  auctionId,
-  initialized,
-  keycloak.authenticated,
-  fetchAuctionDetails,
-  fetchComments,
-  fetchUserProfileForBidding,
-  fetchMyMaxBid,
-]);
+
+    if (auctionId && initialized) {
+      if (auctionIdChanged) {
+        setIsLoadingDetails(true);
+        setIsLoadingComments(true);
+        setErrorDetails("");
+        setCommentError("");
+        setAuctionDetails(null);
+        setComments([]);
+      }
+
+      fetchAuctionDetails();
+      fetchComments();
+
+      detailsIntervalRef.current = setInterval(fetchAuctionDetails, 15 * 1000);
+      commentsIntervalRef.current = setInterval(fetchComments, 30 * 1000);
+
+      if (keycloak.authenticated) {
+        fetchUserProfileForBidding();
+        fetchMyMaxBid();
+      } else {
+        if (userProfile !== null) setUserProfile(null);
+        if (myMaxBid !== null) setMyMaxBid(null);
+      }
+    } else {
+      setIsLoadingDetails(false);
+      setIsLoadingComments(false);
+      if (userProfile !== null) setUserProfile(null);
+      if (myMaxBid !== null) setMyMaxBid(null);
+      if (auctionDetails !== null) setAuctionDetails(null);
+      if (comments.length > 0) setComments([]);
+    }
+
+    return () => {
+      clearInterval(detailsIntervalRef.current);
+      clearInterval(commentsIntervalRef.current);
+    };
+  }, [
+    auctionId,
+    initialized,
+    keycloak.authenticated,
+    fetchAuctionDetails,
+    fetchComments,
+    fetchUserProfileForBidding,
+    fetchMyMaxBid,
+  ]);
 
   useEffect(() => {
     if (auctionDetails?.nextBidAmount != null) {
@@ -420,8 +427,6 @@ function TimedAuctionDetailPage() {
     if (!userProfile) {
       // Check if userInfo is loaded
       setBidError("User details are still loading. Please try again shortly.");
-      // Optionally, trigger a re-fetch or rely on the initial fetch.
-      // You might also want to disable bid buttons while userInfo is null.
       return;
     }
 
@@ -449,7 +454,6 @@ function TimedAuctionDetailPage() {
 
     // 2. Payment Method Check (using userInfo.hasDefaultPaymentMethod from UserDto)
     if (!userProfile.hasDefaultPaymentMethod) {
-      // This check now uses userInfo, assuming UserDto includes hasDefaultPaymentMethod
       console.log(
         "User has no default payment method. Prompting to update profile."
       );
@@ -466,9 +470,7 @@ function TimedAuctionDetailPage() {
     setIsBidConfirmOpen(true);
   };
 
-  // Simplified handlePlaceBid (actual API call)
   const handlePlaceBid = async () => {
-    // Pre-checks (auth, selectedMaxBid, auction status) are good to keep here as a final validation
     if (
       !initialized ||
       !keycloak.authenticated ||
@@ -536,8 +538,6 @@ function TimedAuctionDetailPage() {
   // Handler to set the reply state
   const handleSetReply = (parentId, parentUsername) => {
     setReplyingTo({ id: parentId, username: parentUsername });
-    // Optionally focus the input field here
-    // commentInputRef.current?.focus();
   };
   const cancelReply = () => {
     setReplyingTo(null);
@@ -587,7 +587,6 @@ function TimedAuctionDetailPage() {
     }
   };
 
-  // --- NEW Handlers for Hammer/End Early Action ---
   const promptEndAuctionEarly = useCallback(() => {
     // Basic check before showing prompt
     if (
@@ -612,7 +611,6 @@ function TimedAuctionDetailPage() {
     setHammerError("");
     console.log(`Attempting to END auction ${auctionId} early (hammer)`);
     try {
-      // Use the hammer endpoint for timed auctions
       await apiClient.post(`/timedauctions/${auctionId}/hammer`);
       console.log(`Auction ${auctionId} end early request sent successfully.`);
       setIsHammerConfirmOpen(false); // Close modal on success
@@ -628,6 +626,71 @@ function TimedAuctionDetailPage() {
       setIsHammering(false);
     }
   }, [auctionId, fetchAuctionDetails]);
+
+  const handleInitiateDelete = (comment) => {
+    setCommentToDelete(comment);
+    setDeleteCommentError("");
+    setIsDeleteConfirmOpen(true);
+  };
+
+  const handleCloseDeleteConfirm = () => {
+    setIsDeleteConfirmOpen(false);
+    setCommentToDelete(null);
+  };
+
+  const handleConfirmDelete = async () => {
+    if (!commentToDelete) return;
+    setIsDeletingComment(true);
+    setDeleteCommentError("");
+    try {
+      await apiClient.delete(
+        `/timedauctions/${auctionId}/comments/${commentToDelete.id}`
+      );
+      handleCloseDeleteConfirm();
+      fetchComments(); // Tải lại bình luận sau khi xóa
+    } catch (err) {
+      setDeleteCommentError(
+        err.response?.data?.message || "Could not delete comment."
+      );
+    } finally {
+      setIsDeletingComment(false);
+    }
+  };
+
+  const handleInitiateEdit = (comment) => {
+    setCommentToEdit(comment);
+    setEditedCommentText(comment.commentText);
+    setEditCommentError("");
+    setIsEditModalOpen(true);
+  };
+
+  const handleCloseEditModal = () => {
+    setIsEditModalOpen(false);
+    setCommentToEdit(null);
+    setEditedCommentText("");
+  };
+
+  const handleConfirmEdit = async () => {
+    if (!commentToEdit || !editedCommentText.trim()) return;
+    setIsEditingComment(true);
+    setEditCommentError("");
+    try {
+      await apiClient.put(
+        `/timedauctions/${auctionId}/comments/${commentToEdit.id}`,
+        {
+          commentText: editedCommentText.trim(),
+        }
+      );
+      handleCloseEditModal();
+      fetchComments(); // Tải lại bình luận sau khi sửa
+    } catch (err) {
+      setEditCommentError(
+        err.response?.data?.message || "Could not save changes."
+      );
+    } finally {
+      setIsEditingComment(false);
+    }
+  };
 
   // --- Render Logic ---
   // Initial Loading State
@@ -646,7 +709,6 @@ function TimedAuctionDetailPage() {
   }
 
   return (
-    // Use a main container that allows comments section below
     <div className="max-w-7xl mx-auto p-4">
       {/* Top Section: Grid for Product Info and Bidding/History */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 mb-8">
@@ -778,7 +840,6 @@ function TimedAuctionDetailPage() {
                     </p>
                   )}
               </div>
-              {/* END MODIFIED CONTENT FOR OVERVIEW SECTION */}
             </CollapsibleSection>
             <AuctionRules /> {/* This remains the same */}
           </div>
@@ -869,7 +930,6 @@ function TimedAuctionDetailPage() {
                   </span>
                 )}
               </div>
-              {/* --- END MODIFIED TOP-RIGHT TIMER DISPLAY --- */}
             </div>
 
             {/* Current Bid Info */}
@@ -1015,8 +1075,6 @@ function TimedAuctionDetailPage() {
                 </p>
                 <CountdownTimer
                   endTimeMillis={new Date(auctionDetails.startTime).getTime()}
-                  // Optional: Add a specific message for when it starts, or let CountdownTimer handle it
-                  // endedText="Starting Soon!"
                 />
                 <p className="text-sm text-gray-500 mt-3">
                   Starting Price:{" "}
@@ -1175,7 +1233,6 @@ function TimedAuctionDetailPage() {
         {/* End Right Column */}
       </div>{" "}
       {/* End Top Grid */}
-      {/* --- NEW: Comments Section (Full Width Below) --- */}
       <section className="mt-8 bg-white p-4 md:p-6 rounded shadow border">
         <h3 className="text-xl font-semibold mb-4 border-b pb-2">
           Comments & Questions
@@ -1252,7 +1309,10 @@ function TimedAuctionDetailPage() {
                 key={comment.id}
                 comment={comment}
                 onReply={keycloak.authenticated ? handleSetReply : null}
-              /> // Pass reply handler only if logged in
+                currentUserId={loggedInUserId}
+                onEdit={handleInitiateEdit}
+                onDelete={handleInitiateDelete}
+              />
             ))}
         </div>
       </section>
@@ -1269,8 +1329,6 @@ function TimedAuctionDetailPage() {
         confirmText="Go to Profile"
         cancelText="Later" // Or "Close"
         confirmButtonClass="bg-indigo-600 hover:bg-indigo-700" // Style as needed
-        // No isLoading or error props specifically for this informational modal,
-        // unless you want to add them for some reason.
       />
       <ConfirmationModal
         isOpen={isAddressModalOpen}
@@ -1332,6 +1390,39 @@ function TimedAuctionDetailPage() {
         confirmButtonClass="bg-blue-600 hover:bg-blue-700" // Blue for hammer?
         isLoading={isHammering}
         error={hammerError}
+      />
+      <ConfirmationModal
+        isOpen={isDeleteConfirmOpen}
+        onClose={handleCloseDeleteConfirm}
+        onConfirm={handleConfirmDelete}
+        title="Confirm Deletion"
+        message="Are you sure you want to delete this comment? All replies to this comment will also be removed. This action cannot be undone."
+        confirmText="Yes, Delete"
+        cancelText="No, Cancel"
+        confirmButtonClass="bg-red-600 hover:bg-red-700"
+        isLoading={isDeletingComment}
+        error={deleteCommentError}
+      />
+      <ConfirmationModal
+        isOpen={isEditModalOpen}
+        onClose={handleCloseEditModal}
+        onConfirm={handleConfirmEdit}
+        title="Edit Your Comment"
+        message={
+          <div>
+            <textarea
+              value={editedCommentText}
+              onChange={(e) => setEditedCommentText(e.target.value)}
+              rows="4"
+              className="w-full p-2 border rounded border-gray-300 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+            />
+          </div>
+        }
+        confirmText="Save Changes"
+        cancelText="Cancel"
+        confirmButtonClass="bg-indigo-600 hover:bg-indigo-700"
+        isLoading={isEditingComment}
+        error={editCommentError}
       />
     </div> // End Page Container
   );

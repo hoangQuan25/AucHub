@@ -13,7 +13,7 @@ import java.time.LocalDateTime;
 
 @Entity
 @Table(name = "review_eligibilities",
-        uniqueConstraints = @UniqueConstraint(columnNames = {"order_id", "buyer_id", "seller_id"})) // Ensure one eligibility record per order-buyer-seller
+        uniqueConstraints = @UniqueConstraint(columnNames = {"order_id", "buyer_id", "seller_id"}))
 @Getter
 @Setter
 @NoArgsConstructor

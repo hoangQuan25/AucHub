@@ -9,12 +9,6 @@ import CategorySelector from "../components/CategorySelector";
 import ConfirmationModal from "../components/ConfirmationModal";
 import PaginationControls from "../components/PaginationControls";
 
-/* -------------------------------------------------------------------------
- * Tabs / filters: we expose raw enum values the backend knows about.
- * For the UI “Ended” tab, we DON’T send a single status.  Instead we send
- *   ended=true
- * Backend recognises that flag and returns SOLD / RESERVE_NOT_MET / CANCELLED.
- * -------------------------------------------------------------------------*/
 const STATUS_TABS = [
   { key: "ALL", label: "All" },
   { key: "ACTIVE", label: "Ongoing" },
@@ -92,7 +86,6 @@ function MyAuctionsPage() {
     fetchCategories();
   }, [fetchCategories]);
 
-  /* --- MODIFIED: Fetch Auctions Logic --- */
   const fetchFollowingAuctions = useCallback(
     async (pageToFetch = 0) => {
       if (!(initialized && keycloak.authenticated)) return;
@@ -100,7 +93,6 @@ function MyAuctionsPage() {
       setIsLoading(true); // Set single loading state
       setError(""); // Clear single error state
 
-      // --- Prepare Common Params (Same as before) ---
       const params = {
         page: pageToFetch,
         size: pagination.size, // Use single pagination state
@@ -124,8 +116,7 @@ function MyAuctionsPage() {
           { params }
         ); // Use the new aggregated endpoint
 
-        const pageData = response.data; // Assuming backend returns Page or PagedResultDto
-        // Assuming backend returns a field like 'auctionType' in each content item
+        const pageData = response.data; 
         setFollowingAuctions(pageData.content || []);
         setPagination((p) => ({
           ...p,
@@ -151,7 +142,6 @@ function MyAuctionsPage() {
       statusFilter,
       selectedCatIds,
       timeFilter, // Depends on filters
-      // NOTE: Does NOT depend on pagination.page or the data/error/loading states
     ]
   );
 
@@ -180,7 +170,6 @@ function MyAuctionsPage() {
     (id, type) => {
       if (!type) {
         console.error("Auction type missing for navigation:", id);
-        // Maybe default to one type or show error?
         return;
       }
       const path =
@@ -255,7 +244,6 @@ function MyAuctionsPage() {
 
       {/* Main Content */}
       <div className="flex-1 flex flex-col overflow-y-auto bg-gray-50">
-        {/* Top Bar (No Change) */}
         <div className="border-b bg-white px-6 py-3 flex flex-wrap items-center gap-6 sticky top-0 z-10">
           <div className="flex gap-4">
             {" "}

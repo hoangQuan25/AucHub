@@ -10,7 +10,6 @@ import java.time.LocalDateTime;
 import java.util.Set;
 import java.util.UUID;
 
-// Container class or individual records/classes
 public final class NotificationEvents {
 
     @Value @Builder

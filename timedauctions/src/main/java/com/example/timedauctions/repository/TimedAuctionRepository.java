@@ -15,7 +15,6 @@ import java.util.UUID;
 
 @Repository
 public interface TimedAuctionRepository extends JpaRepository<TimedAuction, UUID> {
-    // Add methods for finding by status, sellerId etc. later if needed
     Page<TimedAuction> findByStatus(AuctionStatus status, Pageable pageable);
 
     Page<TimedAuction> findAll(Specification<TimedAuction> spec, Pageable pageable);

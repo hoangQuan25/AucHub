@@ -15,5 +15,4 @@ public interface DeliveryRepository extends JpaRepository<Delivery, UUID> {
     Optional<Delivery> findByOrderId(UUID orderId);
     List<Delivery> findByBuyerIdOrderByCreatedAtDesc(String buyerId);
     List<Delivery> findBySellerIdOrderByCreatedAtDesc(String sellerId);
-    // Add other query methods as needed, e.g., findByTrackingNumber, findByStatus, etc.
 }

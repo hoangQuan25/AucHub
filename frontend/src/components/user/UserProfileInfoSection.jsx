@@ -12,8 +12,7 @@ function UserProfileInfoSection({ profileData, onAvatarUpload, isAvatarUploading
   };
 
   return (
-    // This section already has a modern style, keeping it as the standout "hero" for user info.
-    // bg-gradient-to-br from-indigo-50 via-white to-purple-50 is a good choice for a prominent section.
+    
     <div className="p-6 md:p-8 rounded-2xl bg-gradient-to-br from-indigo-100 via-white to-purple-100 shadow-xl border border-indigo-200">
       <div className="flex flex-col sm:flex-row items-center sm:items-start gap-6 md:gap-8">
         {/* Avatar Display and Upload */}
@@ -26,7 +25,6 @@ function UserProfileInfoSection({ profileData, onAvatarUpload, isAvatarUploading
             />
           ) : (
             <div className="h-32 w-32 rounded-full bg-slate-200 flex items-center justify-center text-slate-400 text-3xl border-4 border-white shadow-lg">
-              {/* You can use initials here if available */}
               <span>{profileData.username ? profileData.username.charAt(0).toUpperCase() : '?'}</span>
             </div>
           )}
@@ -76,11 +74,7 @@ function UserProfileInfoSection({ profileData, onAvatarUpload, isAvatarUploading
                 <span className="font-semibold text-slate-700">Phone:</span>{" "}
                 <span className="text-slate-900">{profileData.phoneNumber || <span className="italic text-slate-500">(Not set)</span>}</span>
               </p>
-              {/* Example of adding more info if available */}
-              {/* <p className="mb-2">
-                <span className="font-semibold text-slate-700">Member Since:</span>{" "}
-                <span className="text-slate-900">{new Date(profileData.createdAt).toLocaleDateString() || <span className="italic text-slate-500">(Not set)</span>}</span>
-              </p> */}
+              
             </div>
           </div>
         </div>

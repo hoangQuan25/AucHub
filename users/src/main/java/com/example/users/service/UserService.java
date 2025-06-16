@@ -5,7 +5,6 @@ import com.example.users.dto.*;
 
 import java.util.List;
 import java.util.Map;
-// REMOVE Address/Payment DTO imports and List import
 
 public interface UserService {
 
@@ -20,6 +19,10 @@ public interface UserService {
     Map<String, UserBasicInfoDto> getUsersBasicInfo(List<String> userIds);
 
     PublicSellerProfileDto getPublicSellerProfile(String userIdOrUsername);
+
+    StripeSetupIntentSecretDto createSetupIntentSecret(String userId, String email, String username);
+    StripePaymentMethodConfirmationResultDto confirmPaymentMethodSetup(String userId, String email,
+                                                                       String username, StripeSetupConfirmationRequestDto confirmationRequest);
 
     void saveStripePaymentDetails(
             String userId,

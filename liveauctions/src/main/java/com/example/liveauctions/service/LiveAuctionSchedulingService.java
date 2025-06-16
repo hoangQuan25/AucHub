@@ -10,7 +10,4 @@ public interface LiveAuctionSchedulingService {
 
     /** Schedules the auction end command via delayed queue. */
     void scheduleAuctionEnd(LiveAuction auction);
-
-    // Optional: Cancel scheduled end (if feasible)
-    // void cancelScheduledEnd(UUID auctionId);
 }

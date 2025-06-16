@@ -56,5 +56,4 @@ public class TimedAuctionDetailsDto {
 
     // --- Data for UI (fetched separately or included) ---
     private List<BidDto> recentBids; // History of VISIBLE bids
-    // private List<CommentDto> comments; // Comments might be fetched separately
 }

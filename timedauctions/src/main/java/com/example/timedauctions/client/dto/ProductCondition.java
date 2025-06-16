@@ -17,5 +17,4 @@ public enum ProductCondition {
         this.displayName = displayName;
     }
 
-    // Optional: Method to find enum by display name if needed
 }

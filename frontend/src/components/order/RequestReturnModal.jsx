@@ -59,7 +59,6 @@ function RequestReturnModal({ isOpen, onClose, onSubmit, isLoading: isSubmitting
   };
 
 
-  // Submit Handler remains the same...
   const handleSubmit = async () => {
     setError('');
     if (!reason || !returnCourier || !returnTrackingNumber) {
@@ -93,10 +92,8 @@ function RequestReturnModal({ isOpen, onClose, onSubmit, isLoading: isSubmitting
 
   const totalIsLoading = isSubmitting || isUploading;
 
-  // --- NEW: Render nothing if modal is not open ---
   if (!isOpen) return null;
 
-  // --- NEW: Self-contained modal structure ---
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex justify-center items-center p-4" aria-modal="true" role="dialog">
       {/* Modal Panel */}
@@ -111,7 +108,6 @@ function RequestReturnModal({ isOpen, onClose, onSubmit, isLoading: isSubmitting
 
         {/* Modal Body (Scrollable) */}
         <div className="p-6 space-y-4 max-h-[70vh] overflow-y-auto">
-          {/* --- Form Fields (Same as before) --- */}
           <div>
             <label className="block text-sm font-medium text-gray-700">Reason for Return*</label>
             <input type="text" value={reason} onChange={(e) => setReason(e.target.value)} className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm" placeholder="e.g., Item not as described"/>

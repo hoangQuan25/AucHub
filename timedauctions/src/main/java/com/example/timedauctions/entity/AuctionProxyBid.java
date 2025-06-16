@@ -9,7 +9,6 @@ import java.time.LocalDateTime;
 import java.util.UUID;
 
 @Entity
-// Use different schema/table, add indexes
 @Table(name = "timed_auction_proxy_bids", schema = "timed_auction_schema", indexes = {
         @Index(name = "idx_proxy_bid_auction_max", columnList = "timedAuctionId, maxBid DESC, submissionTime ASC"), // For finding winner/runner-up quickly
         @Index(name = "idx_proxy_bid_auction_bidder", columnList = "timedAuctionId, bidderId", unique = true) // Ensure one proxy bid per bidder per auction

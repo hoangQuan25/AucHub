@@ -16,9 +16,6 @@ import {
   FaClock,
 } from "react-icons/fa"; // Adjusted icons for categories
 
-// Import your actual components
-import AuctionCard from "../components/AuctionCard"; // Assuming path
-import CountdownTimer from "../components/CountdownTimer"; // Assuming path
 import apiClient from "../api/apiClient"; // Assuming path
 import InteractiveAuctionCard from "../components/InteractiveAuctionCard";
 
@@ -60,21 +57,20 @@ const mainCategoryData = [
   },
 ];
 
-// Helper functions for banner text (as discussed)
 const getBannerAuctionStatusText = (auction) => {
   if (!auction || !auction.status) return "Trạng thái không xác định";
   switch (auction.status.toUpperCase()) {
     case "ACTIVE":
-      return auction.auctionType === "LIVE" ? "TRỰC TIẾP" : "ĐANG DIỄN RA";
+      return auction.auctionType === "LIVE" ? "LIVE" : "ON GOING";
     case "SCHEDULED":
-      return "SẮP DIỄN RA";
+      return "STARTING SOON";
     case "SOLD":
-      return "ĐÃ BÁN";
+      return "SOLD";
     case "ENDED":
     case "RESERVE_NOT_MET":
-      return "ĐÃ KẾT THÚC";
+      return "ENDED";
     case "CANCELLED":
-      return "ĐÃ HỦY";
+      return "CANCELLED";
     default:
       return auction.status;
   }
@@ -108,7 +104,7 @@ function HomePage() {
 
   // Define mainCategoryData directly or fetch if it becomes dynamic
   const [featuredCategories, setFeaturedCategories] = useState([]); // Will be set from mainCategoryData
-  const [loadingCategories, setLoadingCategories] = useState(true); // Still good to have for async pattern
+  const [loadingCategories, setLoadingCategories] = useState(true); 
   const [errorCategories, setErrorCategories] = useState("");
 
   const [endingSoonAuctions, setEndingSoonAuctions] = useState([]);
@@ -518,7 +514,7 @@ function HomePage() {
   // --- JSX Structure ---
   return (
     <div className="bg-gray-100 min-h-screen">
-      {/* 1. Hero Section with Banner (Placeholder for now) */}
+      {/* 1. Hero Section with Banner */}
       <section className="hero-banner relative w-full h-[300px] sm:h-[400px] md:h-[500px] bg-gray-700 text-white overflow-hidden">
         {loadingBanner && (
           <div className="flex justify-center items-center h-full">
@@ -533,7 +529,7 @@ function HomePage() {
         {!loadingBanner && !errorBanner && currentBannerItem && (
           <div
             key={currentBannerItem.id}
-            className="absolute inset-0 w-full h-full transition-opacity duration-1000 ease-in-out opacity-100" // Simplified: always show current
+            className="absolute inset-0 w-full h-full transition-opacity duration-1000 ease-in-out opacity-100"
             style={{
               backgroundImage: `url(${
                 currentBannerItem.productImageUrlSnapshot || "/placeholder.png"
@@ -561,7 +557,7 @@ function HomePage() {
                 }`}
                 className="bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-2 sm:py-3 px-4 sm:px-6 rounded-md text-sm sm:text-md transition duration-150"
               >
-                Xem Chi Tiết {/* Or more dynamic CTA */}
+                View Details
               </Link>
             </div>
           </div>
@@ -593,7 +589,7 @@ function HomePage() {
       <section className="py-8 sm:py-12 bg-white">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <h2 className="text-2xl sm:text-3xl font-bold text-center text-gray-800 mb-6 sm:mb-8">
-            Khám Phá Danh Mục
+            Explore Categories
           </h2>
           {loadingCategories && (
             <p className="text-center">Loading categories...</p>
@@ -636,15 +632,14 @@ function HomePage() {
       <section className="py-8 sm:py-12 bg-gray-50">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <h2 className="text-2xl sm:text-3xl font-bold text-gray-800 mb-8 text-center">
-            Hãy Xem Qua Những Phiên Đấu Giá Này!
+            Check Out These Auctions!
           </h2>
 
           {/* Timed Auctions Subsection */}
           <div className="mb-10">
             <h3 className="text-xl font-semibold text-gray-700 mb-4 flex items-center">
-              <FaGavel className="text-blue-600 mr-2 transform -scale-x-100" />{" "}
-              {/* Icon for Timed */}
-              Phiên Đấu Giá Có Giới Hạn Thời Gian
+              <FaGavel className="text-blue-600 mr-2 transform -scale-x-100" />
+              Timed Auctions
             </h3>
             {loadingCheckOutTimed && <p>Loading timed auctions...</p>}
             {errorCheckOutTimed && (
@@ -653,14 +648,12 @@ function HomePage() {
             {!loadingCheckOutTimed &&
               !errorCheckOutTimed &&
               checkOutTimedAuctions.length === 0 && (
-                <p>Không có phiên đấu giá nào.</p>
+                <p>No auctions available.</p>
               )}
             {!loadingCheckOutTimed &&
               !errorCheckOutTimed &&
               checkOutTimedAuctions.length > 0 && (
                 <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6">
-                  {" "}
-                  {/* 3 per row for 6 items */}
                   {checkOutTimedAuctions.map((auction) => (
                     <InteractiveAuctionCard
                       key={auction.id}
@@ -675,8 +668,8 @@ function HomePage() {
           {/* Live Auctions Subsection */}
           <div>
             <h3 className="text-xl font-semibold text-gray-700 mb-4 flex items-center">
-              <FaBolt className="text-red-500 mr-2" /> {/* Icon for Live */}
-              Phiên Đấu Giá Trực Tiếp
+              <FaBolt className="text-red-500 mr-2" />
+              Live Auctions
             </h3>
             {loadingCheckOutLive && <p>Loading live auctions...</p>}
             {errorCheckOutLive && (
@@ -685,14 +678,12 @@ function HomePage() {
             {!loadingCheckOutLive &&
               !errorCheckOutLive &&
               checkOutLiveAuctions.length === 0 && (
-                <p>Không có phiên đấu giá nào.</p>
+                <p>No auctions available.</p>
               )}
             {!loadingCheckOutLive &&
               !errorCheckOutLive &&
               checkOutLiveAuctions.length > 0 && (
                 <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6">
-                  {" "}
-                  {/* 3 per row for 6 items */}
                   {checkOutLiveAuctions.map((auction) => (
                     <InteractiveAuctionCard
                       key={auction.id}
@@ -706,18 +697,19 @@ function HomePage() {
         </div>
       </section>
 
-      <section className="py-8 sm:py-12 bg-white"> {/* Or bg-gray-50 for alternation */}
+      {/* 4. "Starting Soon" Section */}
+      <section className="py-8 sm:py-12 bg-white">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center mb-6 sm:mb-8">
             <h2 className="text-2xl sm:text-3xl font-bold text-gray-800 flex items-center">
-              <FaClock className="text-green-500 mr-3" /> {/* Icon for Starting Soon */}
-              Sắp Bắt Đầu
+              <FaClock className="text-green-500 mr-3" />
+              Starting Soon
             </h2>
             <Link
-              to="/search?status=SCHEDULED&sort=startTime,asc" // Link to all scheduled auctions
+              to="/search?status=SCHEDULED&sort=startTime,asc"
               className="text-sm font-medium text-indigo-600 hover:text-indigo-800 transition-colors"
             >
-              Xem Tất Cả &rarr;
+              View All &rarr;
             </Link>
           </div>
           {loadingStartingSoon && (
@@ -734,7 +726,7 @@ function HomePage() {
                   <InteractiveAuctionCard
                     key={auction.id}
                     auction={auction}
-                    type={auction.auctionType} // Make sure auctionType is added in fetch
+                    type={auction.auctionType}
                   />
                 ))}
               </div>
@@ -743,24 +735,25 @@ function HomePage() {
             !errorStartingSoon &&
             startingSoonAuctions.length === 0 && (
               <p className="text-center text-gray-500">
-                Không có phiên đấu giá nào sắp bắt đầu.
+                No auctions starting soon.
               </p>
             )}
         </div>
       </section>
 
-      {/* 4. "Ending Soon" / "Hot Right Now" Auctions Section */}
+      {/* 5. "Ending Soon / Hot Right Now" */}
       <section className="py-8 sm:py-12 bg-white">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center mb-6 sm:mb-8">
             <h2 className="text-2xl sm:text-3xl font-bold text-gray-800 flex items-center">
-              <FaClock className="text-red-500 mr-3" /> Sắp Kết Thúc / Đang Hot
+              <FaClock className="text-red-500 mr-3" />
+              Ending Soon / Hot Right Now
             </h2>
             <Link
               to="/search?status=ACTIVE&sort=endTime,asc"
               className="text-sm font-medium text-indigo-600 hover:text-indigo-800 transition-colors"
             >
-              Xem Tất Cả &rarr;
+              View All &rarr;
             </Link>
           </div>
           {(loadingEndingSoon || loadingHot) && (
@@ -768,21 +761,16 @@ function HomePage() {
           )}
           {errorEndingSoon && <p className="text-red-500">{errorEndingSoon}</p>}
           {errorHot && <p className="text-red-500">{errorHot}</p>}
-
-          {/* Combine endingSoon and hotAuctions, ensuring no duplicates and then display */}
-          {/* This part needs a bit more logic to combine and de-duplicate if needed */}
-          {/* For now, let's just show them sequentially or interleave if possible */}
           {!loadingEndingSoon &&
           !loadingHot &&
           (endingSoonAuctions.length > 0 || hotAuctions.length > 0) ? (
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-              {/* A simple way to combine and avoid duplicates by ID, then take top N */}
               {Array.from(
                 new Map(
                   [...endingSoonAuctions, ...hotAuctions].map((a) => [a.id, a])
                 ).values()
               )
-                .slice(0, 4) // Show up to 4 unique auctions from these combined lists
+                .slice(0, 4)
                 .map((auction) => (
                   <InteractiveAuctionCard
                     key={auction.id}
@@ -798,70 +786,70 @@ function HomePage() {
         </div>
       </section>
 
-      {/* 5. "How It Works" Section (Static) - From mock */}
+      {/* 6. "How It Works" Section */}
       <section className="py-8 sm:py-12 bg-gray-50">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <h2 className="text-2xl sm:text-3xl font-bold text-center text-gray-800 mb-6 sm:mb-8">
-            Cách Thức Hoạt Động
+            How It Works
           </h2>
           <div className="grid md:grid-cols-3 gap-6 sm:gap-8 text-center">
             <div className="p-4">
               <FaSearch className="text-4xl text-indigo-600 mx-auto mb-3" />
               <h3 className="text-lg font-semibold text-gray-700 mb-1">
-                1. Tìm Kiếm
+                1. Discover
               </h3>
               <p className="text-sm text-gray-600">
-                Khám phá hàng ngàn sản phẩm độc đáo.
+                Browse thousands of unique items.
               </p>
             </div>
             <div className="p-4">
               <FaGavel className="text-4xl text-indigo-600 mx-auto mb-3" />
               <h3 className="text-lg font-semibold text-gray-700 mb-1">
-                2. Đặt Giá
+                2. Bid
               </h3>
               <p className="text-sm text-gray-600">
-                Tham gia đấu giá và đặt mức giá tốt nhất của bạn.
+                Participate and place your best offer.
               </p>
             </div>
             <div className="p-4">
               <FaShoppingCart className="text-4xl text-indigo-600 mx-auto mb-3" />
               <h3 className="text-lg font-semibold text-gray-700 mb-1">
-                3. Chiến Thắng & Sở Hữu
+                3. Win & Own
               </h3>
               <p className="text-sm text-gray-600">
-                Thanh toán an toàn và nhận sản phẩm.
+                Pay securely and receive your item.
               </p>
             </div>
           </div>
         </div>
       </section>
 
-      {/* 6. "Why Choose AucHub?" Section (Static) - From mock */}
+      {/* 7. "Why Choose Us" Section */}
       <section className="py-8 sm:py-12 bg-white">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <h2 className="text-2xl sm:text-3xl font-bold text-center text-gray-800 mb-6 sm:mb-8">
-            Tại Sao Chọn Chúng Tôi?
+            Why Choose Us?
           </h2>
           <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6 text-center">
             <div className="p-4">
               <FaUsers className="text-3xl text-indigo-600 mx-auto mb-2" />
-              <h4 className="text-md font-semibold">Cộng Đồng Sôi Nổi</h4>
+              <h4 className="text-md font-semibold">Vibrant Community</h4>
               <p className="text-xs text-gray-500">
-                Kết nối người mua và người bán đam mê.
+                Connect passionate buyers and sellers.
               </p>
             </div>
             <div className="p-4">
               <FaShieldAlt className="text-3xl text-indigo-600 mx-auto mb-2" />
-              <h4 className="text-md font-semibold">Giao Dịch An Toàn</h4>
+              <h4 className="text-md font-semibold">Secure Transactions</h4>
               <p className="text-xs text-gray-500">
-                Nền tảng bảo mật, thanh toán minh bạch.
+                A secure platform with transparent payments.
               </p>
             </div>
             <div className="p-4">
               <FaChartLine className="text-3xl text-indigo-600 mx-auto mb-2" />
-              <h4 className="text-md font-semibold">Giá Trị Tốt Nhất</h4>
+              <h4 className="text-md font-semibold">Best Value</h4>
               <p className="text-xs text-gray-500">
-                Cơ hội sở hữu sản phẩm độc đáo với giá hời.
+                Get unique items at great deals.
               </p>
             </div>
           </div>

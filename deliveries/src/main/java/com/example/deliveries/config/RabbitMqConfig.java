@@ -23,7 +23,6 @@ public class RabbitMqConfig {
     public static final String DELIVERY_AUTO_COMPLETE_COMMAND_QUEUE = "q.delivery.command.auto_complete";
 
     // --- Routing Keys Consumed by THIS Deliveries Service ---
-    // Must match the routing key used by OrdersService for OrderReadyForShippingEvent
     public static final String ORDER_EVENT_READY_FOR_SHIPPING_ROUTING_KEY = "order.event.ready-for-shipping";
 
 
@@ -56,7 +55,6 @@ public class RabbitMqConfig {
 
     @Bean
     public TopicExchange ordersEventsExchange() { // For events consumed BY this service
-        // Assumes OrdersService defines and publishes to an exchange with this name.
         return ExchangeBuilder.topicExchange(ORDERS_EVENTS_EXCHANGE)
                 .durable(true)
                 .build();
@@ -65,7 +63,7 @@ public class RabbitMqConfig {
     @Bean
     CustomExchange deliveriesScheduleExchange() {
         Map<String, Object> args = new HashMap<>();
-        args.put("x-delayed-type", "direct"); // Can be direct or topic based on routing needs
+        args.put("x-delayed-type", "direct");
         return new CustomExchange(
                 DELIVERIES_SCHEDULE_EXCHANGE,
                 "x-delayed-message", // Plugin type

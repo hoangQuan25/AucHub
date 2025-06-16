@@ -16,6 +16,5 @@ public class DeliveryAwaitingBuyerConfirmationEventDto {
     String buyerId;
     String sellerId;
     LocalDateTime deliveredAt; // When it was marked as physically delivered
-    // int confirmationWindowDays; // Optional: if you want to pass this info
     String productInfoSnapshot;
 }

@@ -17,7 +17,6 @@ import org.springframework.stereotype.Component;
 @Slf4j
 public class NotificationEventListener {
 
-    // Inject a service to handle the notification logic
     private final NotificationService notificationService;
 
     private String getAuctionTypeFromRoutingKey(String routingKey) {
@@ -83,11 +82,9 @@ public class NotificationEventListener {
     public void handleOrderCreated(@Payload OrderCreatedEvent event) {
         log.info("Received OrderCreatedEvent: orderId={}, bidderId={}", event.getOrderId(), event.getCurrentBidderId());
         try {
-            // You'll need a corresponding processOrderCreated method in NotificationService
             notificationService.processOrderCreated(event);
         } catch (Exception e) {
             log.error("Error processing OrderCreatedEvent for order {}: {}", event.getOrderId(), e.getMessage(), e);
-            // Consider error handling / dead-lettering
         }
     }
 
@@ -95,7 +92,6 @@ public class NotificationEventListener {
     public void handleOrderPaymentDue(@Payload OrderCreatedEvent event) { // Reusing OrderCreatedEvent as discussed
         log.info("Received OrderPaymentDueEvent (using OrderCreatedEvent structure): orderId={}, newBidderId={}", event.getOrderId(), event.getCurrentBidderId());
         try {
-            // You'll need a corresponding processOrderPaymentDue method in NotificationService
             notificationService.processOrderPaymentDue(event);
         } catch (Exception e) {
             log.error("Error processing OrderPaymentDueEvent for order {}: {}", event.getOrderId(), e.getMessage(), e);
@@ -106,7 +102,6 @@ public class NotificationEventListener {
     public void handleUserPaymentDefaulted(@Payload UserPaymentDefaultedEvent event) {
         log.info("Received UserPaymentDefaultedEvent: orderId={}, defaultedUserId={}", event.getOrderId(), event.getDefaultedUserId());
         try {
-            // You'll need a corresponding processUserPaymentDefaulted method in NotificationService
             notificationService.processUserPaymentDefaulted(event);
         } catch (Exception e) {
             log.error("Error processing UserPaymentDefaultedEvent for order {}: {}", event.getOrderId(), e.getMessage(), e);
@@ -117,7 +112,6 @@ public class NotificationEventListener {
     public void handleSellerDecisionRequired(@Payload SellerDecisionRequiredEvent event) {
         log.info("Received SellerDecisionRequiredEvent: orderId={}, sellerId={}", event.getOrderId(), event.getSellerId());
         try {
-            // You'll need a corresponding processSellerDecisionRequired method in NotificationService
             notificationService.processSellerDecisionRequired(event);
         } catch (Exception e) {
             log.error("Error processing SellerDecisionRequiredEvent for order {}: {}", event.getOrderId(), e.getMessage(), e);
@@ -128,7 +122,6 @@ public class NotificationEventListener {
     public void handleOrderReadyForShipping(@Payload OrderReadyForShippingEvent event) {
         log.info("Received OrderReadyForShippingEvent: orderId={}, buyerId={}", event.getOrderId(), event.getBuyerId());
         try {
-            // You'll need a corresponding processOrderReadyForShipping method in NotificationService
             notificationService.processOrderReadyForShipping(event);
         } catch (Exception e) {
             log.error("Error processing OrderReadyForShippingEvent for order {}: {}", event.getOrderId(), e.getMessage(), e);
@@ -139,7 +132,6 @@ public class NotificationEventListener {
     public void handleOrderCancelled(@Payload OrderCancelledEvent event) {
         log.info("Received OrderCancelledEvent: orderId={}, reason={}", event.getOrderId(), event.getCancellationReason());
         try {
-            // You'll need a corresponding processOrderCancelled method in NotificationService
             notificationService.processOrderCancelled(event);
         } catch (Exception e) {
             log.error("Error processing OrderCancelledEvent for order {}: {}", event.getOrderId(), e.getMessage(), e);
@@ -182,10 +174,9 @@ public class NotificationEventListener {
         log.info("Received DeliveryCreatedEvent: deliveryId={}, orderId={}, buyerId={}, sellerId={}",
                 event.getDeliveryId(), event.getOrderId(), event.getBuyerId(), event.getSellerId());
         try {
-            notificationService.processDeliveryCreated(event); // We'll define this in NotificationService
+            notificationService.processDeliveryCreated(event);
         } catch (Exception e) {
             log.error("Error processing DeliveryCreatedEvent for deliveryId {}: {}", event.getDeliveryId(), e.getMessage(), e);
-            // Consider error handling / dead-lettering
         }
     }
 
@@ -194,7 +185,7 @@ public class NotificationEventListener {
         log.info("Received DeliveryShippedEvent: deliveryId={}, orderId={}, trackingNumber={}",
                 event.getDeliveryId(), event.getOrderId(), event.getTrackingNumber());
         try {
-            notificationService.processDeliveryShipped(event); // We'll define this in NotificationService
+            notificationService.processDeliveryShipped(event);
         } catch (Exception e) {
             log.error("Error processing DeliveryShippedEvent for deliveryId {}: {}", event.getDeliveryId(), e.getMessage(), e);
         }
@@ -205,7 +196,7 @@ public class NotificationEventListener {
         log.info("Received DeliveryDeliveredEvent: deliveryId={}, orderId={}, deliveredAt={}",
                 event.getDeliveryId(), event.getOrderId(), event.getDeliveredAt());
         try {
-            notificationService.processDeliveryDelivered(event); // We'll define this in NotificationService
+            notificationService.processDeliveryDelivered(event);
         } catch (Exception e) {
             log.error("Error processing DeliveryDeliveredEvent for deliveryId {}: {}", event.getDeliveryId(), e.getMessage(), e);
         }
@@ -227,7 +218,7 @@ public class NotificationEventListener {
         log.info("Received DeliveryIssueReportedEvent: deliveryId={}, orderId={}, issue='{}'",
                 event.getDeliveryId(), event.getOrderId(), event.getIssueNotes());
         try {
-            notificationService.processDeliveryIssueReported(event); // We'll define this in NotificationService
+            notificationService.processDeliveryIssueReported(event);
         } catch (Exception e) {
             log.error("Error processing DeliveryIssueReportedEvent for deliveryId {}: {}", event.getDeliveryId(), e.getMessage(), e);
         }
@@ -238,7 +229,7 @@ public class NotificationEventListener {
         log.info("Received UserBannedEvent: userId={}, banEndsAt={}, level={}",
                 event.getUserId(), event.getBanEndsAt(), event.getBanLevel());
         try {
-            notificationService.processUserBanned(event); // Create this method in NotificationService
+            notificationService.processUserBanned(event);
         } catch (Exception e) {
             log.error("Error processing UserBannedEvent for user {}: {}", event.getUserId(), e.getMessage(), e);
         }
@@ -260,7 +251,6 @@ public class NotificationEventListener {
         log.info("Received DeliveryReturnApprovedEvent: deliveryId={}, orderId={}, sellerId={}",
                 event.getDeliveryId(), event.getOrderId(), event.getSellerId());
         try {
-            // This event notifies the buyer that their return request was approved by the seller.
             notificationService.processDeliveryReturnApproved(event);
         } catch (Exception e) {
             log.error("Error processing DeliveryReturnApprovedEvent for delivery {}: {}", event.getDeliveryId(), e.getMessage(), e);

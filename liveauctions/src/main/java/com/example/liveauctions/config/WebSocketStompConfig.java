@@ -8,7 +8,7 @@ import org.springframework.web.socket.config.annotation.WebSocketMessageBrokerCo
 import org.springframework.beans.factory.annotation.Value;
 
 @Configuration
-@EnableWebSocketMessageBroker // Enables WebSocket message handling, backed by a message broker
+@EnableWebSocketMessageBroker
 public class WebSocketStompConfig implements WebSocketMessageBrokerConfigurer {
 
     @Value("${FRONTEND_ORIGIN_URL}")

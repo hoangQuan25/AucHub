@@ -11,7 +11,6 @@ const AuctionChatPanel = ({ auctionId }) => {
   const [input, setInput] = useState("");
   const bottomRef = useRef(null);
   const stompRef = useRef(null);
-  // lastHistoryTimestampRef removed as it wasn't being used for message filtering
 
   // Preload chat history
   useEffect(() => {
@@ -35,8 +34,6 @@ const AuctionChatPanel = ({ auctionId }) => {
 
     const client = new Client({
       webSocketFactory: () => {
-        // CORRECTED: Revert to using http/https for SockJS initial connection URL
-        // This uses the current page's protocol (http or https)
         const sockJsUrl = `${
           window.location.protocol
         }//localhost:8072/ws?uid=${encodeURIComponent(userId)}`;
@@ -44,9 +41,6 @@ const AuctionChatPanel = ({ auctionId }) => {
         return new SockJS(sockJsUrl);
       },
       connectHeaders: {
-        // If your STOMP broker over WS requires an Authorization header for the WebSocket connection itself
-        // (often STOMP auth is handled differently, e.g. via connect frame or session from HTTP handshake)
-        // Authorization: `Bearer ${keycloak.token}`
       },
       reconnectDelay: 5000,
       debug: (str) => {
@@ -124,9 +118,7 @@ const AuctionChatPanel = ({ auctionId }) => {
 
   return (
     <div className="flex flex-col h-full overflow-hidden border border-gray-200 rounded-lg shadow">
-      {" "}
-      {/* Main panel style */}
-      {/* Chat messages */}
+      
       <div className="flex-1 overflow-y-auto p-3 text-sm bg-gray-50">
         {msgs.map((m, i) => {
           const isSelf = loggedInUsername === m.username;

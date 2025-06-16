@@ -35,7 +35,6 @@ public class Notification {
     @Column(nullable = false)
     private boolean isRead = false; // Default to unread
 
-    // --- Optional: Links to related entities ---
     @Column(updatable = false)
     private UUID relatedAuctionId;
 
@@ -52,6 +51,4 @@ public class Notification {
     @Column(nullable = false, updatable = false)
     private LocalDateTime createdAt;
 
-    // Optional: Add an expiry time if implementing auto-deletion
-    // private LocalDateTime expiresAt;
 }

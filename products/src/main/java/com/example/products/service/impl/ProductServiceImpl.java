@@ -48,8 +48,6 @@ public class ProductServiceImpl implements ProductService {
             categories = new HashSet<>(categoryRepository.findAllById(dto.getCategoryIds()));
             if (categories.size() != dto.getCategoryIds().size()) {
                 log.warn("Some category IDs provided were not found for seller ID: {}", sellerId);
-                // Optionally throw an exception if all IDs must be valid
-                // throw new IllegalArgumentException("Invalid category ID(s) provided.");
             }
         }
         if (categories.isEmpty()) {
@@ -94,7 +92,6 @@ public class ProductServiceImpl implements ProductService {
         Set<Category> categories = new HashSet<>();
         if (dto.getCategoryIds() != null && !dto.getCategoryIds().isEmpty()) {
             categories = new HashSet<>(categoryRepository.findAllById(dto.getCategoryIds()));
-            // Optional: Add check if all requested category IDs were found
         }
         if (categories.isEmpty()) {
             throw new IllegalArgumentException("At least one valid category must be assigned during update.");
@@ -126,15 +123,10 @@ public class ProductServiceImpl implements ProductService {
                     return new RuntimeException("Product not found"); // Use specific exception
                 });
 
-        // Verify ownership before deleting
         if (!product.getSellerId().equals(sellerId)) {
             log.error("SECURITY: User {} attempted to delete product {} owned by {}", sellerId, productId, product.getSellerId());
             throw new RuntimeException("Access denied - You do not own this product"); // Or Forbidden exception
         }
-
-        // TODO: Add check here - can the product be deleted?
-        // Is it currently in an active auction? If so, should deletion be prevented?
-        // Example: if (isProductInActiveAuction(productId)) { throw new IllegalStateException("Cannot delete product while it is in an active auction."); }
 
         productRepository.delete(product);
         log.info("Product ID: {} deleted successfully by seller ID: {}", productId, sellerId);

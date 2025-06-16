@@ -162,7 +162,6 @@ public class RabbitMqConfig {
                 .noargs();
     }
 
-    // --- NEW BINDING ---
     // Bind end queue to COMMAND exchange (for immediate messages if scheduled time is past)
     @Bean
     Binding tdEndBindingImmediate(Queue tdAuctionEndQueue, DirectExchange tdAuctionCommandExchange) {
@@ -178,7 +177,6 @@ public class RabbitMqConfig {
                 .with(MAIN_DLQ_ROUTING_KEY); // Bind the DLQ with the specific routing key
     }
 
-    // --- Message Converter (identical is fine) ---
     @Bean
     public MessageConverter jsonMessageConverter() {
         return new Jackson2JsonMessageConverter();

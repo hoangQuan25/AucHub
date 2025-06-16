@@ -1,18 +1,11 @@
 package com.example.liveauctions.listener;
 
-import com.example.liveauctions.commands.AuctionLifecycleCommands;
 import com.example.liveauctions.config.RabbitMqConfig;
 import com.example.liveauctions.dto.LiveAuctionStateDto;
-import com.example.liveauctions.entity.AuctionStatus;
-import com.example.liveauctions.entity.LiveAuction;
-import com.example.liveauctions.event.AuctionStateUpdateEvent;
+import com.example.liveauctions.dto.event.AuctionStateUpdateEvent;
 // import com.example.liveauctions.websocket.WebSocketSessionManager; // REMOVE this
-import com.example.liveauctions.exception.AuctionNotFoundException;
 import com.example.liveauctions.repository.LiveAuctionRepository;
 import com.example.liveauctions.service.WebSocketEventPublisher;
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.amqp.core.ExchangeTypes;
@@ -23,16 +16,12 @@ import org.springframework.amqp.rabbit.annotation.RabbitListener;
 import org.springframework.messaging.simp.SimpMessagingTemplate; // Import this
 import org.springframework.stereotype.Component;
 
-import java.time.LocalDateTime;
-
 @Component
 @RequiredArgsConstructor
 @Slf4j
 public class AuctionEventListener {
 
     private final SimpMessagingTemplate messagingTemplate;
-    private final LiveAuctionRepository liveAuctionRepository;
-    private final WebSocketEventPublisher webSocketEventPublisher;
 
     @RabbitListener(bindings = @QueueBinding(
             value = @Queue(durable = "false", autoDelete = "true", exclusive = "true"), // Anonymous queue for this instance

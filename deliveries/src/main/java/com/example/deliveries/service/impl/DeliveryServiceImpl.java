@@ -219,10 +219,7 @@ public class DeliveryServiceImpl implements DeliveryService {
 
         // CRITICAL CHECK: Only auto-complete if buyer hasn't acted yet
         if (delivery.getDeliveryStatus() == DeliveryStatus.AWAITING_BUYER_CONFIRMATION) {
-            // Double check deadline if necessary, though delay mechanism should handle timing
-            // if (LocalDateTime.now().isAfter(originalConfirmationDeadline) || LocalDateTime.now().isEqual(originalConfirmationDeadline)) {
             delivery.setDeliveryStatus(DeliveryStatus.COMPLETED_AUTO);
-            // delivery.setAutoCompletedAt(LocalDateTime.now()); // Optional: add new timestamp field
             String note = "Delivery auto-completed by system as buyer did not confirm within the window (Original deadline: " + originalConfirmationDeadline.toString() + ").";
             delivery.setNotes(delivery.getNotes() == null ? note : delivery.getNotes() + "; " + note);
 
@@ -230,10 +227,6 @@ public class DeliveryServiceImpl implements DeliveryService {
             log.info("Delivery {} auto-completed. Status set to COMPLETED_AUTO.", savedDelivery.getDeliveryId());
 
             publishDeliveryAutoCompletedEvent(savedDelivery);
-            // } else {
-            //    log.warn("Auto-completion command received for delivery {} but original deadline {} not yet passed. Current time: {}. Ignoring.",
-            //        deliveryId, originalConfirmationDeadline, LocalDateTime.now());
-            // }
         } else {
             log.info("Auto-completion for delivery {} skipped. Current status is {} (not AWAITING_BUYER_CONFIRMATION).",
                     deliveryId, delivery.getDeliveryStatus());
@@ -252,14 +245,11 @@ public class DeliveryServiceImpl implements DeliveryService {
             throw new SecurityException("User not authorized for this action.");
         }
 
-        // Allow reporting issue from most active states, but not if already resolved or cancelled
         Set<DeliveryStatus> NON_REPORTABLE_STATUSES = Set.of(
                 DeliveryStatus.RECEIPT_CONFIRMED_BY_BUYER,
                 DeliveryStatus.COMPLETED_AUTO,
                 DeliveryStatus.CANCELLED
-                // Potentially others like RETURN_ACCEPTED, RETURN_COMPLETED if they exist
         );
-// In reportDeliveryIssue:
         if (NON_REPORTABLE_STATUSES.contains(delivery.getDeliveryStatus())) {
             log.warn("Cannot report issue for delivery {} as it is already {}." , deliveryId, delivery.getDeliveryStatus());
             throw new IllegalStateException("Cannot report issue for a delivery in its current state.");
@@ -294,8 +284,6 @@ public class DeliveryServiceImpl implements DeliveryService {
         delivery.setReturnApprovedAt(DateTimeUtil.roundToMicrosecond(LocalDateTime.now()));
         Delivery savedDelivery = deliveryRepository.save(delivery);
 
-        // Publish event to notify buyer that their return request was approved
-        // and they should now ship the item back.
         publishDeliveryReturnApprovedEvent(savedDelivery);
 
         log.info("Delivery {} return approved by seller. Status: {}", savedDelivery.getDeliveryId(), savedDelivery.getDeliveryStatus());
@@ -320,9 +308,6 @@ public class DeliveryServiceImpl implements DeliveryService {
         delivery.setReturnItemReceivedAt(DateTimeUtil.roundToMicrosecond(LocalDateTime.now()));
         Delivery savedDelivery = deliveryRepository.save(delivery);
 
-        // --- THIS IS THE KEY TRIGGER ---
-        // Now that the seller has the item, we publish an event to tell
-        // the PaymentService (via OrderService or directly) to issue the refund.
         publishDeliveryReturnApprovedEvent(savedDelivery);
         publishRefundRequiredForReturnEvent(savedDelivery);
 
@@ -413,10 +398,8 @@ public class DeliveryServiceImpl implements DeliveryService {
                 .sellerId(delivery.getSellerId())
                 .deliveredAt(delivery.getDeliveredAt())
                 .productInfoSnapshot(delivery.getProductInfoSnapshot())
-                // .confirmationWindowDays(3) // Example if you want to include this
                 .build();
         try {
-            // Make sure RabbitMqConfig in DeliveriesService has this routing key and it's bound
             rabbitTemplate.convertAndSend(
                     RabbitMqConfig.DELIVERIES_EVENTS_EXCHANGE,
                     RabbitMqConfig.DELIVERY_EVENT_AWAITING_BUYER_CONFIRMATION_ROUTING_KEY, // NEW ROUTING KEY
@@ -445,7 +428,6 @@ public class DeliveryServiceImpl implements DeliveryService {
             log.warn("Delivery {} has null deliveredAt timestamp when scheduling auto-completion. Using current time as base.", delivery.getDeliveryId());
             confirmationDeadline = roundedNow.plus(BUYER_CONFIRMATION_WINDOW);
         }
-        // Ensure the deadline itself is also rounded for the command
         LocalDateTime roundedConfirmationDeadline = DateTimeUtil.roundToMicrosecond(confirmationDeadline);
 
         long delayMillis = Duration.between(roundedNow, roundedConfirmationDeadline).toMillis();
@@ -473,8 +455,6 @@ public class DeliveryServiceImpl implements DeliveryService {
         } else {
             log.warn("Auto-completion check delay for delivery {} was not positive ({}ms). Consider immediate check or error.",
                     delivery.getDeliveryId(), delayMillis);
-            // Potentially trigger immediate auto-completion if deadline already passed (e.g., for testing)
-            // processAutoCompletion(delivery.getDeliveryId(), confirmationDeadline);
         }
     }
 

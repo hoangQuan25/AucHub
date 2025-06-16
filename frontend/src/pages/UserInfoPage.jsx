@@ -1,14 +1,12 @@
 import React, { useState, useEffect, useCallback } from "react";
 import { useKeycloak } from "@react-keycloak/web";
-import apiClient from "../api/apiClient"; // Adjust path if needed
+import apiClient from "../api/apiClient";
 import { loadStripe } from "@stripe/stripe-js";
 
-// Import Modals (assuming they are in ../components/)
 import ConfirmationModal from "../components/ConfirmationModal";
 import EditProfileModal from "../components/EditProfileModal";
 import StripeWrappedSetupFormModal from "../components/StripeSetupFormModal";
 
-// Import New User Sections
 import UserProfileInfoSection from "../components/user/UserProfileInfoSection";
 import UserAddressSection from "../components/user/UserAddressSection";
 import UserPaymentMethodSection from "../components/user/UserPaymentMethodSection";
@@ -48,7 +46,6 @@ function UserInfoPage() {
   const [isAvatarUploading, setIsAvatarUploading] = useState(false);
   const [avatarUploadError, setAvatarUploadError] = useState("");
 
-  // Cloudinary Configuration (same as your AddProductModal)
   const CLOUDINARY_CLOUD_NAME = "dkw4hauo9"; // Your Cloudinary cloud name
   const CLOUDINARY_UPLOAD_PRESET = "auction_preset"; // Your Upload Preset NAME
   const CLOUDINARY_UPLOAD_URL = `https://api.cloudinary.com/v1_1/${CLOUDINARY_CLOUD_NAME}/image/upload`;
@@ -119,10 +116,7 @@ function UserInfoPage() {
         avatarUrl: newAvatarUrl,
       });
 
-      // Update profile data locally with the new avatar URL from backend response
       setProfileData(backendResponse.data); // Assuming backend returns the updated UserDto
-      // Or: setProfileData(prev => ({ ...prev, avatarUrl: newAvatarUrl }));
-      //     if the backend response is just a success message.
 
       setEditSuccess("Avatar updated successfully!"); // Reuse editSuccess or add avatarSuccess
       setTimeout(() => setEditSuccess(""), 3000);
@@ -133,7 +127,6 @@ function UserInfoPage() {
         err.message ||
         "Failed to update avatar.";
       setAvatarUploadError(errorMessage);
-      // Optionally clear the error after a few seconds
       setTimeout(() => setAvatarUploadError(""), 5000);
     } finally {
       setIsAvatarUploading(false);
@@ -172,7 +165,6 @@ function UserInfoPage() {
       profileData.hasDefaultPaymentMethod ||
       (profileData.stripeDefaultPaymentMethodId &&
         profileData.stripeDefaultPaymentMethodId.trim() !== "");
-    // As a fallback, you could also check profileData.defaultCardLast4 if hasDefaultPaymentMethod isn't directly available.
 
     if (!hasPaymentMethod) {
       missingFields.push(
@@ -241,8 +233,6 @@ function UserInfoPage() {
         stateProvince: updatedData.stateProvince,
         postalCode: updatedData.postalCode,
         country: updatedData.country,
-        // If you add sellerDescription later, it would go here too
-        // sellerDescription: updatedData.sellerDescription
       };
 
       if (profileData && (profileData.isSeller || profileData.seller)) {
@@ -321,8 +311,6 @@ function UserInfoPage() {
       errorMessage || "Failed to set up payment method with Stripe."
     );
     setIsAddingPaymentMethod(false);
-    // setIsStripeSetupModalOpen(false); // Optional: close modal on Stripe error too
-    // setSetupIntentClientSecret(null);
   };
 
   if (!initialized || profileLoading) {
@@ -337,8 +325,6 @@ function UserInfoPage() {
     );
   }
 
-  // Moved this specific error display down to be shown only if profileData itself is null AFTER loading attempt
-  // if (!profileData && profileError) { ... }
 
   return (
     <div className="bg-slate-50 min-h-screen"> {/* Added a light background to the whole page */}
@@ -391,13 +377,12 @@ function UserInfoPage() {
 
             {/* Grid layout for Address, Payment, and Seller sections */}
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-              {/* Address Section - spans 1 column on lg, can be made to span 2 if desired */}
               <div className="lg:col-span-1"> {/* Or lg:col-span-2 for wider address */}
                 <UserAddressSection profileData={profileData} />
               </div>
 
               {/* Payment and Seller Sections - stacked in the remaining column(s) */}
-              <div className="lg:col-span-2 space-y-8"> {/* Or lg:col-span-1 if address is wider */}
+              <div className="lg:col-span-2 space-y-8"> 
                 <UserPaymentMethodSection
                   profileData={profileData}
                   onAddOrUpdatePaymentMethod={handleAddOrUpdatePaymentMethod}
@@ -444,7 +429,6 @@ function UserInfoPage() {
             onSave={handleSaveProfile}
             initialData={profileData}
             error={editError} // Pass error to be displayed in modal
-            // success message is handled outside, or pass setEditSuccess to clear it from modal
           />
         )}
         {isStripeSetupModalOpen && setupIntentClientSecret && stripePromise && (

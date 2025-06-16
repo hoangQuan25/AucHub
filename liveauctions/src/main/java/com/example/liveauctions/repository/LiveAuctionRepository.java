@@ -23,14 +23,6 @@ import jakarta.persistence.LockModeType; // JPA Lock Mode
 @Repository
 public interface LiveAuctionRepository extends JpaRepository<LiveAuction, UUID> { // Entity is LiveAuction, ID is UUID
 
-    /**
-     * Finds auctions by their status, supporting pagination and sorting.
-     * Used for fetching active auctions list.
-     *
-     * @param status The status to filter by (e.g., ACTIVE).
-     * @param pageable Pagination and sorting information.
-     * @return A Page of LiveAuction entities.
-     */
     Page<LiveAuction> findByStatus(AuctionStatus status, Pageable pageable);
 
 

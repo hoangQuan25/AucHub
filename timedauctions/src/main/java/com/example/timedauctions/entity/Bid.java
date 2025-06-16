@@ -9,7 +9,6 @@ import java.time.LocalDateTime;
 import java.util.UUID;
 
 @Entity
-// Use different schema/table, update index name
 @Table(name = "timed_bids", schema = "timed_auction_schema", indexes = {
         @Index(name = "idx_timed_bid_auction_time", columnList = "timedAuctionId, bidTime DESC")
 })

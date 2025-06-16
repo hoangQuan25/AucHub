@@ -1,11 +1,11 @@
-package com.example.timedauctions.client.dto; // Example package within liveauctions
+package com.example.timedauctions.client.dto;
 
 import lombok.Data;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Set;
 
-@Data // Assuming using Lombok Data, ensure required constructors/getters/setters exist
+@Data
 public class ProductDto {
     private Long id;
     private String title;

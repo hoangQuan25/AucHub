@@ -13,7 +13,6 @@ import java.util.List;
 @Repository
 public interface ProductRepository extends JpaRepository<Product, Long> {
 
-    // Find products by the seller's ID (Keycloak ID)
     List<Product> findBySellerId(String sellerId);
 
     Page<Product> findBySellerId(String sellerId, Pageable pageable);

@@ -31,16 +31,13 @@ public class AuctionChatServiceImpl implements AuctionChatService {
                                 String userId,
                                 ChatMessageDto payload) {
 
-        // --- seller flag + timestamp + auctionId as before ---
         boolean seller = userId != null &&
                 auctionRepository.existsByIdAndSellerId(auctionId, userId);
         payload.setAuctionId(auctionId);
         payload.setSeller(seller);
         payload.setTimestamp(LocalDateTime.now());
 
-        // --- new: fetch username in batch ---
         if (userId != null) {
-            // call your open /batch endpoint
             Map<String, UserBasicInfoDto> infos =
                     userServiceClient.getUsersBasicInfoByIds(List.of(userId));
             UserBasicInfoDto info = infos.get(userId);

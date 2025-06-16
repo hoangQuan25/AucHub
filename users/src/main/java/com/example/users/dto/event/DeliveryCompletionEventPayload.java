@@ -16,5 +16,4 @@ public class DeliveryCompletionEventPayload {
     private String orderId; // Crucial for linking
     private String buyerId;
     private String sellerId;
-    // Add other fields if needed from the original event, like productInfoSnapshot
 }

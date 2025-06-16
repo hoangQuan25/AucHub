@@ -50,8 +50,6 @@ function BuyerShippingInfo({ deliveryDetails }) {
             <p>{addressLine2}</p>
           </div>
         </div>
-        {/* You could add buyer's email here if deliveryDetails included it,
-            or if OrderDetailPage fetched UserBasicInfoDto for the buyer separately */}
       </div>
     </div>
   );

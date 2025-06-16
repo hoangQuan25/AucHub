@@ -12,7 +12,6 @@ public class ReturnRequestDto {
 
     private String comments;
 
-    // --- NEW FIELDS to be provided by the buyer ---
 
     @NotBlank(message = "Please provide the courier service you are using for the return.")
     private String returnCourier;

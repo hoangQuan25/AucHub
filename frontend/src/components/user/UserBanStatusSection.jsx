@@ -4,7 +4,6 @@ import { FaUserSlash } from 'react-icons/fa'; // Or FaBan, FaExclamationTriangle
 
 const UserBanStatusSection = ({ banEndsAt }) => {
   if (!banEndsAt) {
-    // This should ideally not be reached if the parent component only renders this when isBanned is true
     return null;
   }
 

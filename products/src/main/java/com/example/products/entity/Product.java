@@ -32,13 +32,10 @@ public class Product {
     private String sellerId; // Keycloak User ID of the owner
 
 
-    // --- ADD Condition ---
     @Enumerated(EnumType.STRING) // Store enum name as string in DB
     @Column(name = "product_condition", nullable = false)
     private ProductCondition condition; // Add condition field
-    // ---
 
-    // Store image URLs directly in a collection table managed by JPA
     @ElementCollection(fetch = FetchType.EAGER) // Fetch eagerly for simplicity now
     @CollectionTable(name = "product_image_urls", joinColumns = @JoinColumn(name = "product_id"), schema = "product_schema")
     @Column(name = "image_url", nullable = false, length=1024) // Column in the join table
@@ -65,5 +62,4 @@ public class Product {
     @Column(nullable = false)
     private LocalDateTime updatedAt;
 
-    // Consider adding a Status enum later (AVAILABLE, IN_AUCTION, SOLD)
 }

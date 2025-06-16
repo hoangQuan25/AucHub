@@ -16,21 +16,11 @@ import jakarta.validation.constraints.NotNull;
 @Validated // Enable validation on properties
 public class AuctionTimingProperties {
 
-    @NotNull
-    private SoftClose softClose = new SoftClose();
+    private boolean softCloseEnabled = true;
 
-    // Fast finish might not be relevant, but keep structure if needed
-    // private FastFinish fastFinish = new FastFinish();
+    @Min(1)
+    private int softCloseThresholdMinutes = 10;
 
-    @Getter @Setter
-    public static class SoftClose {
-        private boolean enabled = true;
-
-        @Min(1)
-        private int thresholdMinutes = 10; // Default threshold in minutes
-
-        @Min(1)
-        private int extensionMinutes = 5; // Default extension in minutes
-    }
-
+    @Min(1)
+    private int softCloseExtensionMinutes = 5;
 }

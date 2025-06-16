@@ -31,8 +31,7 @@ import java.util.Map;
 public class UserController {
 
     private final UserService userService;
-    private final PaymentServiceClient paymentServiceClient; // Assuming this is a Feign client
-    private final SellerReviewService sellerReviewService; // Assuming this is a service for handling reviews
+    private final SellerReviewService sellerReviewService;
     private static final String USER_ID_HEADER = "X-User-ID";
     private static final String USER_EMAIL_HEADER = "X-User-Email";
     private static final String USER_USERNAME_HEADER = "X-User-Username";
@@ -47,7 +46,7 @@ public class UserController {
         return ResponseEntity.ok(userProfile);
     }
 
-    @PutMapping("/me") // This endpoint now handles all profile updates
+    @PutMapping("/me")
     public ResponseEntity<UserDto> updateUserProfile(
             @RequestHeader(USER_ID_HEADER) String userId,
             @Valid @RequestBody UpdateUserDto updateUserDto) { // Use the updated DTO
@@ -64,7 +63,7 @@ public class UserController {
         return ResponseEntity.noContent().build();
     }
 
-    @PutMapping("/me/avatar") // Or @PostMapping, PUT is common for updates
+    @PutMapping("/me/avatar")
     public ResponseEntity<UserDto> updateUserAvatar(
             @RequestHeader(USER_ID_HEADER) String userId,
             @RequestBody AvatarUpdateRequestDto avatarUpdateRequest) { // Expecting JSON like {"avatarUrl": "http://..."}
@@ -73,7 +72,6 @@ public class UserController {
             log.warn("Avatar URL is missing in the request for user ID: {}", userId);
             return ResponseEntity.badRequest().build(); // Or a more descriptive error
         }
-        // You might want to add URL validation here if necessary
         UserDto updatedUserProfile = userService.updateAvatarUrl(userId, avatarUpdateRequest.getAvatarUrl());
         return ResponseEntity.ok(updatedUserProfile);
     }
@@ -91,9 +89,6 @@ public class UserController {
             @RequestHeader(USER_ID_HEADER) String buyerId, // Get buyer ID from header (set by API Gateway/Auth service)
             @Valid @RequestBody CreateReviewDto createReviewDto) {
         log.info("POST /reviews request from buyer ID: {}", buyerId);
-        // Simple check: Make sure the authenticated user is not trying to submit a review as someone else.
-        // More complex validation (e.g., can this buyerId review this orderId from this sellerId)
-        // is handled in the service layer.
         ReviewDto createdReview = sellerReviewService.createReview(createReviewDto, buyerId);
         return ResponseEntity.status(HttpStatus.CREATED).body(createdReview);
     }
@@ -127,55 +122,14 @@ public class UserController {
 
     @PostMapping("/me/payment-method/setup-intent-secret")
     public ResponseEntity<?> createSetupIntentSecret(@RequestHeader(USER_ID_HEADER) String userId,
-                                                     @RequestHeader(value = USER_EMAIL_HEADER, required = false) String email, // For creating Stripe Customer
-                                                     @RequestHeader(value = USER_USERNAME_HEADER, required = false) String username) { // For creating Stripe Customer
+                                                     @RequestHeader(value = USER_EMAIL_HEADER, required = false) String email,
+                                                     @RequestHeader(value = USER_USERNAME_HEADER, required = false) String username) {
         log.info("User {} requesting SetupIntent secret", userId);
         try {
-            UserDto userDto = userService.getOrCreateUserProfile(userId, username, email); // Ensures user exists, gets current stripeCustomerId
-            String existingStripeCustomerId = userDto.getStripeCustomerId();
-            String userEmailForStripe = userDto.getEmail(); // Get email from profile
-            String userNameForStripe = null; // Construct name if available
-            if (userDto.getFirstName() != null || userDto.getLastName() != null) {
-                userNameForStripe = (userDto.getFirstName() == null ? "" : userDto.getFirstName()) +
-                        (userDto.getLastName() == null ? "" : " " + userDto.getLastName()).trim();
-            }
-
-
-            CreateStripeSetupIntentRequestClientDto setupRequest =
-                    new CreateStripeSetupIntentRequestClientDto(userId, userEmailForStripe, userNameForStripe, existingStripeCustomerId);
-
-            log.debug("Calling PaymentsService to create SetupIntent for userId: {}, existingStripeCustomerId: {}", userId, existingStripeCustomerId);
-            ResponseEntity<CreateStripeSetupIntentResponseClientDto> paymentsResponse =
-                    paymentServiceClient.createStripeSetupIntent(setupRequest);
-
-            if (paymentsResponse.getStatusCode().is2xxSuccessful() && paymentsResponse.getBody() != null) {
-                CreateStripeSetupIntentResponseClientDto setupResponseData = paymentsResponse.getBody();
-                log.info("Successfully received SetupIntent client_secret for user {}. Stripe Customer ID: {}", userId, setupResponseData.getStripeCustomerId());
-
-                // If PaymentsService created/confirmed a Stripe Customer ID and UsersService didn't have it,
-                // or if it was newly created by PaymentsService, save it now.
-                if (setupResponseData.getStripeCustomerId() != null &&
-                        (existingStripeCustomerId == null || !existingStripeCustomerId.equals(setupResponseData.getStripeCustomerId()))) {
-                    // We only have stripeCustomerId here, other card details come after confirm-setup
-                    // So, we can update only the stripeCustomerId if it's new/changed from PaymentsService response.
-                    // The full card details are saved in the confirm-setup step.
-                    userService.saveStripePaymentDetails(
-                            userId,
-                            setupResponseData.getStripeCustomerId(),
-                            null, null, null, null, null // No card details yet
-                    );
-                    log.info("Updated Stripe Customer ID for user {} to {}", userId, setupResponseData.getStripeCustomerId());
-                }
-                return ResponseEntity.ok(Collections.singletonMap("clientSecret", setupResponseData.getClientSecret()));
-            } else {
-                log.error("PaymentsService failed to create SetupIntent for user {}. Status: {}, Body: {}",
-                        userId, paymentsResponse.getStatusCode(), paymentsResponse.getBody());
-                return ResponseEntity.status(paymentsResponse.getStatusCode())
-                        .body("Failed to create SetupIntent via PaymentsService.");
-            }
+            StripeSetupIntentSecretDto result = userService.createSetupIntentSecret(userId, email, username);
+            return ResponseEntity.ok(result);
         } catch (Exception e) {
             log.error("Error creating SetupIntent secret for user {}: {}", userId, e.getMessage(), e);
-            // Check if it's a FeignException to provide more specific error handling
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("Failed to create SetupIntent.");
         }
     }
@@ -188,39 +142,8 @@ public class UserController {
             @Valid @RequestBody StripeSetupConfirmationRequestDto confirmationRequest) {
         log.info("User {} confirming payment method setup with PaymentMethod ID: {}", userId, confirmationRequest.getStripePaymentMethodId());
         try {
-            UserDto userDto = userService.getOrCreateUserProfile(userId, username, email); // Get current Stripe Customer ID if any
-            String existingStripeCustomerId = userDto.getStripeCustomerId();
-
-            ConfirmStripePaymentMethodRequestClientDto confirmPmRequest =
-                    new ConfirmStripePaymentMethodRequestClientDto(userId, confirmationRequest.getStripePaymentMethodId(), existingStripeCustomerId);
-
-            log.debug("Calling PaymentsService to confirm PaymentMethod for userId: {}, pmId: {}, existingStripeCustomerId: {}",
-                    userId, confirmationRequest.getStripePaymentMethodId(), existingStripeCustomerId);
-            ResponseEntity<StripePaymentMethodDetailsClientDto> paymentsResponse =
-                    paymentServiceClient.confirmAndSaveStripePaymentMethod(confirmPmRequest);
-
-            if (paymentsResponse.getStatusCode().is2xxSuccessful() && paymentsResponse.getBody() != null) {
-                StripePaymentMethodDetailsClientDto pmDetails = paymentsResponse.getBody();
-                log.info("Successfully received payment method details from PaymentsService for user {}. Stripe Customer ID: {}", userId, pmDetails.getStripeCustomerId());
-
-                userService.saveStripePaymentDetails(
-                        userId,
-                        pmDetails.getStripeCustomerId(),
-                        pmDetails.getStripePaymentMethodId(), // This is the default PM ID
-                        pmDetails.getCardBrand(),
-                        pmDetails.getLast4(),
-                        pmDetails.getExpiryMonth(),
-                        pmDetails.getExpiryYear()
-                );
-                return ResponseEntity.ok(Map.of("message", "Payment method saved successfully.",
-                        "stripeCustomerId", pmDetails.getStripeCustomerId(),
-                        "defaultPaymentMethodId", pmDetails.getStripePaymentMethodId()));
-            } else {
-                log.error("PaymentsService failed to confirm payment method for user {}. Status: {}, Body: {}",
-                        userId, paymentsResponse.getStatusCode(), paymentsResponse.getBody());
-                return ResponseEntity.status(paymentsResponse.getStatusCode())
-                        .body("Failed to confirm payment method via PaymentsService.");
-            }
+            StripePaymentMethodConfirmationResultDto result = userService.confirmPaymentMethodSetup(userId, email, username, confirmationRequest);
+            return ResponseEntity.ok(result);
         } catch (Exception e) {
             log.error("Error confirming payment method setup for user {}: {}", userId, e.getMessage(), e);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("Failed to save payment method.");

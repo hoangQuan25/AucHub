@@ -116,7 +116,6 @@ public class OrderServiceImpl implements OrderService {
                 savedOrder.getAuctionType());
 
         schedulePaymentTimeoutCheck(savedOrder.getId(), paymentDeadline, currentPaymentOfferAttempt);
-        // Use savedOrder.getAuctionType() for publishing the event
         publishOrderCreatedEvent(savedOrder); // Removed auctionType param, will get from order object
 
         log.info("Successfully processed auction sold event for order ID {}", savedOrder.getId());
@@ -143,7 +142,6 @@ public class OrderServiceImpl implements OrderService {
                 OrderStatus.ORDER_CANCELLED_SYSTEM,
                 OrderStatus.AUCTION_REOPEN_INITIATED,       // Order flow is being reset
                 OrderStatus.ORDER_SUPERSEDED_BY_REOPEN     // This order instance is finalized due to reopen
-                // Add any other statuses where payment timeout logic should absolutely not run
         );
 
         if (finalOrNonTimeoutableStatuses.contains(order.getOrderStatus())) {
@@ -285,11 +283,6 @@ public class OrderServiceImpl implements OrderService {
         log.info("Seller decision processed for order {}. New status: {}", orderId, order.getOrderStatus());
     }
 
-    /**
-     * Processes a successful payment event from the Payment Service.
-     *
-     * @param eventDto Details of the successful payment.
-     */
     @Override
     @Transactional
     public void processPaymentSuccess(PaymentSucceededEventDto eventDto) {
@@ -309,8 +302,6 @@ public class OrderServiceImpl implements OrderService {
                 order.getOrderStatus() == OrderStatus.PAYMENT_SUCCESSFUL /* If PAYMENT_SUCCESSFUL can be re-processed to AWAITING_FULFILLMENT_CONFIRMATION */) {
             log.warn("Order {} already processed for successful payment or awaiting confirmation. Current status: {}. Ignoring event or re-evaluating.",
                     order.getId(), order.getOrderStatus());
-            // If it's PAYMENT_SUCCESSFUL and you want to transition it now, you can proceed.
-            // For now, if it's already AWAITING_FULFILLMENT_CONFIRMATION or AWAITING_SHIPMENT, we can skip.
             if (order.getOrderStatus() == OrderStatus.AWAITING_FULFILLMENT_CONFIRMATION || order.getOrderStatus() == OrderStatus.AWAITING_SHIPMENT) {
                 return;
             }
@@ -321,15 +312,11 @@ public class OrderServiceImpl implements OrderService {
         if (!order.getCurrentBidderId().equals(eventDto.getUserId())) { // Assuming DTO has userId who paid
             log.error("Payment success event for order {} has mismatched user. Order current bidder: {}, Event user: {}. Critical error!",
                     order.getId(), order.getCurrentBidderId(), eventDto.getUserId());
-            // This is a serious issue, might require manual intervention or specific error handling.
-            // For now, we'll throw an exception.
             throw new IllegalStateException("Payment user mismatch for order " + order.getId());
         }
 
         order.setOrderStatus(OrderStatus.AWAITING_FULFILLMENT_CONFIRMATION); // Or directly AWAITING_SHIPMENT
         order.setPaymentTransactionRef(eventDto.getPaymentIntentId()); // Store Stripe's PaymentIntent ID
-        // Potentially store eventDto.getChargeId() if you add that to Order entity
-        // order.setActualAmountPaid(eventDto.getAmountPaid()); // If you store this
 
         Order savedOrder = orderRepository.save(order);
         log.info("Order {} status updated to AWAITING_FULFILLMENT_CONFIRMATION. PaymentIntentId: {}",
@@ -359,11 +346,8 @@ public class OrderServiceImpl implements OrderService {
         Order savedOrder = orderRepository.save(order);
         log.info("Order {} fulfillment confirmed by seller. Status set to AWAITING_SHIPMENT.", savedOrder.getId());
 
-        // Now publish the event for DeliveryService
         publishOrderReadyForShippingEvent(savedOrder);
 
-        // (Optional) Publish an event for notifications about seller's confirmation
-        // publishOrderConfirmedBySellerEvent(savedOrder);
     }
 
     @Override
@@ -384,8 +368,6 @@ public class OrderServiceImpl implements OrderService {
         if (!order.getCurrentBidderId().equals(buyerId)) {
             log.warn("Attempt to complete order {} by user {} who is not the current buyer {}.",
                     orderId, buyerId, order.getCurrentBidderId());
-            // Depending on strictness, you might throw an exception or just log
-            // For now, we'll proceed but this is a point of validation.
         }
 
 
@@ -406,11 +388,6 @@ public class OrderServiceImpl implements OrderService {
         publishOrderCompletedEvent(savedOrder, "BUYER_CONFIRMED_RECEIPT");
     }
 
-    /**
-     * Processes a failed payment event from the Payment Service.
-     *
-     * @param eventDto Details of the failed payment.
-     */
     @Override
     @Transactional
     public void processPaymentFailure(PaymentFailedEventDto eventDto) {
@@ -442,10 +419,6 @@ public class OrderServiceImpl implements OrderService {
         log.info("Payment failed for order {}, current bidder {}, attempt {}. Reason: {}",
                 order.getId(), order.getCurrentBidderId(), order.getPaymentOfferAttempt(), eventDto.getFailureMessage());
 
-        // At this point, payment has failed for the currentBidderId at the currentAttempt.
-        // Logic here is very similar to handlePaymentTimeout.
-        // We can refactor this into a common method if the logic is identical.
-
         publishUserPaymentDefaultedEvent(order); // User defaulted due to payment failure
 
         int currentAttempt = order.getPaymentOfferAttempt();
@@ -458,7 +431,6 @@ public class OrderServiceImpl implements OrderService {
 
         } else if (currentAttempt == 2) { // Second bidder's payment failed
             log.info("Second offered bidder's (attempt 2) payment failed for order {}.", order.getId());
-            // DON'T offer to 3rd automatically. Go to AWAITING_SELLER_DECISION.
             order.setOrderStatus(OrderStatus.AWAITING_SELLER_DECISION);
             publishSellerDecisionRequiredEvent(order);
         } else if (currentAttempt >= 3) { // Third (or later) bidder's payment failed
@@ -475,14 +447,6 @@ public class OrderServiceImpl implements OrderService {
         }
     }
 
-    /**
-     * Retrieves a paginated list of orders for the authenticated user.
-     *
-     * @param userId       The ID of the authenticated user.
-     * @param statusFilter Optional status to filter by (e.g., "PENDING_PAYMENT").
-     * @param pageable     Pagination information.
-     * @return A page of OrderSummaryDto.
-     */
     @Override
     @Transactional(readOnly = true)
     public Page<OrderSummaryDto> getMyOrders(String userId, String statusFilterString, Pageable pageable) {
@@ -527,7 +491,6 @@ public class OrderServiceImpl implements OrderService {
             if (!targetStatuses.isEmpty()) {
                 ordersPage = orderRepository.findByCurrentBidderIdAndOrderStatusIn(userId, targetStatuses, pageable);
             } else {
-                // This case should ideally not be reached if default in switch handles unknown values
                 log.warn("No target statuses determined for filter: '{}'. Fetching all orders for user.", statusFilterString);
                 ordersPage = orderRepository.findByCurrentBidderId(userId, pageable);
             }
@@ -538,13 +501,6 @@ public class OrderServiceImpl implements OrderService {
         return ordersPage.map(orderMapper::toOrderSummaryDto);
     }
 
-    /**
-     * Retrieves the details of a specific order for an authorized user.
-     *
-     * @param orderId The ID of the order.
-     * @param userId  The ID of the authenticated user (for authorization).
-     * @return OrderDetailDto.
-     */
     @Override
     @Transactional(readOnly = true)
     public OrderDetailDto getOrderDetailsForUser(UUID orderId, String userId) {
@@ -562,12 +518,6 @@ public class OrderServiceImpl implements OrderService {
     }
 
 
-    /**
-     * Allows a buyer (current bidder) to cancel their payment obligation for an order.
-     *
-     * @param orderId The ID of the order.
-     * @param buyerId The ID of the authenticated buyer.
-     */
     @Override
     @Transactional
     public void processBuyerCancelPaymentAttempt(UUID orderId, String buyerId) {
@@ -622,14 +572,7 @@ public class OrderServiceImpl implements OrderService {
         }
     }
 
-    /**
-     * Retrieves a paginated list of orders for a seller.
-     *
-     * @param sellerId     The ID of the authenticated seller.
-     * @param statusFilter Optional status to filter by (e.g., "PENDING_PAYMENT").
-     * @param pageable     Pagination information.
-     * @return A page of OrderSummaryDto.
-     */
+
     @Override
     @Transactional(readOnly = true)
     public Page<OrderSummaryDto> getMySales(String sellerId, String statusFilterString, Pageable pageable) {
@@ -666,12 +609,7 @@ public class OrderServiceImpl implements OrderService {
                     targetStatuses.add(OrderStatus.ORDER_CANCELLED_NO_PAYMENT_FINAL);
                     targetStatuses.add(OrderStatus.ORDER_CANCELLED_SYSTEM);
                     break;
-                // Note: AUCTION_REOPEN_INITIATED is likely transient and might not need a direct filter
-                // if it quickly moves to ORDER_SUPERSEDED_BY_REOPEN.
-                // If you still want to filter by it:
-                // case "AUCTION_REOPEN_INITIATED":
-                //     targetStatuses.add(OrderStatus.AUCTION_REOPEN_INITIATED);
-                //     break;
+
                 default:
                     try {
                         targetStatuses.add(OrderStatus.valueOf(filterKey));
@@ -795,7 +733,6 @@ public class OrderServiceImpl implements OrderService {
         publishOrderReturnedEvent(order);
     }
 
-    // --- NEW METHOD to handle FAILED refund outcome ---
     @Override
     @Transactional
     public void processRefundFailure(RefundFailedEventDto event) {
@@ -810,7 +747,6 @@ public class OrderServiceImpl implements OrderService {
         log.info("Order {} status updated to REFUND_FAILED. Manual intervention required.", order.getId());
     }
 
-    // --- NEW Private Publisher for the final OrderReturnedEvent ---
     private void publishOrderReturnedEvent(Order order) {
         // You'll need an OrderReturnedEventDto class
         OrderReturnedEventDto event = OrderReturnedEventDto.builder()
@@ -1043,10 +979,7 @@ public class OrderServiceImpl implements OrderService {
                 .reason(reasonText)
                 .build();
         try {
-            // This event should likely go to an exchange the PaymentsService listens to.
-            // It could be PAYMENTS_EVENTS_EXCHANGE or a specific commands exchange.
-            // For now, using ORDERS_EVENTS_EXCHANGE and assuming PaymentsService can pick it up,
-            // OR you might define a PAYMENTS_COMMANDS_EXCHANGE.
+
             rabbitTemplate.convertAndSend(
                     RabbitMqConfig.ORDERS_EVENTS_EXCHANGE, // Or PAYMENTS_COMMANDS_EXCHANGE if Payments service listens there
                     RabbitMqConfig.PAYMENT_EVENT_REFUND_REQUESTED_ROUTING_KEY, // <<< NEW ROUTING KEY
@@ -1099,12 +1032,9 @@ public class OrderServiceImpl implements OrderService {
                 .amountPaid(order.getCurrentAmountDue()) // Assuming DTO field is BigDecimal
                 .currency(order.getCurrency())
                 .paymentTransactionRef(order.getPaymentTransactionRef())
-                // Populate shipping address from buyerInfo
                 .shippingRecipientName(recipientName)
                 .shippingStreetAddress(buyerInfo != null ? buyerInfo.getStreetAddress() : null)
                 .shippingCity(buyerInfo != null ? buyerInfo.getCity() : null)
-                // Add stateProvince if your UserBasicInfoDto and OrderReadyForShippingEventDto have it
-                // .shippingStateProvince(buyerInfo != null ? buyerInfo.getStateProvince() : null)
                 .shippingPostalCode(buyerInfo != null ? buyerInfo.getPostalCode() : null)
                 .shippingCountry(buyerInfo != null ? buyerInfo.getCountry() : null)
                 .shippingPhoneNumber(buyerInfo != null ? buyerInfo.getPhoneNumber() : null)

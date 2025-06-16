@@ -61,7 +61,6 @@ public class LiveAuctionController {
         return ResponseEntity.ok().build(); // Return 200 OK
     }
 
-    // --- REVERTED getActiveAuctions to use Pageable injection ---
     @GetMapping("/live-auctions")
     public ResponseEntity<Page<LiveAuctionSummaryDto>> getActiveAuctions(
             // Use @PageableDefault for default size and sort
@@ -71,9 +70,7 @@ public class LiveAuctionController {
         Page<LiveAuctionSummaryDto> auctionPage = liveAuctionService.getActiveAuctions(pageable);
         return ResponseEntity.ok(auctionPage);
     }
-    // --- END REVERT ---
 
-    // LiveAuctionController.java   (add just after getActiveAuctions)
     @GetMapping("/my-auctions")
     public ResponseEntity<Page<LiveAuctionSummaryDto>> getSellerAuctions(
             @RequestHeader(USER_ID_HEADER) String sellerId,          // comes from Gateway filter
@@ -93,7 +90,6 @@ public class LiveAuctionController {
     @GetMapping("/seller/{sellerId}/live-auctions")
     public ResponseEntity<Page<LiveAuctionSummaryDto>> getPublicLiveAuctionsBySeller(
             @PathVariable String sellerId,
-            // We'll primarily be interested in ACTIVE or SCHEDULED for public display
             @RequestParam(value = "status", required = false) AuctionStatus status,
             @RequestParam(value = "categoryIds", required = false) Set<Long> categoryIds,
             @RequestParam(value = "from", required = false) // Might be less relevant for 'current' live auctions

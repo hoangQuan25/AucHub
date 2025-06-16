@@ -188,11 +188,6 @@ function Header() {
                   {keycloak.tokenParsed?.preferred_username}
                 </span>
               </button>
-              {/* Basic Dropdown Example (can be expanded) */}
-              {/* <div className="absolute right-0 mt-1 w-48 bg-slate-800 border border-slate-700 rounded-md shadow-lg py-1 hidden group-hover:block">
-                <Link to="/profile" className="block px-4 py-2 text-sm text-slate-200 hover:bg-slate-700">Profile</Link>
-                <button onClick={handleLogout} className="w-full text-left block px-4 py-2 text-sm text-rose-400 hover:bg-slate-700">Logout</button>
-              </div> */}
             </div>
           ) : (
             <button 

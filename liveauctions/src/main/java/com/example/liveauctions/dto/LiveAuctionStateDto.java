@@ -7,8 +7,8 @@ import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.UUID;
 
-@Value // Creates final fields, getters, constructor, equals/hashCode, toString
-@Builder // Allows easy construction
+@Value
+@Builder
 public class LiveAuctionStateDto {
 
     UUID auctionId;

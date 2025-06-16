@@ -1,4 +1,4 @@
-package com.example.liveauctions.mapper; // Or a suitable package
+package com.example.liveauctions.mapper;
 
 import com.example.liveauctions.client.dto.ProductDto; // DTO from Products service
 import com.example.liveauctions.client.dto.CategoryDto; // Assuming this is the correct package
@@ -15,7 +15,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.stream.Collectors;
 
-@Component // Make it a Spring bean so it can be injected
+@Component
 public class AuctionMapper {
 
     // --- Mapping for Bid ---
@@ -100,12 +100,10 @@ public class AuctionMapper {
         if (productDto != null) {
             builder.productDescription(productDto.getDescription());
             builder.productCondition(String.valueOf(productDto.getCondition())); // Assumes enum type matches
-            // Assuming ProductDto already has Set<CategoryDto> matching our definition
             builder.productCategories(productDto.getCategories());
             builder.productImageUrls(productDto.getImageUrls());
             // Map other product fields if needed
         } else {
-            // Optionally set defaults or leave null if productDto is null
             builder.productDescription(null); // Or "Details unavailable"
             builder.productCondition(null);
             builder.productCategories(Collections.emptySet());

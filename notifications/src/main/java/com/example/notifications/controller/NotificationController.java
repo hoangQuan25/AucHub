@@ -24,17 +24,14 @@ import java.util.*;
 public class NotificationController {
 
     private final NotificationService notificationService;
-    // Assuming Gateway provides this header after authentication
     private static final String USER_ID_HEADER = "X-User-ID";
 
     @GetMapping("/my-notifications")
     public ResponseEntity<Page<NotificationDto>> getUserNotifications(
             @RequestHeader(USER_ID_HEADER) String userId,
-            // Default pagination: 15 items per page, sort by creation date descending
             @PageableDefault(size = 15, sort = "createdAt", direction = Sort.Direction.DESC) Pageable pageable
     ) {
         log.info("Fetching notifications for user {} with pagination {}", userId, pageable);
-        // Add a method to the service interface & implementation to handle this
         Page<NotificationDto> notificationPage = notificationService.getUserNotifications(userId, pageable);
         return ResponseEntity.ok(notificationPage);
     }
@@ -54,7 +51,6 @@ public class NotificationController {
             @RequestBody List<Long> notificationIds // Expect a JSON array of IDs
     ) {
         if (notificationIds == null || notificationIds.isEmpty()) {
-            // Or return OK if empty list is not an error
             return ResponseEntity.badRequest().build();
         }
         log.info("Request from user {} to mark notifications as read: {}", userId, notificationIds);

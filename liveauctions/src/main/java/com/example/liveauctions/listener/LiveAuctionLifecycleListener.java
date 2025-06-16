@@ -5,7 +5,7 @@ import com.example.liveauctions.config.RabbitMqConfig;
 import com.example.liveauctions.entity.AuctionStatus;
 import com.example.liveauctions.entity.Bid;
 import com.example.liveauctions.entity.LiveAuction;
-import com.example.liveauctions.event.NotificationEvents;
+import com.example.liveauctions.dto.event.NotificationEvents;
 import com.example.liveauctions.exception.AuctionNotFoundException;
 import com.example.liveauctions.repository.BidRepository;
 import com.example.liveauctions.repository.LiveAuctionRepository;
@@ -102,7 +102,6 @@ public class LiveAuctionLifecycleListener {
         LocalDateTime fireAtFromCommand = command.fireAt();
         LocalDateTime endTimeFromDb = auction.getEndTime();
 
-// Add these logs
         log.info("[StaleCheckDebug] AuctionID: {}, Initial Command fireAt: {}, Initial DB endTime: {}",
                 auctionId,
                 (fireAtFromCommand != null ? fireAtFromCommand.toString() : "null"),

@@ -63,7 +63,7 @@ public class NotificationServiceImpl implements NotificationService {
     private static final String TYPE_SELLER_DECISION_REQUIRED = "SELLER_DECISION_REQUIRED";
     private static final String TYPE_ORDER_READY_FOR_SHIPPING = "ORDER_READY_FOR_SHIPPING";
     private static final String TYPE_ORDER_CANCELLED = "ORDER_CANCELLED";
-    private static final String TYPE_USER_PAYMENT_DEFAULTED = "USER_PAYMENT_DEFAULTED"; // Optional: if a direct notification is sent
+    private static final String TYPE_USER_PAYMENT_DEFAULTED = "USER_PAYMENT_DEFAULTED";
     private static final String TYPE_REFUND_SUCCEEDED = "REFUND_SUCCEEDED";
     private static final String TYPE_REFUND_FAILED = "REFUND_FAILED";
     private static final String TYPE_ORDER_AWAITING_FULFILLMENT_CONFIRMATION = "ORDER_AWAITING_FULFILLMENT_CONFIRMATION";
@@ -93,7 +93,7 @@ public class NotificationServiceImpl implements NotificationService {
         // Notify Seller
         if (event.getSellerId() != null) {
             notifiedUserIds.add(event.getSellerId());
-            // MODIFIED: Use the auctionType parameter
+            // : Use the auctionType parameter
             message = String.format("Your %s auction for '%s' has started.",
                     auctionType.toLowerCase(), productTitle);
             saveAndSendNotification(event.getSellerId(), TYPE_AUCTION_STARTED, message, event.getAuctionId(), auctionType, null, null);
@@ -102,7 +102,7 @@ public class NotificationServiceImpl implements NotificationService {
         // Notify Followers
         List<String> followerIds = getFollowersForAuction(event.getAuctionId());
         if (!followerIds.isEmpty()) {
-            // MODIFIED: Use the auctionType parameter
+            // : Use the auctionType parameter
             message = String.format("The %s auction you follow for '%s' has started!",
                     auctionType.toLowerCase(), productTitle);
             String finalMessage = message;
@@ -123,7 +123,7 @@ public class NotificationServiceImpl implements NotificationService {
         // Notify Seller
         if (event.getSellerId() != null) {
             notifiedUserIds.add(event.getSellerId());
-            // MODIFIED: Create a more specific base message
+            // : Create a more specific base message
             String message = String.format("The %s auction for '%s' has ended.", auctionType.toLowerCase(), productTitle);
             if (event.getFinalStatus() == AuctionStatus.SOLD) {
                 message += String.format(" You sold it for %s VNĐ to %s.",
@@ -164,7 +164,7 @@ public class NotificationServiceImpl implements NotificationService {
     public void processOutbid(OutbidEvent event, String auctionType) {
         log.debug("Processing OutbidEvent for {} auction {}, user {}", auctionType, event.getAuctionId(), event.getOutbidUserId());
 
-        // MODIFIED: Specify it's a timed auction.
+        // : Specify it's a timed auction.
         String message = String.format("You've been outbid on the timed auction for '%s'! The new bid is %s VNĐ by %s.",
                 truncate(event.getProductTitleSnapshot(), 50),
                 event.getNewCurrentBid().toPlainString(),
@@ -182,7 +182,7 @@ public class NotificationServiceImpl implements NotificationService {
             return;
         }
 
-        // MODIFIED: Specify it's on a timed auction.
+        // : Specify it's on a timed auction.
         String message = String.format("%s replied to your comment on the timed auction for '%s': '%s'",
                 event.getReplierUsernameSnapshot(),
                 truncate(event.getProductTitleSnapshot(), 40),
@@ -475,11 +475,6 @@ public class NotificationServiceImpl implements NotificationService {
                 event.getTrackingNumber());
         saveAndSendNotification(event.getBuyerId(), TYPE_DELIVERY_SHIPPED, buyerMessage, null, null, event.getOrderId(), null);
 
-        // Optional: Notify Seller (though they initiated this, a confirmation notification might be redundant)
-        // String sellerMessage = String.format("You've marked order #%s (%s) as shipped with tracking %s.",
-        // orderIdShort, productInfo, event.getTrackingNumber());
-        // saveAndSendNotification(event.getSellerId(), TYPE_DELIVERY_SHIPPED, sellerMessage, event.getDeliveryId(), null);
-
         log.info("Processed DeliveryShippedEvent for delivery {}, notified buyer {}.",
                 event.getDeliveryId(), event.getBuyerId());
     }
@@ -709,7 +704,6 @@ public class NotificationServiceImpl implements NotificationService {
         log.info("Marking all notifications as read for user {}", userId);
         int updatedCount = notificationRepository.markAllAsRead(userId);
         log.info("Marked {} notifications as read for user {}", updatedCount, userId);
-        // Optionally: Send a WebSocket message to update the unread count on clients?
          sendUnreadCountUpdate(userId);
         return updatedCount;
     }
@@ -943,14 +937,11 @@ public class NotificationServiceImpl implements NotificationService {
                     ));
         } catch (Exception e) {
             log.error("Failed to fetch usernames for IDs: {}. Error: {}", userIds, e.getMessage());
-            // Return an empty map on failure to prevent halting notification flow.
-            // The calling methods will handle the fallback.
             return Collections.emptyMap();
         }
     }
 
 
-    // Optional helper to push unread count updates via WebSocket
     private void sendUnreadCountUpdate(String userId) {
         try {
             long count = notificationRepository.countByUserIdAndIsReadFalse(userId);
@@ -1002,7 +993,7 @@ public class NotificationServiceImpl implements NotificationService {
             );
             log.info("Sent WebSocket notification type '{}' to user {}, destination '/user/{}/{}'", type, userId, userId, destination);
 
-            // 4. (Optional) Trigger Email Notification
+            // 4.  Trigger Email Notification
             sendEmailNotification(userId, message);
 
         } catch (Exception e) {
@@ -1010,7 +1001,7 @@ public class NotificationServiceImpl implements NotificationService {
         }
     }
 
-    // --- (Optional) Email Sending Logic ---
+    //  Email Sending Logic ---
     private void sendEmailNotification(String userId, String message) {
         // 1. Fetch user email (handle potential errors/not found)
         try {

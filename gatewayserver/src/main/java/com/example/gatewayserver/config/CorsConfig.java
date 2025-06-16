@@ -21,11 +21,9 @@ public class CorsConfig {
         CorsConfiguration config = new CorsConfiguration();
 
         config.setAllowCredentials(true);
-        // config.setAllowCredentials(true); // Usually needed with Authentication
         config.setAllowedOrigins(List.of(allowedOrigin)); // Your FE origin ONLY
         config.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS", "HEAD"));
         config.setAllowedHeaders(List.of("*")); // Allow all standard/custom headers
-        // Optional: config.setMaxAge(3600L);
 
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
         source.registerCorsConfiguration("/api/**", config); // Apply CORS to all paths gateway handles

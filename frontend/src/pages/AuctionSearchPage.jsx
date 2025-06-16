@@ -1,19 +1,13 @@
 // src/pages/AuctionSearchPage.jsx
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
-import { useSearchParams, useNavigate, Link } from 'react-router-dom'; // Added Link for auction cards
-import apiClient from '../api/apiClient'; // Your API client
+import { useSearchParams, useNavigate, Link } from 'react-router-dom';
+import apiClient from '../api/apiClient';
 
 import CategorySelector from '../components/CategorySelector';
 import AuctionFilters from '../components/seller/tab/listing/AuctionFilters'; // Reusable
-// Assuming SellerLiveAuctions and SellerTimedAuctions can be reused by passing isOwner={false}
-// If you prefer, you can create generic versions like LiveAuctionDisplay.jsx, etc.
 import LiveAuctionList from '../components/seller/tab/listing/SellerLiveAuctions';
 import TimedAuctionList from '../components/seller/tab/listing/SellerTimedAuctions';
-// Placeholder for loading/error components if you have them
-// import LoadingSpinner from '../components/LoadingSpinner';
-// import ErrorMessage from '../components/ErrorMessage';
 
-// --- Constants (you might import these from a shared constants file) ---
 const STATUS_TABS = [
   { key: "ALL", label: "All Statuses" }, // "All Auctions" label might be confusing with type filter
   { key: "ACTIVE", label: "Ongoing" },
@@ -219,10 +213,6 @@ function AuctionSearchPage() {
         timedPageChanged = true;
     }
     
-    // Only fetch if it's not just a pagination state sync
-    // The fetch should be triggered by the main dependencies changing
-    // Or if pagination state *was* out of sync and now corrected.
-    // This effect should primarily react to the source-of-truth params.
 
     fetchSearchResults(
       query, typeFilter, selectedCategoryIds, auctionStatusFilter, auctionTimeFilter,
@@ -344,7 +334,7 @@ function AuctionSearchPage() {
           auctionTimeFilter={auctionTimeFilter} // Controlled by state updated from URL
           setAuctionTimeFilter={handleAuctionTimeFilterChange}
           statusTabs={STATUS_TABS}
-          timeFilters={TIME_FILTERS} // Make sure TIME_FILTERS are suitable for global search
+          timeFilters={TIME_FILTERS} 
           onFilterChange={() => { /* Logic now in individual handlers to reset pagination */ }}
         />
 

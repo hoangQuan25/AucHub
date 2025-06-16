@@ -24,7 +24,6 @@
                  productService.markProductAsSold(event.getProductId());
              } catch (Exception e) {
                  log.error("Error marking product {} as sold: {}", event.getProductId(), e.getMessage(), e);
-                 // Consider retry/DLQ
              }
          } else {
              log.warn("OrderCompletedEvent received without productId, orderId: {}", event.getOrderId());

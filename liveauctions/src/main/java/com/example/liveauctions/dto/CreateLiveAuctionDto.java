@@ -6,7 +6,7 @@ import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.UUID;
 
-@Data // Includes @Getter, @Setter, @ToString, @EqualsAndHashCode, @RequiredArgsConstructor
+@Data
 public class CreateLiveAuctionDto {
 
     @NotNull(message = "Product ID cannot be null")
@@ -23,7 +23,6 @@ public class CreateLiveAuctionDto {
     @DecimalMin(value = "0.0", inclusive = true, message = "Reserve price must be non-negative") // Can be 0 or positive
     private BigDecimal reservePrice; // Optional
 
-    // Optional: If null, auction starts immediately. If present, must be in the future.
     @Future(message = "Scheduled start time must be in the future")
     private LocalDateTime startTime; // Represents the 'datetime-local' input from frontend
 

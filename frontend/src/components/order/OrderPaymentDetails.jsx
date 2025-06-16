@@ -11,9 +11,9 @@ function OrderPaymentDetails({
   totalAmountDue,
   isProcessing,
   paymentProcessing,
-  onDeclinePurchase, // Renamed from handleOpenCancelConfirm for clarity
-  onInitiatePayment, // Renamed from handleConfirmPaymentChoice for clarity
-  onOpenPaymentModal, // Renamed from setIsPaymentConfirmOpen(true)
+  onDeclinePurchase, 
+  onInitiatePayment, 
+  onOpenPaymentModal,
 }) {
   if (!order || !order.paymentDeadline) return null;
 

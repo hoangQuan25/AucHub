@@ -9,7 +9,6 @@ import { Elements } from "@stripe/react-stripe-js";
 import CheckoutForm from "../components/CheckoutForm";
 import { FaCreditCard, FaHistory } from "react-icons/fa";
 
-// Import the new refactored components
 import OrderHeader from "../components/order/OrderHeader";
 import OrderItems from "../components/order/OrderItems";
 import OrderPaymentDetails from "../components/order/OrderPaymentDetails";
@@ -27,8 +26,7 @@ import StartAuctionModal from "../components/StartAuctionModal";
 import RequestReturnModal from "../components/order/RequestReturnModal";
 import OrderReturnDetails from "../components/order/OrderReturnDetails";
 
-const STRIPE_PUBLISHABLE_KEY =
-  "pk_test_51RN788QoAglQPjjvhupJXkisXj7R7wt7epc8hYTUbDBTCxumwAownPBKNMM8NfNVza13yVVf6SrfAnmAxoiJtfRw00cIVf2LIl";
+const STRIPE_PUBLISHABLE_KEY = import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY;
 const stripePromise = loadStripe(STRIPE_PUBLISHABLE_KEY);
 
 function OrderDetailPage() {
@@ -42,10 +40,7 @@ function OrderDetailPage() {
   const [userProfile, setUserProfile] = useState(null);
   const [deliveryDetails, setDeliveryDetails] = useState(null); // For storing fetched delivery info
   const [isLoadingDelivery, setIsLoadingDelivery] = useState(false);
-  // Profile loading state is managed internally by fetchUserProfile now if not critical for main page load
-  // const [profileLoading, setProfileLoading] = useState(true);
-
-  // Modal States
+  
   const [isPaymentConfirmOpen, setIsPaymentConfirmOpen] = useState(false);
   const [isCancelConfirmOpen, setIsCancelConfirmOpen] = useState(false);
   const [isConfirmFulfillmentOpen, setIsConfirmFulfillmentOpen] =
@@ -134,14 +129,12 @@ function OrderDetailPage() {
         // Add other relevant statuses from DeliveryStatus enum once mapped
       ) {
         try {
-          // ASSUMPTION: Endpoint to get delivery by orderId
           const deliveryResponse = await apiClient.get(
             `/deliveries/by-order/${orderId}`
           );
           setDeliveryDetails(deliveryResponse.data);
           console.log("Fetched delivery details:", deliveryResponse.data);
         } catch (deliveryErr) {
-          // It's okay if delivery details are not found initially (e.g., PENDING_PREPARATION in DeliveriesService)
           if (deliveryErr.response?.status === 404) {
             console.info(
               `No delivery record found yet for order ${orderId}. This might be expected.`
@@ -149,7 +142,6 @@ function OrderDetailPage() {
             setDeliveryDetails(null); // Ensure it's null if not found
           } else {
             console.error("Failed to fetch delivery details:", deliveryErr);
-            // Optionally set an error specific to delivery fetching
           }
         }
       }
@@ -168,7 +160,6 @@ function OrderDetailPage() {
   }, [fetchOrderAndDeliveryDetails, fetchUserProfile]);
 
   const refreshAllDetails = useCallback(async () => {
-    // This function will now re-fetch both order and delivery details
     await fetchOrderAndDeliveryDetails();
   }, [fetchOrderAndDeliveryDetails]);
 
@@ -268,7 +259,6 @@ function OrderDetailPage() {
       if (!useSavedCard) setIsPaymentConfirmOpen(true); // Re-open choice modal if new card init fails
     } finally {
       setPaymentProcessing(false);
-      // Do not close setIsPaymentConfirmOpen(false) here if it wasn't a saved card attempt
     }
   };
 
@@ -360,8 +350,7 @@ function OrderDetailPage() {
 
   const handleOpenMarkAsShippedModal = () => {
     if (!deliveryDetails && order?.status !== "AWAITING_SHIPMENT") {
-      // This check might be too strict if delivery record in PENDING_PREPARATION is not yet fetched
-      // Or if the deliveryId is on the order object directly
+      
       alert("Delivery details not available or order not ready for shipment.");
       return;
     }
@@ -378,33 +367,27 @@ function OrderDetailPage() {
     setIsSellerDecisionModalOpen(true);
   };
 
-  // Inside OrderDetailPage component:
 
-  // Handler to open seller decision modal (you might already have a version of this)
   const handleOpenSellerDecisionModalOnDetail = () => {
     if (!order || !isSeller || order.status !== "AWAITING_SELLER_DECISION") {
       console.warn("Conditions not met to open seller decision modal.");
       return;
     }
-    setModalError(""); // Assuming you have a shared modalError state
+    setModalError(""); 
     setIsSellerDecisionModalOpen(true);
   };
 
-  // Handler to close seller decision modal
   const handleCloseSellerDecisionModalOnDetail = async (
     decisionWasMade = false,
     actionTaken = null
   ) => {
     setIsSellerDecisionModalOpen(false);
-    // If a decision was made AND it was NOT 'REOPEN_AUCTION' (which has its own refresh later)
     if (decisionWasMade && actionTaken !== "REOPEN_AUCTION") {
       await refreshAllDetails(); // refreshAllDetails should fetch order & delivery
     }
   };
 
-  // Handler called by SellerDecisionModal when "Reopen Auction" is chosen
   const handleInitiateReopenAuctionOnDetail = (orderFromModal) => {
-    // orderFromModal is the 'order' object currently displayed on this page
     if (
       !orderFromModal ||
       !orderFromModal.items ||
@@ -434,8 +417,6 @@ function OrderDetailPage() {
       title: productTitleForReopen,
       imageUrls: productImageUrlForReopen ? [productImageUrlForReopen] : [],
       originalOrderId: orderFromModal.id, // ID of the current order on OrderDetailPage
-      // Potentially carry over other relevant details from order or product snapshot
-      // reservePrice: orderFromModal.reservePriceSnapshot,
     };
 
     setProductToAuction(productDataForAuction);
@@ -456,17 +437,9 @@ function OrderDetailPage() {
       `Frontend (OrderDetailPage): New auction ${createdAuctionDto.id} started. Original order ${reopenedFromOrderInfo?.originalOrderId} should be finalized by backend processes.`
     );
 
-    // CRITICAL: Refresh the current order details.
-    // The backend should have updated the status of this original order
-    // (e.g., to ORDER_SUPERSEDED_BY_REOPEN) after the new auction was created.
     await refreshAllDetails();
 
-    // Optionally navigate away, e.g., to the new auction or to My Auctions page
-    // if (createdAuctionDto.type === 'LIVE') {
-    //   navigate(`/live-auctions/${createdAuctionDto.id}`);
-    // } else {
-    //   navigate(`/timed-auctions/${createdAuctionDto.id}`);
-    // }
+  
   };
 
   const handleCloseSellerDecisionModal = async (decisionWasMade = false) => {
@@ -477,11 +450,6 @@ function OrderDetailPage() {
   };
 
   const handleConfirmMarkAsShipped = async (shippingData) => {
-    // We need deliveryId. If not in deliveryDetails, and order status is AWAITING_SHIPMENT,
-    // it implies the delivery record exists in DeliveriesService but might not have been fetched yet,
-    // OR DeliveriesService.createDeliveryFromOrderEvent hasn't run / completed.
-    // For this action, we ideally need the deliveryId.
-    // Let's assume deliveryDetails contains the deliveryId.
 
     const currentDeliveryId = deliveryDetails?.deliveryId; // Get deliveryId from fetched delivery details
 
@@ -489,16 +457,12 @@ function OrderDetailPage() {
       setMarkAsShippedError(
         "Delivery ID is missing. Cannot mark as shipped. Ensure delivery record exists."
       );
-      // Potentially try to re-fetch delivery details here if it's expected to exist.
       return;
     }
 
     setIsMarkingAsShipped(true);
     setMarkAsShippedError("");
     try {
-      // API Call to Deliveries Service
-      // Endpoint: /deliveries/{deliveryId}/ship (as per DeliveriesServiceImpl)
-      // The actual path via gateway might be /deliveries/{deliveryId}/ship
       await apiClient.post(
         `/deliveries/${currentDeliveryId}/ship`,
         shippingData
@@ -581,7 +545,6 @@ function OrderDetailPage() {
         err.response?.data?.message ||
           "Failed to confirm receipt. Please try again."
       );
-      // Potentially show error in a toast or modal
       alert(err.response?.data?.message || "Failed to confirm receipt.");
     } finally {
       setIsConfirmingReceipt(false);
@@ -606,8 +569,6 @@ function OrderDetailPage() {
   };
 
   const handleReviewError = (errorMessage) => {
-    // Error is already shown in the modal, but if you want to show it on the page after modal closes:
-    // setReviewSubmissionMessage({ type: 'error', text: errorMessage });
     console.error("Review submission failed:", errorMessage);
   };
 
@@ -627,7 +588,6 @@ function OrderDetailPage() {
     setIsSubmittingReturn(true);
     setReturnRequestError("");
     try {
-      // --- CORRECTED API CALL to Deliveries Service ---
       await apiClient.post(
         `/deliveries/${deliveryDetails.deliveryId}/request-return`, // Uses deliveryId
         returnData
@@ -655,7 +615,6 @@ function OrderDetailPage() {
     }
     setIsProcessing(true); 
     try {
-      // --- CORRECTED API CALL to Deliveries Service ---
       await apiClient.post(
         `/deliveries/${deliveryDetails.deliveryId}/confirm-return-received` // Uses deliveryId
       );
@@ -673,20 +632,15 @@ function OrderDetailPage() {
     }
   };
 
-  // Derived states
   const isSeller = order && keycloak.subject === order.sellerId;
   const isBuyer = order && keycloak.subject === order.currentBidderId;
 
-  // CLARIFIED: A return is "in progress" if the DELIVERY status says so.
   const isReturnInProgress = deliveryDetails?.deliveryStatus?.startsWith("RETURN_");
 
-  // CLARIFIED: The order is "commercially returned" if the ORDER status says so.
   const isOrderReturnedOrRefunding = order?.status === 'ORDER_RETURNED' || order?.status === 'RETURN_APPROVED_BY_SELLER' || order?.status === 'REFUND_FAILED';
 
-  // CLARIFIED: Buyer can request a return if the item has been delivered and is awaiting confirmation.
   const canRequestReturn = isBuyer && deliveryDetails?.deliveryStatus === "AWAITING_BUYER_CONFIRMATION";
 
-  // CLARIFIED: Show buyer actions (Confirm/Return) only in the specific delivery state.
   const showBuyerDeliveryActions = isBuyer && deliveryDetails?.deliveryStatus === "AWAITING_BUYER_CONFIRMATION";
 
   const isAwaitingBuyerPayment =
@@ -704,8 +658,6 @@ function OrderDetailPage() {
   const isInShippingPhase =
     order &&
     (order.status === "AWAITING_SHIPMENT" ||
-      // Add other statuses that imply shipping is active, based on your DeliveryStatus enum
-      // e.g., if you map delivery statuses back to order statuses or check deliveryDetails.status
       deliveryDetails?.deliveryStatus === "SHIPPED_IN_TRANSIT" ||
       deliveryDetails?.deliveryStatus === "DELIVERED" ||
       deliveryDetails?.deliveryStatus === "PENDING_PREPARATION" || // From Delivery entity
@@ -716,7 +668,6 @@ function OrderDetailPage() {
     (deliveryDetails.deliveryStatus === "SHIPPED_IN_TRANSIT" ||
       deliveryDetails.deliveryStatus === "DELIVERED" ||
       deliveryDetails.deliveryStatus === "ISSUE_REPORTED" ||
-      // Show even for these if we want to display "Preparing" type statuses
       deliveryDetails.deliveryStatus === "PENDING_PREPARATION" ||
       deliveryDetails.deliveryStatus === "READY_FOR_SHIPMENT");
 
@@ -840,7 +791,6 @@ function OrderDetailPage() {
           onOpenReturnModal={handleOpenReturnModal}
           isLoadingConfirm={isConfirmingReceipt}
           isLoadingReturn={isRequestingReturn}
-          // You could also pass buyerActionError to display in the component
         />
       )}
       {buyerActionError && showBuyerDeliveryActions && (

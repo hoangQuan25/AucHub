@@ -191,8 +191,6 @@ const AuctionRulesGuidePage = () => {
         <p className={paragraphStyle}>
           If you have any further questions, please don't hesitate to contact our support team or check our FAQ section (if available).
         </p>
-        {/* You can add a Link component here if you have a contact page */}
-        {/* <Link to="/contact-support" className="text-indigo-600 hover:text-indigo-800 font-semibold">Contact Support</Link> */}
       </section>
     </div>
   );

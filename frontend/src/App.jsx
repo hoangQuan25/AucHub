@@ -18,7 +18,6 @@ import PublicSellerProfilePage from "./pages/PublicSellerProfilePage";
 import AuctionSearchPage from "./pages/AuctionSearchPage";
 import AuctionRulesGuidePage from "./pages/AuctionRulesGuidePage";
 
-// PrivateRoute now just checks auth, Layout handles UI structure
 const PrivateRoute = ({ children }) => {
   const { keycloak, initialized } = useKeycloak();
 
@@ -26,19 +25,16 @@ const PrivateRoute = ({ children }) => {
     return <div>Loading...</div>; // Or a spinner
   }
 
-  // Redirect to login if not authenticated
   return keycloak.authenticated ? children : <Navigate to="/login" replace />;
 };
 
-// Component to specifically check for Seller role
 const SellerRoute = ({ children }) => {
   const { keycloak } = useKeycloak();
-  // Must be authenticated AND have the seller role
   return keycloak.authenticated && keycloak.hasRealmRole("ROLE_SELLER") ? (
     children
   ) : (
     <Navigate to="/" />
-  ); // Or redirect to an "unauthorized" page
+  );
 };
 
 function App() {
@@ -70,7 +66,6 @@ function App() {
       />
       <NotificationProvider>
         <Routes>
-          {/* Public Login Route */}
           <Route
             path="/login"
             element={
@@ -78,10 +73,7 @@ function App() {
             }
           />
 
-          {/* All other routes are nested under MainLayout */}
           <Route element={<MainLayout />}>
-            {/* --- PUBLIC ROUTES --- */}
-            {/* These routes are accessible to everyone */}
             <Route path="/" element={<HomePage />} />
             <Route
               path="/live-auctions/:auctionId"
@@ -101,8 +93,6 @@ function App() {
               element={<PublicSellerProfilePage />}
             />
 
-            {/* --- PRIVATE ROUTES --- */}
-            {/* These routes require the user to be logged in */}
             <Route
               path="/profile"
               element={<PrivateRoute><UserInfoPage /></PrivateRoute>}
@@ -120,12 +110,8 @@ function App() {
               element={<PrivateRoute><OrderDetailPage /></PrivateRoute>}
             />
             
-            {/* Example for a seller-specific route if needed in the future */}
-            {/* <Route path="/dashboard" element={<SellerRoute><DashboardPage /></SellerRoute>} /> */}
           </Route>
 
-          {/* Optional: Catch-all route for 404 */}
-          {/* <Route path="*" element={<NotFoundPage />} /> */}
         </Routes>
       </NotificationProvider>
     </BrowserRouter>

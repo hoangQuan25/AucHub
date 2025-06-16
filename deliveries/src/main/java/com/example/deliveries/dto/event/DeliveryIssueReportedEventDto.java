@@ -1,4 +1,3 @@
-// File: com.example.deliveries.dto.event.DeliveryIssueReportedEventDto.java
 package com.example.deliveries.dto.event;
 
 import lombok.AllArgsConstructor;
@@ -20,8 +19,8 @@ public class DeliveryIssueReportedEventDto {
     private UUID deliveryId;
     private UUID orderId;
     private String sellerId; // Seller of the order
-    private String buyerId; // Or sellerId if seller reported
-    private String reporterId; // Who reported (BUYER, SELLER, SYSTEM)
+    private String buyerId;
+    private String reporterId;
     private String issueNotes;
     private String newStatus; // e.g. "ISSUE_REPORTED"
     private String productInfoSnapshot; // Brief description of items

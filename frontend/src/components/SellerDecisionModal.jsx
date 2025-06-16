@@ -9,34 +9,24 @@ const SellerDecisionModal = ({ order, isOpen, onClose, onInitiateReopenAuction }
   const [isProcessing, setIsProcessing] = useState(false);
   const [error, setError] = useState(null);
 
-  // Filter decision types based on order properties
-  // This is the key change:
   const availableDecisionTypes = Object.entries(SELLER_DECISION_TYPES).filter(
     ([apiKey, displayText]) => {
       if (apiKey === 'OFFER_TO_NEXT_BIDDER') {
-        // order.paymentOfferAttempt tells us which attempt just failed, leading to this decision point.
-        // If attempt 1 (winner) failed, we check for eligibleSecondBidderId.
-        // If attempt 2 (second bidder) failed, we check for eligibleThirdBidderId.
+        
         if (order.paymentOfferAttempt === 1) {
           return !!order.eligibleSecondBidderId; // Show if 2nd bidder exists
         } else if (order.paymentOfferAttempt === 2) {
           return !!order.eligibleThirdBidderId; // Show if 3rd bidder exists
         } else {
-          // If paymentOfferAttempt is 3 or more, or an unexpected value,
-          // there are no further "next bidders" defined in the current logic for this option.
+          
           return false;
         }
       }
-      // For other decision types like 'REOPEN_AUCTION' or 'CANCEL_SALE',
-      // they are generally always available when order is AWAITING_SELLER_DECISION.
       return true;
     }
   );
 
   const handleSubmitDecision = async () => {
-    // If, after filtering, no decision was pre-selected or is available, handle it.
-    // However, setSelectedDecision should ideally pick from availableDecisionTypes.
-    // This check is mostly for safety.
     const currentSelectedDecisionIsValid = availableDecisionTypes.some(([apiKey]) => apiKey === selectedDecision);
 
     if (!selectedDecision || !currentSelectedDecisionIsValid) {
@@ -79,26 +69,14 @@ const SellerDecisionModal = ({ order, isOpen, onClose, onInitiateReopenAuction }
         setSelectedDecision('');
         setError(null);
         setIsProcessing(false);
-
-        // Optionally, pre-select a default if only one option is available or a preferred one
-        // For example, if availableDecisionTypes has REOPEN_AUCTION and it's a common path:
-        // if (availableDecisionTypes.some(([key]) => key === 'REOPEN_AUCTION')) {
-        //    setSelectedDecision('REOPEN_AUCTION');
-        // }
     }
   }, [isOpen, order]); 
 
-  // Effect to clear selectedDecision if it becomes unavailable
-  // (e.g., if the order data somehow changed while modal was open, though unlikely for this specific field)
-  // Or if the initial default selection is not valid based on filtered options.
   useEffect(() => {
     if (isOpen && selectedDecision && !availableDecisionTypes.some(([apiKey]) => apiKey === selectedDecision)) {
         setSelectedDecision(''); // Clear if current selection is not in the filtered list
     }
-    // Optionally, auto-select the first available option if none is selected and list is not empty
-    // else if (isOpen && !selectedDecision && availableDecisionTypes.length > 0) {
-    //   setSelectedDecision(availableDecisionTypes[0][0]); // Auto-select first available
-    // }
+    
   }, [isOpen, selectedDecision, availableDecisionTypes]);
 
 
@@ -113,7 +91,6 @@ const SellerDecisionModal = ({ order, isOpen, onClose, onInitiateReopenAuction }
           </h3>
           <div className="mt-2 px-7 py-3">
             <p className="text-sm text-gray-500 mb-4">
-              {/* You can make this message more dynamic based on order.paymentOfferAttempt */}
               {order.paymentOfferAttempt === 1 && "The initial winner did not complete the payment."}
               {order.paymentOfferAttempt === 2 && "The second bidder did not complete the payment."}
               {order.paymentOfferAttempt >= 3 && "The previously offered bidder did not complete the payment."}
@@ -137,10 +114,7 @@ const SellerDecisionModal = ({ order, isOpen, onClose, onInitiateReopenAuction }
               ) : (
                 <p className="text-sm text-gray-600 p-3 border border-gray-200 rounded-md bg-gray-50">
                   No specific follow-up actions available (e.g., no further bidders to offer to). You might need to cancel the sale if that's not an automatic option.
-                  {/* This case should ideally not happen if "CANCEL_SALE" is always an option. 
-                      If CANCEL_SALE is also conditional, this message might appear.
-                      Or, if OFFER_TO_NEXT_BIDDER was the only option and it got filtered out.
-                  */}
+                  
                 </p>
               )}
             </div>

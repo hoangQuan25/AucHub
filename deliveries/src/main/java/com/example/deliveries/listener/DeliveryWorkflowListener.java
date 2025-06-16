@@ -24,7 +24,6 @@ public class DeliveryWorkflowListener {
             deliveryService.processAutoCompletion(command.deliveryId(), command.originalConfirmationDeadline());
         } catch (Exception e) {
             log.error("Error processing AutoCompleteDeliveryCommand for delivery {}: {}", command.deliveryId(), e.getMessage(), e);
-            // DLQ strategy needed
             throw e;
         }
     }

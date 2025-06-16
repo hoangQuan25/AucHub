@@ -18,10 +18,6 @@ function Sidebar() {
 
   return (
     <aside className="w-64 bg-slate-800 text-slate-200 p-5 flex flex-col space-y-6 shadow-lg">
-      {/* Optional: User Info / Logo at the top of sidebar */}
-      {/* <div className="pb-6 border-b border-slate-700">
-        <h2 className="text-xl font-semibold text-white text-center">My AucHub</h2>
-      </div> */}
       
       <nav className="flex-grow">
         <ul className="space-y-2">

@@ -5,7 +5,6 @@ import { Navigate } from 'react-router-dom';
 function LoginPage() {
   const { keycloak } = useKeycloak();
 
-  // Nếu đã đăng nhập rồi thì chuyển về trang chủ
   if (keycloak.authenticated) {
     return <Navigate to="/" />;
   }

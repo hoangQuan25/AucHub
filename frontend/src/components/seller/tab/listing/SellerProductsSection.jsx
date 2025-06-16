@@ -123,10 +123,8 @@ const SellerProductsSection = ({
             <div className="mt-8">
               <PaginationControls
                 pagination={{
-                  // Use 'page' if your component expects 'page', or 'currentPage'
                   page: productPage,
                   totalPages: productTotalPages,
-                  // size: listingPageSize, // if needed
                 }}
                 onPageChange={onProductPageChange}
                 isLoading={isLoadingProducts}

@@ -78,34 +78,24 @@ const MySalesTab = ({
                 </div>
                 <span
                   className={`inline-flex items-center gap-1.5 text-sm font-semibold px-3 py-1 rounded-full shadow-sm border transition-colors duration-200 ${
-                    // Payment statuses
                     [ "AWAITING_WINNER_PAYMENT", "AWAITING_NEXT_BIDDER_PAYMENT" ].includes(order.status)
                       ? "bg-yellow-50 text-yellow-800 border-yellow-300"
-                    // Seller action needed
                     : order.status === "AWAITING_SELLER_DECISION"
                       ? "bg-amber-100 text-amber-800 border-amber-300"
-                    // Shipping statuses
                     : [ "PAYMENT_SUCCESSFUL", "AWAITING_FULFILLMENT_CONFIRMATION", "AWAITING_SHIPMENT" ].includes(order.status)
                       ? "bg-sky-100 text-sky-800 border-sky-300"
-                    // NEW: Return/Refund In Progress
                     : order.status === 'RETURN_APPROVED_BY_SELLER'
                       ? "bg-orange-100 text-orange-800 border-orange-300"
-                    // NEW: Refund Failed - CRITICAL
                     : order.status === 'REFUND_FAILED'
                       ? "bg-red-200 text-red-900 border-red-400 font-bold"
-                    // NEW: Return Completed Successfully
                     : order.status === 'ORDER_RETURNED'
                       ? "bg-slate-200 text-slate-800 border-slate-400"
-                    // Standard completion
                     : order.status === "COMPLETED"
                       ? "bg-emerald-100 text-emerald-800 border-emerald-300"
-                    // Reopened order
                     : order.status === "ORDER_SUPERSEDED_BY_REOPEN"
                       ? "bg-gray-200 text-gray-800 border-gray-400"
-                    // Cancelled orders
                     : order.status.includes("CANCELLED")
                       ? "bg-rose-100 text-rose-700 border-rose-300"
-                    // Fallback
                       : "bg-gray-100 text-gray-700 border-gray-300"
                   }`}
                 >
@@ -214,11 +204,7 @@ const MySalesTab = ({
                     Xử Lý Quyết Định
                   </button>
                 )}
-                {order.status === "AWAITING_FULFILLMENT_CONFIRMATION" && (
-                  <button className="cursor-pointer px-4 py-1.5 bg-cyan-500 text-white text-sm font-semibold rounded-md hover:bg-cyan-600 transition duration-150 ease-in-out shadow-sm">
-                    Xác Nhận Giao Hàng
-                  </button>
-                )}
+                
               </div>
             </div>
           ))}

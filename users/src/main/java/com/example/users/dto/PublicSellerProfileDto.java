@@ -19,7 +19,6 @@ public class PublicSellerProfileDto {
     private String sellerDescription;
     private LocalDateTime memberSince; // Corresponds to User's createdAt
 
-    // We will add these later after implementing reviews:
      private Double averageRating;
      private Long reviewCount;
 }

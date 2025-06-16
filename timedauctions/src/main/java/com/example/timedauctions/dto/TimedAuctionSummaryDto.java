@@ -19,7 +19,5 @@ public class TimedAuctionSummaryDto {
     LocalDateTime endTime;
     int bidCount; // Total number of bids placed
     AuctionStatus status;
-    // Add other fields like reserveMet if needed on summary card
-    // boolean reserveMet;
     Set<Long> categoryIds;
 }

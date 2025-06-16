@@ -4,7 +4,7 @@ import { useParams, useNavigate } from "react-router-dom";
 import { useKeycloak } from "@react-keycloak/web";
 import { useNotifications } from "../context/NotificationContext";
 import apiClient from "../api/apiClient";
-import CountdownTimer from "../components/CountdownTimer"; // Assuming extracted
+import CountdownTimer from "../components/CountdownTimer";
 import ConfirmationModal from "../components/ConfirmationModal";
 import CollapsibleSection from "../components/CollapsibleSection";
 import AuctionRules from "../components/AuctionRules";
@@ -15,7 +15,7 @@ import {
   FaEye,
   FaCreditCard,
 } from "react-icons/fa"; // Icons for arrows
-import SockJS from "sockjs-client/dist/sockjs"; // Use specific path for wider compatibility
+import SockJS from "sockjs-client/dist/sockjs";
 import { Client } from "@stomp/stompjs";
 
 function LiveAuctionDetailPage() {
@@ -141,9 +141,7 @@ function LiveAuctionDetailPage() {
   }, [auctionId, initialized]); // Rerun when auctionId or initialized status changes
 
   // --- WebSocket Connection (useEffect) ---
-  // --- MODIFIED: WebSocket/STOMP Connection (useEffect) ---
   useEffect(() => {
-    // Connect only if we have auctionId and user is authenticated
     if (!auctionId || !initialized || !keycloak.authenticated) {
       setWsStatus("Not Connected (Prerequisites not met)");
       // Ensure any existing client is deactivated if auth state changes
@@ -169,9 +167,6 @@ function LiveAuctionDetailPage() {
     const client = new Client({
       // Use SockJS as the transport
       webSocketFactory: () => {
-        // URL points to the STOMP endpoint configured in the backend WebSocketStompConfig
-        // Typically served by the backend service itself (or Gateway if proxying STOMP)
-        // We connect to the Gateway which proxies to LiveAuctions' /ws endpoint
         const gatewayHost = "localhost:8072"; // Your Gateway host/port
         const sockjsUrl = `${window.location.protocol}//${gatewayHost}/ws`; // Use http/https based on current page
         console.log(`Creating SockJS connection to: ${sockjsUrl}`);
@@ -179,7 +174,6 @@ function LiveAuctionDetailPage() {
       },
 
       debug: (str) => {
-        // Optional: Enable STOMP protocol debugging
         console.log("STOMP DEBUG:", str);
       },
       reconnectDelay: 5000, // Attempt reconnect every 5 seconds
@@ -252,7 +246,6 @@ function LiveAuctionDetailPage() {
       console.error("STOMP Broker reported error: " + frame.headers["message"]);
       console.error("STOMP Additional details: " + frame.body);
       setWsStatus(`Error (STOMP: ${frame.headers["message"]})`);
-      // Optionally attempt reconnect or display error to user
     };
 
     client.onWebSocketError = (error) => {
@@ -267,8 +260,6 @@ function LiveAuctionDetailPage() {
       );
       setWsStatus(`Closed (${event?.code || "Unknown"})`);
       setViewerError(true);
-      // Client will attempt to reconnect automatically based on reconnectDelay
-      // Clear subscription ref if connection is closed
       subscriptionRef.current = null;
       viewersSubRef.current = null;
       stompClientRef.current = null; // Clear client ref on close? Or let reconnect handle? Let's clear.
@@ -316,7 +307,6 @@ function LiveAuctionDetailPage() {
     // Dependencies: Rerun effect if auctionId changes or user auth status changes
   }, [auctionId, initialized, keycloak.authenticated]);
 
-  // --- Place Bid Handler (handlePlaceBid) ---
   // ─── Handlers to open/close the bid-confirmation modal ────────────
    const promptBid = (amount) => {
     if (!keycloak.authenticated || !userInfo) {
@@ -341,7 +331,7 @@ function LiveAuctionDetailPage() {
 
     // 2. Payment Method Check (using userInfo.hasDefaultPaymentMethod from UserDto)
     // UserDto.java includes: hasDefaultPaymentMethod
-    if (!userInfo.hasDefaultPaymentMethod) { // <<< ADD THIS CHECK
+    if (!userInfo.hasDefaultPaymentMethod) { 
       setIsPaymentMethodModalOpen(true); // Open the payment method modal
       return; // Stop bid process
     }
@@ -415,10 +405,8 @@ function LiveAuctionDetailPage() {
     setCancelError("");
     console.log(`Attempting to CANCEL auction ${auctionId}`);
     try {
-      // Assumes backend endpoint exists: POST /api/v1/liveauctions/{auctionId}/cancel
       await apiClient.post(`/liveauctions/${auctionId}/cancel`);
       console.log(`Auction ${auctionId} cancel request sent successfully.`);
-      // Rely on WebSocket to update the status to CANCELLED
       setIsCancelConfirmOpen(false); // Close modal on success
     } catch (err) {
       console.error("Failed to cancel auction:", err);
@@ -434,7 +422,6 @@ function LiveAuctionDetailPage() {
 
   // -- Hammer Down Action --
   const promptHammerDown = () => {
-    // Double-check conditions just in case (though button should be disabled)
     if (
       !auctionDetails?.highestBidderId ||
       (auctionDetails?.reservePrice != null && !auctionDetails?.reserveMet)
@@ -455,7 +442,6 @@ function LiveAuctionDetailPage() {
     setHammerError("");
     console.log(`Attempting to HAMMER DOWN auction ${auctionId}`);
     try {
-      // Uses existing backend endpoint: POST /api/v1/liveauctions/{auctionId}/hammer
       await apiClient.post(`/liveauctions/${auctionId}/hammer`);
       console.log(
         `Auction ${auctionId} hammer down request sent successfully.`
@@ -493,7 +479,6 @@ function LiveAuctionDetailPage() {
     keycloak.authenticated &&
     auctionDetails.highestBidderUsername ===
       keycloak.tokenParsed?.preferred_username;
-  // Use the correct field for images from the DTO
   const isSeller = loggedInUserId && auctionDetails.sellerId === loggedInUserId;
   const isWinner = loggedInUserId && auctionDetails.winnerId === loggedInUserId;
   const isAuctionSold = auctionDetails.status === "SOLD";
@@ -902,7 +887,6 @@ function LiveAuctionDetailPage() {
                 </div>
               </div>
 
-              {/* --- NEW: Go to Payment Button for Winner --- */}
               {isWinner && ( // Only show this button if the current user is the winner
                 <div className="mt-4 text-center border-t pt-4">
                   <button
@@ -1054,7 +1038,7 @@ function LiveAuctionDetailPage() {
         isOpen={isPaymentMethodModalOpen}
         onClose={() => setIsPaymentMethodModalOpen(false)}
         onConfirm={() => {
-          navigate('/profile'); // Ensure '/profile' leads to payment method management or general profile
+          navigate('/profile'); 
           setIsPaymentMethodModalOpen(false);
         }}
         title="Payment Method Required"
@@ -1067,7 +1051,7 @@ function LiveAuctionDetailPage() {
         isOpen={isAddressModalOpen}
         onClose={() => setIsAddressModalOpen(false)}
         onConfirm={() => {
-          navigate('/profile'); // Make sure '/profile' is your correct user profile page route
+          navigate('/profile'); 
           setIsAddressModalOpen(false);
         }}
         title="Shipping Address Required"
@@ -1075,7 +1059,6 @@ function LiveAuctionDetailPage() {
         confirmText="Go to Profile"
         cancelText="Cancel"
         confirmButtonClass="bg-blue-600 hover:bg-blue-700"
-        // You can add isLoading or error props if needed for this modal, though likely not for this simple prompt
       />
     </div>
   );

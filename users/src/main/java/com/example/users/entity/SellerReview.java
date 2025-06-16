@@ -1,5 +1,4 @@
-// src/main/java/com/example/users/entity/SellerReview.java (adjust package if your reviews belong to a different domain/microservice context)
-package com.example.users.entity; // Or a more appropriate package like com.example.reviews.entity
+package com.example.users.entity;
 
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
@@ -20,7 +19,7 @@ import java.time.LocalDateTime;
 public class SellerReview {
 
     @Id
-    @GeneratedValue(strategy = GenerationType.UUID) // Or GenerationType.IDENTITY if you prefer auto-increment long
+    @GeneratedValue(strategy = GenerationType.UUID)
     private String id;
 
     @ManyToOne(fetch = FetchType.LAZY)
@@ -32,7 +31,7 @@ public class SellerReview {
     private User buyer; // The user who wrote the review
 
     @Column(name = "order_id", nullable = false) // To link to the specific order
-    private String orderId; // Assuming order IDs are strings (e.g., UUIDs from an Order service)
+    private String orderId;
 
     @Column(nullable = false)
     private Integer rating; // e.g., 1 to 5
@@ -48,7 +47,4 @@ public class SellerReview {
     @Column(name = "updated_at", nullable = false)
     private LocalDateTime updatedAt;
 
-    // Consider adding a unique constraint for (seller_id, buyer_id, order_id)
-    // to prevent multiple reviews for the same order by the same buyer.
-    // @Table(uniqueConstraints = @UniqueConstraint(columnNames = {"seller_id", "buyer_id", "order_id"}))
 }

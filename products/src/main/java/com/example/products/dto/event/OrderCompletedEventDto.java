@@ -19,6 +19,4 @@ public class OrderCompletedEventDto {
     private Long productId; // Crucial for product-service
     private String sellerId;
     private String buyerId;
-    // You can add other details if any other service might be interested,
-    // but productId is key for your current requirement.
 }

@@ -3,5 +3,5 @@ import lombok.Data;
 
 @Data
 public class UpdateToDeliveredRequestDto {
-    private String notes; // Optional, e.g., "Buyer confirmed via phone"
+    private String notes;
 }

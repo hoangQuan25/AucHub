@@ -24,13 +24,9 @@ public class RefundEventListener {
         try {
             paymentService.processRefundRequest(event);
         } catch (StripeException e) {
-            // Error already logged in service, this catch is for AMQP listener resilience if needed
             log.error("StripeException while processing refund request for order {}: {}", event.getOrderId(), e.getMessage());
-            // Depending on your AMQP error handling strategy, you might rethrow or send to DLQ.
-            // For now, logging and letting Spring AMQP handle it (e.g., default retries if configured).
         } catch (Exception e) {
             log.error("Unexpected error processing refund request for order {}: {}", event.getOrderId(), e.getMessage(), e);
-            // General catch-all
         }
     }
 }

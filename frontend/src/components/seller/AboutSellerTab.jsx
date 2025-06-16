@@ -2,11 +2,7 @@
 import React from 'react';
 
 const AboutSellerTab = ({ sellerProfile }) => {
-  // The parent component (PublicSellerProfilePage) should already handle
-  // the main loading/error states for sellerProfile before rendering this tab's content.
-  // So, we can assume sellerProfile is available here if this component is rendered.
   if (!sellerProfile) {
-    // This is a fallback, ideally the parent wouldn't render this if profile is null post-initial load.
     return <div className="p-6 text-gray-500">Seller information is not available.</div>;
   }
 

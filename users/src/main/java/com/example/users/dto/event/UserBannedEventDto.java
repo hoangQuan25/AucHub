@@ -1,4 +1,3 @@
-// In UsersService (e.g., com.example.users.dto.event.UserBannedEventDto.java)
 package com.example.users.dto.event;
 
 import lombok.AllArgsConstructor;

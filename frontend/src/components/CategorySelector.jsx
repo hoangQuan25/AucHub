@@ -96,4 +96,3 @@ function CategorySelector({ categories = [], selectedIds = new Set(), onSelectio
 }
 
 export default CategorySelector;
-// Note: This component is designed to be used in a modal or sidebar, so it has a max height and scrolls if necessary.

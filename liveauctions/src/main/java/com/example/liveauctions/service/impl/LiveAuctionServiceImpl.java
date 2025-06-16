@@ -18,6 +18,7 @@ import com.example.liveauctions.exception.*;
 import com.example.liveauctions.mapper.AuctionMapper;
 import com.example.liveauctions.repository.BidRepository;
 import com.example.liveauctions.repository.LiveAuctionRepository;
+import com.example.liveauctions.service.LiveAuctionSchedulingService;
 import com.example.liveauctions.service.LiveAuctionService;
 import com.example.liveauctions.service.WebSocketEventPublisher; // For WebSocket events
 import com.example.liveauctions.utils.DateTimeUtil;
@@ -53,27 +54,25 @@ public class LiveAuctionServiceImpl implements LiveAuctionService {
     private final ProductServiceClient productServiceClient; // Feign client
     private final UserServiceClient userServiceClient;     // Feign client
     private final RabbitTemplate rabbitTemplate;
-    private final AuctionMapper auctionMapper; // Your MapStruct or similar mapper
+    private final AuctionMapper auctionMapper;
 
     private final BidRepository bidRepository; // Add BidRepository dependency
     private final RedissonClient redissonClient; // Add RedissonClient dependency
     private final WebSocketEventPublisher webSocketEventPublisher; // For publishing events
     private final AuctionTimingProperties timing;
-    private final LiveAuctionSchedulingServiceImpl schedulingService;
+    private final LiveAuctionSchedulingService schedulingService;
 
-    // Assume getIncrement is available, maybe in a helper class or static method
-    // private final AuctionHelper auctionHelper;
 
     @Override
     @Transactional
     public LiveAuctionDetailsDto createAuction(String sellerId, CreateLiveAuctionDto createDto) {
         log.info("Attempting to create live auction for product ID: {} by seller: {}", createDto.getProductId(), sellerId);
 
-        // 1. Fetch Product & Seller Details (No change)
+        // 1. Fetch Product & Seller Details
         ProductDto product = fetchProductDetails(createDto.getProductId());
         String sellerUsername = fetchSellerUsername(sellerId);
 
-        // 2. Determine Timing & Status (No change)
+        // 2. Determine Timing & Status
         LocalDateTime now = LocalDateTime.now();
         LocalDateTime startTime = createDto.getStartTime() != null ? createDto.getStartTime() : now;
         // Calculate endTime
@@ -94,13 +93,13 @@ public class LiveAuctionServiceImpl implements LiveAuctionService {
             // roundedEndTime is already calculated and rounded based on original or adjusted startTime
         }
 
-        // 3. Calculate Initial Increment (No change)
+        // 3. Calculate Initial Increment
         BigDecimal initialIncrement = getIncrement(createDto.getStartPrice());
 
-        // 4. Snapshot Category IDs (No change)
+        // 4. Snapshot Category IDs
         Set<Long> categoryIdsSnapshot = product.getCategories() == null ? Set.of() : product.getCategories().stream().map(CategoryDto::getId).collect(Collectors.toSet());
 
-        // 5. Build LiveAuction Entity (No change)
+        // 5. Build LiveAuction Entity
         LiveAuction auction = LiveAuction.builder()
                 .productId(product.getId()).sellerId(sellerId).productTitleSnapshot(product.getTitle())
                 .productImageUrlSnapshot(product.getImageUrls() != null && !product.getImageUrls().isEmpty() ? product.getImageUrls().get(0) : null)
@@ -110,11 +109,11 @@ public class LiveAuctionServiceImpl implements LiveAuctionService {
                 .productCategoryIdsSnapshot(categoryIdsSnapshot)
                 .build();
 
-        // 6. Save the Auction Entity (No change)
+        // 6. Save the Auction Entity
         LiveAuction savedAuction = liveAuctionRepository.save(auction);
         log.info("Auction entity saved with ID: {} and status: {}", savedAuction.getId(), savedAuction.getStatus());
 
-        // --- MODIFIED: 7. Schedule Start or Handle Immediate Start ---
+        // --- 7. Schedule Start or Handle Immediate Start ---
         if (savedAuction.getStatus() == AuctionStatus.SCHEDULED) {
             // Delegate start scheduling to the service
             schedulingService.scheduleAuctionStart(savedAuction);
@@ -128,7 +127,6 @@ public class LiveAuctionServiceImpl implements LiveAuctionService {
             // Publish initial state update
             webSocketEventPublisher.publishAuctionStateUpdate(savedAuction, null); // Use publisher directly
         }
-        // --- End MODIFICATION ---
         if (createDto.getOriginalOrderId() != null) {
             NewLiveAuctionFromReopenedOrderEventDto reopenEvent = NewLiveAuctionFromReopenedOrderEventDto.builder()
                     .eventId(UUID.randomUUID())
@@ -154,7 +152,7 @@ public class LiveAuctionServiceImpl implements LiveAuctionService {
             }
         }
 
-        // 8. Map to Details DTO and Return (No change)
+        // 8. Map to Details DTO and Return
         return auctionMapper.mapToLiveAuctionDetailsDto( savedAuction, product, Collections.emptyList(),
                 Duration.between(LocalDateTime.now(), savedAuction.getEndTime()).toMillis(),
                 // Calculate initial next bid correctly
@@ -171,7 +169,6 @@ public class LiveAuctionServiceImpl implements LiveAuctionService {
             return productServiceClient.getProductById(productId);
         } catch (Exception e) { // Catch specific Feign exceptions ideally (using ErrorDecoder)
             log.error("Failed to fetch product details for ID: {}", productId, e);
-            // Throw your custom exception
             throw new ProductNotFoundException("Product not found with ID: " + productId);
         }
     }
@@ -324,7 +321,7 @@ public class LiveAuctionServiceImpl implements LiveAuctionService {
                     .orElseThrow(() -> new AuctionNotFoundException("Auction not found: " + auctionId));
             LocalDateTime originalEndTime = auction.getEndTime(); // Store original end time before potential changes
 
-            // 1. Validations (No change)
+            // 1. Validations
             validateAuctionStateForBidding(auction); // Uses local helper
             validateNotSeller(auction, bidderId);    // Uses local helper
             // ... validate bid amount ...
@@ -333,14 +330,14 @@ public class LiveAuctionServiceImpl implements LiveAuctionService {
             if (bidDto.getAmount().compareTo(requiredAmount) < 0) throw new InvalidBidException("Bid too low. Minimum required: " + requiredAmount);
 
 
-            // 2. Persist new bid (No change)
+            // 2. Persist new bid
             String bidderUsername = fetchBidderUsername(bidderId);
             Bid newBid = bidRepository.save(Bid.builder().liveAuctionId(auctionId).bidderId(bidderId)
                     .bidderUsernameSnapshot(bidderUsername).amount(bidDto.getAmount()).build());
 
             auction.setBidCount(auction.getBidCount() + 1);
 
-            // 3. Update auction financials (No change)
+            // 3. Update auction financials
             auction.setCurrentBid(bidDto.getAmount());
             auction.setHighestBidderId(bidderId);
             auction.setHighestBidderUsernameSnapshot(bidderUsername);
@@ -349,7 +346,6 @@ public class LiveAuctionServiceImpl implements LiveAuctionService {
             // 4. Reserve-met & timing rules
             boolean reserveJustMet = !auction.isReserveMet() && auction.getReservePrice() != null && auction.getCurrentBid().compareTo(auction.getReservePrice()) >= 0;
             AuctionTimingProperties.SoftClose sc = timing.getSoftClose();
-            AuctionTimingProperties.FastFinish ff = timing.getFastFinish();
             LocalDateTime roundedNow = DateTimeUtil.roundToMicrosecond(LocalDateTime.now());
             long millisLeft = Duration.between(roundedNow, auction.getEndTime()).toMillis();
             boolean endTimeChanged = false;
@@ -365,30 +361,19 @@ public class LiveAuctionServiceImpl implements LiveAuctionService {
                 log.info("Anti-sniping: extended auction {} by {}s to {}", auctionId, sc.getExtensionSeconds(), potentialNewEndTime);
             }
 
-            // 4-b Reserve met -> optional fast-finish
+            // 4-b Reserve met (fast-finish logic removed)
             if (reserveJustMet) {
                 auction.setReserveMet(true);
                 log.info("Reserve price met for auction {}", auctionId);
-                if (auction.isFastFinishOnReserve() && ff.isEnabled()) {
-                    // Calculate potential earlier end time
-                    LocalDateTime fastFinishEndTime = LocalDateTime.now().plusMinutes(ff.getFastFinishMinutes());
-                    // Shorten only if fast finish time is EARLIER than current end time
-                    if (fastFinishEndTime.isBefore(auction.getEndTime())) {
-                        auction.setEndTime(fastFinishEndTime);
-                        endTimeChanged = true; // Mark for rescheduling
-                        log.info("Fast-finish: reserve met, new end for auction {} is {}", auctionId, auction.getEndTime());
-                    }
-                }
             }
 
-            // --- MODIFIED: Reschedule end if necessary ---
+            // ---: Reschedule end if necessary ---
             if (endTimeChanged) {
                 // Use scheduling service to schedule/reschedule the end task
                 schedulingService.scheduleAuctionEnd(auction);
             }
-            // --- End MODIFICATION ---
 
-            // 5. Persist auction & publish event (No change)
+            // 5. Persist auction & publish event
             LiveAuction updatedAuction = liveAuctionRepository.save(auction); // Save potentially updated auction
             webSocketEventPublisher.publishAuctionStateUpdate(updatedAuction, newBid);
 
@@ -435,7 +420,6 @@ public class LiveAuctionServiceImpl implements LiveAuctionService {
     }
 
 
-    // --- getActiveAuctions (No change needed, uses Pageable from controller) ---
     @Override
     @Transactional(readOnly = true)
     public Page<LiveAuctionSummaryDto> getActiveAuctions(Pageable pageable) {
@@ -495,8 +479,6 @@ public class LiveAuctionServiceImpl implements LiveAuctionService {
         log.info("CancelAuctionCommand sent for auction {}", auctionId);
     }
 
-    // src/main/java/com/example/liveauctions/service/impl/LiveAuctionServiceImpl.java
-// ... (imports and other code)
 
     @Override
     @Transactional(readOnly = true)
@@ -504,7 +486,7 @@ public class LiveAuctionServiceImpl implements LiveAuctionService {
             String queryText,
             Set<Long> categoryIds,
             AuctionStatus status, // This will be ACTIVE or SCHEDULED if 'ended' is not true
-            Boolean ended,        // --- ADD THIS parameter ---
+            Boolean ended,
             LocalDateTime from,
             Pageable pageable) {
 
@@ -551,12 +533,6 @@ public class LiveAuctionServiceImpl implements LiveAuctionService {
         return auctionPage.map(auctionMapper::mapToLiveAuctionSummaryDto);
     }
 
-
-    /**
-     * Fetches summary details for a list of auction IDs.
-     *
-     * @param auctionIds
-     */
     @Override
     @Transactional(readOnly = true)
     public List<LiveAuctionSummaryDto> getAuctionSummariesByIds(Set<UUID> auctionIds) {

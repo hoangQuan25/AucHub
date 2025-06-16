@@ -10,21 +10,17 @@ import org.springframework.context.annotation.Configuration;
 @RequiredArgsConstructor
 public class KeycloakAdminConfig {
 
-    // Inject the properties class we defined earlier
     private final KeycloakAdminClientProperties keycloakProperties;
 
     @Bean
     public Keycloak keycloakAdminClient() {
-        // Use ResteasyClientBuilder if specific proxy/TLS settings are needed
-        // ResteasyClient client = new ResteasyClientBuilderImpl().connectionPoolSize(10).build();
 
         return KeycloakBuilder.builder()
                 .serverUrl(keycloakProperties.getAuthServerUrl())
                 .realm(keycloakProperties.getRealm())
-                .grantType("client_credentials") // Use client credentials grant
-                .clientId(keycloakProperties.getResource()) // Your service account client ID
-                .clientSecret(keycloakProperties.getCredentials().getSecret()) // The secret for that client
-                // .resteasyClient(client) // Optional: provide custom http client
+                .grantType("client_credentials")
+                .clientId(keycloakProperties.getResource())
+                .clientSecret(keycloakProperties.getCredentials().getSecret())
                 .build();
     }
 }

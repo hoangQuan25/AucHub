@@ -1,4 +1,4 @@
-package com.example.liveauctions.event; // Or shared package
+package com.example.liveauctions.dto.event; // Or shared package
 
 import com.example.liveauctions.entity.AuctionStatus; // Use LiveAuction's status enum
 import jakarta.validation.constraints.NotNull;

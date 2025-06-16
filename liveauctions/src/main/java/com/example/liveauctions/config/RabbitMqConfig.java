@@ -176,5 +176,4 @@ public class RabbitMqConfig {
         rabbitTemplate.setMessageConverter(jsonMessageConverter());
         return rabbitTemplate;
     }
-    // as shown previously, so no specific beans are usually needed here for those.
 }

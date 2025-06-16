@@ -1,6 +1,6 @@
 // src/components/delivery/MarkAsShippedFormModal.jsx
 import React, { useState, useEffect } from 'react';
-import { FaShippingFast, FaTimes } from 'react-icons/fa'; // Example icons
+import { FaShippingFast, FaTimes } from 'react-icons/fa'; 
 
 function MarkAsShippedFormModal({
   isOpen,

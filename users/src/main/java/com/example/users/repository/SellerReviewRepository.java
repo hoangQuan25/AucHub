@@ -1,4 +1,3 @@
-// src/main/java/com/example/users/repository/SellerReviewRepository.java (adjust package)
 package com.example.users.repository;
 
 import com.example.users.entity.SellerReview;
@@ -19,8 +18,6 @@ public interface SellerReviewRepository extends JpaRepository<SellerReview, Stri
 
     // Check if a buyer has already reviewed a specific order for a specific seller
     Optional<SellerReview> findBySellerAndBuyerAndOrderId(User seller, User buyer, String orderId);
-    // Or if you store IDs:
-    // Optional<SellerReview> findBySellerIdAndBuyerIdAndOrderId(String sellerId, String buyerId, String orderId);
 
 
     // --- Methods for calculating average rating and count ---

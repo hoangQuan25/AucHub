@@ -2,7 +2,6 @@
 import React, { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import CountdownTimer from "../components/CountdownTimer";
-// Use the updated constants
 import {
   buyerOrderStatusFilters,
   orderStatusMap,
@@ -42,7 +41,6 @@ function MyOrdersPage() {
       };
       fetchOrders();
     } else if (initialized && !keycloak.authenticated) {
-      // ... (error handling for not authenticated)
     }
   }, [activeFilter, initialized, keycloak.authenticated]);
 
@@ -53,7 +51,7 @@ function MyOrdersPage() {
   return (
     <div className="max-w-7xl mx-auto p-4 sm:p-6 lg:p-8 bg-gray-100 min-h-screen">
       <h1 className="text-2xl sm:text-3xl font-bold text-gray-800 mb-6">
-        Đơn Hàng Của Tôi
+        My orders
       </h1>
 
       <div className="mb-6 bg-white shadow-sm rounded-md overflow-hidden">
@@ -79,7 +77,7 @@ function MyOrdersPage() {
 
       {/* Order List */}
       {isLoading && (
-        <div className="text-center py-10">Đang tải đơn hàng...</div>
+        <div className="text-center py-10">Loading orders...</div>
       )}
       {!isLoading && error && (
         <div className="text-center py-10 text-red-600 bg-white rounded-md shadow-sm">
@@ -89,7 +87,7 @@ function MyOrdersPage() {
       {!isLoading && !error && orders.length === 0 && (
         <div className="text-center py-10 bg-white rounded-md shadow-sm">
           <p className="text-gray-500">
-            Không có đơn hàng nào{" "}
+            No orders available{" "}
             {activeFilter !== "ALL"
               ? `cho trạng thái "${buyerOrderStatusFilters[activeFilter]}"`
               : ""}
@@ -110,7 +108,7 @@ function MyOrdersPage() {
                 <div className="px-4 py-3 border-b border-gray-200 bg-gray-50 flex justify-between items-center">
                   <span className="font-semibold text-sm text-gray-700">
                     {/* Assuming order DTO for buyer has sellerUsernameSnapshot or similar */}
-                    Người bán:{" "}
+                    Seller:{" "}
                     {order.sellerUsernameSnapshot || order.sellerName || "N/A"}
                   </span>
                   <span
@@ -136,7 +134,6 @@ function MyOrdersPage() {
                         : "bg-slate-100 text-slate-700 border-slate-300"
                     }`}
                   >
-                    {/* Optional status icons (can replace or customize per status) */}
                     {order.status?.includes("CANCELLED") && <span>❌</span>}
                     {order.status === "COMPLETED" && <span>✅</span>}
                     {[
@@ -198,7 +195,7 @@ function MyOrdersPage() {
                       <div className="text-xs text-orange-600 font-medium flex items-center gap-1 mr-auto">
                         {" "}
                         {/* Pushed to left */}
-                        <span>Thanh toán trước:</span>
+                        <span>Please make payment in:</span>
                         <CountdownTimer
                           endTimeMillis={new Date(
                             order.paymentDeadline
@@ -207,13 +204,12 @@ function MyOrdersPage() {
                       </div>
                     )}
                   <div className="text-right">
-                    <span className="text-sm text-gray-600">Tổng cộng: </span>
+                    <span className="text-sm text-gray-600">Total: </span>
                     <span className="text-lg font-semibold text-red-600">
                       {(order.totalPrice || 0).toLocaleString("vi-VN")} VNĐ
                     </span>
                   </div>
 
-                  {/* Buyer might have other actions depending on status */}
                 </div>
               </div>
             )

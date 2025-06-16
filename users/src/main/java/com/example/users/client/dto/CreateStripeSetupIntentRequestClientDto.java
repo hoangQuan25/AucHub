@@ -9,7 +9,7 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 public class CreateStripeSetupIntentRequestClientDto {
     private String userId;
-    private String userEmail; // <<< ADD
-    private String userName;  // <<< ADD
+    private String userEmail;
+    private String userName;
     private String stripeCustomerId;
 }

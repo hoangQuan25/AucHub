@@ -8,7 +8,7 @@ import java.time.LocalDateTime;
 public class ReviewDto {
     private String id;
     private String buyerUsername; // Display username instead of full buyer object for privacy/simplicity
-    private String buyerAvatarUrl; // Optional: if you want to show buyer's avatar
+    private String buyerAvatarUrl;
     private Integer rating;
     private String comment;
     private String orderId; // Link to the specific order

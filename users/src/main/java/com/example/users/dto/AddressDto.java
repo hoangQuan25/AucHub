@@ -5,7 +5,7 @@ import lombok.NoArgsConstructor;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 
-@Data // Includes @Getter, @Setter, @ToString, @EqualsAndHashCode, @RequiredArgsConstructor
+@Data
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
@@ -25,6 +25,4 @@ public class AddressDto {
 
     private boolean isDefault;
 
-    // We exclude the 'User user' field to avoid circular references
-    // and because it's usually implicit when fetching addresses via a user.
 }

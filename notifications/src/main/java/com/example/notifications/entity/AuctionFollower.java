@@ -31,8 +31,6 @@ public class AuctionFollower {
     @Column(nullable = false, updatable = false)
     private UUID auctionId;
 
-    // Store auction type to distinguish between live/timed if IDs could collide
-    // or for potential different notification rules later.
     @NotNull
     @Column(nullable = false, updatable = false, length = 20)
     private String auctionType; // e.g., "LIVE", "TIMED"

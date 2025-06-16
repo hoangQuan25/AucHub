@@ -19,5 +19,4 @@ public class OrderAwaitingFulfillmentConfirmationEventDto {
     private String sellerId;
     private String buyerId; // Or buyerUsernameSnapshot
     private String productTitleSnapshot;
-    // Any other info useful for the seller's notification
 }

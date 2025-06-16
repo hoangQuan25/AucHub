@@ -17,8 +17,8 @@ public class PaymentSucceededEventDto {
     private UUID eventId; // Unique ID for this event
     private LocalDateTime eventTimestamp;
 
-    private UUID orderId;     // Your internal order ID
-    private String userId;      // Your internal user ID who paid
+    private UUID orderId;
+    private String userId;
     private String paymentIntentId; // Stripe's Payment Intent ID
     private String chargeId;        // Stripe's Charge ID (if available, from the charge object on the PaymentIntent)
     private Long amountPaid;      // Amount in smallest currency unit

@@ -29,7 +29,6 @@ public class PaymentEventsListener {
             orderService.processPaymentSuccess(eventDto);
         } catch (Exception e) {
             log.error("Error processing PaymentSucceededEvent for order {}: {}", eventDto.getOrderId(), e.getMessage(), e);
-            // Consider DLQ strategy / rethrowing to leverage Spring AMQP default retries
             throw e;
         }
     }
@@ -42,12 +41,11 @@ public class PaymentEventsListener {
             orderService.processPaymentFailure(eventDto);
         } catch (Exception e) {
             log.error("Error processing PaymentFailedEvent for order {}: {}", eventDto.getOrderId(), e.getMessage(), e);
-            // Consider DLQ strategy
             throw e;
         }
     }
 
-    @RabbitListener(queues = RabbitMqConfig.ORDERS_REFUND_SUCCEEDED_QUEUE) // Add this queue to RabbitMqConfig
+    @RabbitListener(queues = RabbitMqConfig.ORDERS_REFUND_SUCCEEDED_QUEUE)
     public void handleRefundSuccess(RefundSucceededEventDto event) {
         log.info("Received RefundSucceededEvent for orderId: {}", event.getOrderId());
         try {
@@ -58,7 +56,7 @@ public class PaymentEventsListener {
         }
     }
 
-    @RabbitListener(queues = RabbitMqConfig.ORDERS_REFUND_FAILED_QUEUE) // Add this queue to RabbitMqConfig
+    @RabbitListener(queues = RabbitMqConfig.ORDERS_REFUND_FAILED_QUEUE)
     public void handleRefundFailure(RefundFailedEventDto event) {
         log.info("Received RefundFailedEvent for orderId: {}", event.getOrderId());
         try {

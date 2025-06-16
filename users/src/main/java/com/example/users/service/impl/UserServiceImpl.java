@@ -1,7 +1,14 @@
 package com.example.users.service.impl;
 
+import com.example.users.client.PaymentServiceClient;
+import com.example.users.client.dto.ConfirmStripePaymentMethodRequestClientDto;
+import com.example.users.client.dto.CreateStripeSetupIntentRequestClientDto;
+import com.example.users.client.dto.CreateStripeSetupIntentResponseClientDto;
+import com.example.users.client.dto.StripePaymentMethodDetailsClientDto;
+import com.example.users.config.RabbitMqConfig;
 import com.example.users.dto.*;
 import com.example.users.dto.event.UserBannedEventDto;
+import com.example.users.dto.event.UserUpdatedEventDto;
 import com.example.users.entity.User;
 import com.example.users.exception.ResourceNotFoundException;
 import com.example.users.exception.UserNotFoundException;
@@ -14,6 +21,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.keycloak.representations.idm.UserRepresentation; // Keep this if getOrCreateUserProfile uses it
 import org.springframework.amqp.rabbit.core.RabbitTemplate;
+import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.CollectionUtils; // Keep this
@@ -36,11 +44,11 @@ public class UserServiceImpl implements UserService {
     private final KeycloakAdminService keycloakAdminService;
     private final SellerReviewService sellerReviewService;
     private final RabbitTemplate rabbitTemplate;
+    private final PaymentServiceClient paymentServiceClient;
 
     @Override
     @Transactional
     public UserDto getOrCreateUserProfile(String userId, String username, String email) {
-        // ... (existing implementation is fine - new User() will have null Stripe fields initially)
         log.info("Attempting to fetch or create profile for user ID: {}", userId);
         return userRepository.findById(userId)
                 .map(existingUser -> {
@@ -70,7 +78,6 @@ public class UserServiceImpl implements UserService {
                 });
     }
 
-    // com.example.users.service.impl.UserServiceImpl.java
     @Override
     @Transactional
     public UserDto updateUserProfile(String userId, UpdateUserDto updateUserDto) {
@@ -96,6 +103,9 @@ public class UserServiceImpl implements UserService {
 
         User updatedUser = userRepository.save(user);
         log.info("Profile updated successfully for user ID: {}", userId);
+
+        publishUserUpdatedEvent(updatedUser);
+
         return userMapper.toUserDto(updatedUser);
     }
 
@@ -115,7 +125,6 @@ public class UserServiceImpl implements UserService {
     @Override
     @Transactional
     public void activateSellerRole(String userId) {
-        // ... (existing implementation is fine) ...
         log.debug("Activating seller role for user ID: {}", userId);
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new UserNotFoundException("User not found with id: " + userId));
@@ -134,7 +143,6 @@ public class UserServiceImpl implements UserService {
     @Override
     @Transactional(readOnly = true)
     public Map<String, UserBasicInfoDto> getUsersBasicInfo(List<String> userIds) {
-        // ... (existing implementation is fine, UserMapper now maps more fields to UserBasicInfoDto) ...
         if (CollectionUtils.isEmpty(userIds)) {
             log.debug("Received empty list of user IDs for basic info lookup.");
             return Collections.emptyMap();
@@ -182,6 +190,71 @@ public class UserServiceImpl implements UserService {
         return dto;
     }
 
+    @Override
+    @Transactional
+    public StripeSetupIntentSecretDto createSetupIntentSecret(String userId, String email, String username) {
+        UserDto userDto = getOrCreateUserProfile(userId, username, email);
+        String existingStripeCustomerId = userDto.getStripeCustomerId();
+        String userEmailForStripe = userDto.getEmail();
+        String userNameForStripe = (userDto.getFirstName() != null ? userDto.getFirstName() : "") +
+                (userDto.getLastName() != null ? " " + userDto.getLastName() : "");
+
+        CreateStripeSetupIntentRequestClientDto setupRequest =
+                new CreateStripeSetupIntentRequestClientDto(userId, userEmailForStripe, userNameForStripe.trim(), existingStripeCustomerId);
+
+        ResponseEntity<CreateStripeSetupIntentResponseClientDto> paymentsResponse =
+                paymentServiceClient.createStripeSetupIntent(setupRequest);
+
+        if (paymentsResponse.getStatusCode().is2xxSuccessful() && paymentsResponse.getBody() != null) {
+            CreateStripeSetupIntentResponseClientDto setupResponseData = paymentsResponse.getBody();
+            if (setupResponseData.getStripeCustomerId() != null &&
+                    (existingStripeCustomerId == null || !existingStripeCustomerId.equals(setupResponseData.getStripeCustomerId()))) {
+                saveStripePaymentDetails(
+                        userId,
+                        setupResponseData.getStripeCustomerId(),
+                        null, null, null, null, null
+                );
+            }
+            return new StripeSetupIntentSecretDto(setupResponseData.getClientSecret());
+        } else {
+            throw new RuntimeException("Failed to create SetupIntent via PaymentsService.");
+        }
+    }
+
+    @Override
+    @Transactional
+    public StripePaymentMethodConfirmationResultDto confirmPaymentMethodSetup(
+            String userId, String email, String username, StripeSetupConfirmationRequestDto confirmationRequest) {
+        UserDto userDto = getOrCreateUserProfile(userId, username, email);
+        String existingStripeCustomerId = userDto.getStripeCustomerId();
+
+        ConfirmStripePaymentMethodRequestClientDto confirmPmRequest =
+                new ConfirmStripePaymentMethodRequestClientDto(userId, confirmationRequest.getStripePaymentMethodId(), existingStripeCustomerId);
+
+        ResponseEntity<StripePaymentMethodDetailsClientDto> paymentsResponse =
+                paymentServiceClient.confirmAndSaveStripePaymentMethod(confirmPmRequest);
+
+        if (paymentsResponse.getStatusCode().is2xxSuccessful() && paymentsResponse.getBody() != null) {
+            StripePaymentMethodDetailsClientDto pmDetails = paymentsResponse.getBody();
+            saveStripePaymentDetails(
+                    userId,
+                    pmDetails.getStripeCustomerId(),
+                    pmDetails.getStripePaymentMethodId(),
+                    pmDetails.getCardBrand(),
+                    pmDetails.getLast4(),
+                    pmDetails.getExpiryMonth(),
+                    pmDetails.getExpiryYear()
+            );
+            return new StripePaymentMethodConfirmationResultDto(
+                    "Payment method saved successfully.",
+                    pmDetails.getStripeCustomerId(),
+                    pmDetails.getStripePaymentMethodId()
+            );
+        } else {
+            throw new RuntimeException("Failed to confirm payment method via PaymentsService.");
+        }
+    }
+
 
     @Override
     @Transactional
@@ -211,15 +284,12 @@ public class UserServiceImpl implements UserService {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> {
                     log.warn("User not found for payment default processing: {}", userId);
-                    // If user doesn't exist, they can't have defaulted.
-                    // This could be a sign of an issue, but for now, we can't ban a non-existent user.
                     return new UserNotFoundException("User not found: " + userId);
                 });
 
         // Check if currently banned
         if (user.getBanEndsAt() != null && LocalDateTime.now().isBefore(user.getBanEndsAt())) {
             log.info("User {} is currently banned until {}. Default still counted.", userId, user.getBanEndsAt());
-            // Policy: Current ban remains, default is still counted. No immediate re-banning while already banned.
         }
 
         // Has a previous ban period ended?
@@ -283,5 +353,24 @@ public class UserServiceImpl implements UserService {
 
         boolean isBanned = user.getBanEndsAt() != null && LocalDateTime.now().isBefore(user.getBanEndsAt());
         return new UserBanStatusDto(isBanned, isBanned ? user.getBanEndsAt() : null);
+    }
+
+    private void publishUserUpdatedEvent(User user) {
+        UserBasicInfoDto userBasicInfo = userMapper.toUserBasicInfoDto(user);
+
+        UserUpdatedEventDto event = UserUpdatedEventDto.builder()
+                .updatedUser(userBasicInfo)
+                .build();
+
+        try {
+            log.info("Publishing UserUpdatedEvent for user ID: {}", user.getId());
+            rabbitTemplate.convertAndSend(
+                    RabbitMqConfig.USER_EVENTS_EXCHANGE,
+                    RabbitMqConfig.USER_EVENT_PROFILE_UPDATED_ROUTING_KEY,
+                    event
+            );
+        } catch (Exception e) {
+            log.error("Failed to publish UserUpdatedEvent for user {}: {}", user.getId(), e.getMessage());
+        }
     }
 }

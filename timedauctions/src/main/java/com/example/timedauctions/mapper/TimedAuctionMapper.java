@@ -154,17 +154,9 @@ public class TimedAuctionMapper {
                 // This is a reply, find its parent DTO in the map
                 CommentDto parentDto = dtoMap.get(comment.getParentId());
                 if (parentDto != null) {
-                    // Add the current DTO as a reply to its parent
                     parentDto.getReplies().add(currentDto);
-                    // Optionally update parent's reply count here if needed elsewhere
-                    // parentDto.setReplyCount(parentDto.getReplies().size());
                 } else {
-                    // Parent comment not found in the current batch? Log warning or handle.
-                    // Could happen if fetching paginated replies separately.
-                    // For fetch-all strategy, this shouldn't occur unless data inconsistency.
                     log.warn("Parent comment with ID {} not found for reply {}", comment.getParentId(), comment.getId());
-                    // Optionally add orphans to top-level or ignore
-                    // topLevelDtos.add(currentDto);
                 }
             }
         }

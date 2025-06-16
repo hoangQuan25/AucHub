@@ -8,15 +8,9 @@ import org.springframework.data.domain.Page; // Import Spring Data Page
 import java.util.Collections;
 import java.util.List;
 
-/**
- * A generic DTO for returning paginated results in a stable JSON format.
- * Designed to wrap the content and metadata from a Spring Data Page object.
- *
- * @param <T> The type of the content in the page.
- */
-@Data // Lombok annotation for getters, setters, toString, equals, hashCode
-@NoArgsConstructor // Lombok annotation for no-args constructor
-@AllArgsConstructor // Lombok annotation for all-args constructor
+@Data
+@NoArgsConstructor
+@AllArgsConstructor
 public class PagedResultDto<T> {
 
     private List<T> content = Collections.emptyList(); // The list of items on the current page
@@ -28,13 +22,6 @@ public class PagedResultDto<T> {
     private boolean isFirst;   // Is this the first page?
     private int numberOfElements; // Number of elements actually returned on this page
 
-    /**
-     * Static factory method to create a PagedResultDto from a Spring Data Page object.
-     *
-     * @param page The Page object returned by the repository/service.
-     * @param <T>  The type of the content.
-     * @return A PagedResultDto instance populated with data from the Page.
-     */
     public static <T> PagedResultDto<T> fromPage(Page<T> page) {
         if (page == null) {
             // Or throw an exception, depending on desired behavior

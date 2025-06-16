@@ -118,7 +118,6 @@ function OrderReturnDetails({
           <h4 className="text-md font-semibold text-gray-700 mb-2">
             Buyer's Return Details:
           </h4>
-          {/* ... your existing layout for displaying reason, courier, etc. is perfect ... */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-x-4 gap-y-2">
             <div>
               <span className="text-gray-500 font-medium">Reason:</span>

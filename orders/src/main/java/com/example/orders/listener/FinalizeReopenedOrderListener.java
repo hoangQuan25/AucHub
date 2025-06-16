@@ -44,9 +44,6 @@ public class FinalizeReopenedOrderListener {
             if (originalOrder.getOrderStatus() != OrderStatus.AWAITING_SELLER_DECISION) {
                 log.warn("Listener: Original order {} is not in AWAITING_SELLER_DECISION state. Current status: {}. Cannot supersede automatically for new timed auction {}.",
                         originalOrder.getId(), originalOrder.getOrderStatus(), event.getNewTimedAuctionId());
-                // Depending on business rules, you might still proceed or flag for manual review.
-                // For now, we'll proceed but this state check is important. If it was AUCTION_REOPEN_INITIATED, that's also fine.
-                // throw new IllegalStateException("Order " + originalOrder.getId() + " not in expected state for reopen finalization.");
             }
             if (!originalOrder.getProductId().equals(event.getProductId()) || !originalOrder.getSellerId().equals(event.getSellerId())) {
                 log.error("Listener: Mismatch in product/seller details for original order {} and NewTimedAuctionFromReopenedOrderEvent. Event: {}",
@@ -64,8 +61,6 @@ public class FinalizeReopenedOrderListener {
 
         } catch (NoSuchElementException | IllegalArgumentException | IllegalStateException e) {
             log.error("Listener: Error processing NewTimedAuctionFromReopenedOrderEvent for originalOrderId {}: {}", event.getOriginalOrderId(), e.getMessage());
-            // Consider sending to a Dead Letter Queue (DLQ) or other error handling.
-            // For now, rethrowing will cause RabbitMQ to requeue/DLQ based on config.
             throw e;
         } catch (Exception e) {
             log.error("Listener: Unexpected error processing NewTimedAuctionFromReopenedOrderEvent for originalOrderId {}: {}", event.getOriginalOrderId(), e.getMessage(), e);
@@ -95,7 +90,6 @@ public class FinalizeReopenedOrderListener {
             if (originalOrder.getOrderStatus() != OrderStatus.AWAITING_SELLER_DECISION) {
                 log.warn("Listener: Original order {} is not in AWAITING_SELLER_DECISION state. Current status: {}. Cannot supersede automatically for new live auction {}.",
                         originalOrder.getId(), originalOrder.getOrderStatus(), event.getNewLiveAuctionId());
-                // throw new IllegalStateException("Order " + originalOrder.getId() + " not in expected state for reopen finalization.");
             }
             if (!originalOrder.getProductId().equals(event.getProductId()) || !originalOrder.getSellerId().equals(event.getSellerId())) {
                 log.error("Listener: Mismatch in product/seller details for original order {} and NewLiveAuctionFromReopenedOrderEvent. Event: {}",

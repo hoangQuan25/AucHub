@@ -55,11 +55,9 @@ public class TimedAuctionServiceImpl implements TimedAuctionService {
     private final TimedAuctionRepository timedAuctionRepository;
     private final BidRepository bidRepository;
     private final AuctionSchedulingService auctionSchedulingService;
-    // private final AuctionProxyBidRepository auctionProxyBidRepository; // Inject when needed
-    // private final AuctionCommentRepository auctionCommentRepository; // Inject when needed
 
-    private final ProductServiceClient productServiceClient; // Assuming setup via @EnableFeignClients
-    private final UserServiceClient userServiceClient;       // Assuming setup
+    private final ProductServiceClient productServiceClient;
+    private final UserServiceClient userServiceClient;
     private final AuctionProxyBidRepository auctionProxyBidRepository;
     private final AuctionCommentRepository auctionCommentRepository;
     private final RedissonClient redissonClient;
@@ -67,7 +65,6 @@ public class TimedAuctionServiceImpl implements TimedAuctionService {
     private final RabbitTemplate rabbitTemplate;
     private final TimedAuctionMapper auctionMapper;
     private final AuctionTimingProperties timingProperties;
-    // private final RedissonClient redissonClient; // Inject when needed
 
 
     @Override
@@ -167,7 +164,6 @@ public class TimedAuctionServiceImpl implements TimedAuctionService {
                     .build();
             try {
                 // Use a dedicated exchange for inter-service domain events or a shared one
-                // Let's assume TD_AUCTION_EVENTS_EXCHANGE is suitable for now
                 rabbitTemplate.convertAndSend(
                         RabbitMqConfig.TD_AUCTION_EVENTS_EXCHANGE, // Or a more generic "DOMAIN_EVENTS_EXCHANGE"
                         RabbitMqConfig.AUCTION_TIMED_REOPENED_ORDER_CREATED_ROUTING_KEY,   // New routing key
@@ -178,8 +174,6 @@ public class TimedAuctionServiceImpl implements TimedAuctionService {
             } catch (Exception e) {
                 log.error("Failed to publish NewTimedAuctionFromReopenedOrderEvent for original order ID {}: {}",
                         createDto.getOriginalOrderId(), e.getMessage(), e);
-                // Decide on error handling: should this cause the transaction to roll back?
-                // Usually, event publishing failures are handled asynchronously or logged for retry.
             }
         }
 
@@ -247,12 +241,6 @@ public class TimedAuctionServiceImpl implements TimedAuctionService {
         return auctionPage.map(auctionMapper::mapToTimedAuctionSummaryDto);
     }
 
-    /**
-     * Initiates the cancellation of a timed auction by the seller.
-     *
-     * @param auctionId The ID of the auction to cancel.
-     * @param sellerId  The ID of the user attempting to cancel.
-     */
     @Override
     public void cancelAuction(UUID auctionId, String sellerId) {
         log.info("User {} attempting to cancel auction {}", sellerId, auctionId);
@@ -301,13 +289,6 @@ public class TimedAuctionServiceImpl implements TimedAuctionService {
         }
     }
 
-    /**
-     * Initiates an early end ("hammer down") for a timed auction by the seller.
-     * Requires bids to be present. Reserve price status might not be strictly required.
-     *
-     * @param auctionId The ID of the auction to end early.
-     * @param sellerId  The ID of the user attempting to end the auction.
-     */
     @Override
     public void endAuctionEarly(UUID auctionId, String sellerId) {
         log.info("User {} attempting to end auction {} early", sellerId, auctionId);
@@ -397,13 +378,9 @@ public class TimedAuctionServiceImpl implements TimedAuctionService {
                 throw new InvalidBidException("Your maximum bid must be at least the next required bid amount: " + requiredNext);
             }
 
-
-            // Fetch bidder username *once*
-            UserBasicInfoDto bidderInfo = fetchUserDetails(bidderId);
-
             // --- Call Core Proxy Bid Handling Logic ---
             // This internal method will handle its own transaction
-            boolean stateChanged = handleNewMaxBid(auction, bidderId, bidderInfo.getUsername(), bidDto.getMaxBid());
+            handleNewMaxBid(auction, bidderId, bidDto.getMaxBid());
 
             // Optional: If state changed, maybe trigger soft close rescheduling check here?
             // Soft close logic needs careful placement - should it be inside handleNewMaxBid? Yes.
@@ -420,10 +397,7 @@ public class TimedAuctionServiceImpl implements TimedAuctionService {
         }
     }
 
-    // --- Core Proxy Bidding Logic (New Private Method) ---
-    @Transactional // This core logic needs to be atomic
-    // propagation = Propagation.REQUIRES_NEW // Optional: Consider if a new transaction is better
-    boolean handleNewMaxBid(TimedAuction auction, String bidderId, String bidderUsername, BigDecimal newMaxBid) {
+    void handleNewMaxBid(TimedAuction auction, String bidderId, BigDecimal newMaxBid) {
         log.debug("Handling new max bid logic for auction {}, bidder {}, max {}", auction.getId(), bidderId, newMaxBid);
 
         // --- Track original state ---
@@ -461,8 +435,6 @@ public class TimedAuctionServiceImpl implements TimedAuctionService {
             } else {
                 log.info("New max bid {} is not higher than existing {} for bidder {}. No update needed.",
                         newMaxBid, currentProxy.getMaxBid(), bidderId);
-                // If max bid isn't higher, no recalculation is needed.
-                return false; // Indicate no state change occurred
             }
         }
         auctionProxyBidRepository.save(currentProxy); // Save new or updated proxy
@@ -474,7 +446,6 @@ public class TimedAuctionServiceImpl implements TimedAuctionService {
         if (allProxies.isEmpty()) {
             // Should not happen if we just saved one, but defensive check
             log.error("No proxy bids found for auction {} after saving one!", auction.getId());
-            return false;
         }
 
         AuctionProxyBid winnerProxy = allProxies.get(0);
@@ -589,13 +560,13 @@ public class TimedAuctionServiceImpl implements TimedAuctionService {
             boolean isFirstBid = originalLeaderId == null && priceIncreased; // First visible bid placed
             boolean shouldTriggerSoftClose = isFirstBid || winnerChanged;
 
-            if (shouldTriggerSoftClose && timingProperties.getSoftClose().isEnabled()) {
-                long thresholdMillis = timingProperties.getSoftClose().getThresholdMinutes() * 60 * 1000L;
+            if (shouldTriggerSoftClose && timingProperties.isSoftCloseEnabled()) {
+                long thresholdMillis = timingProperties.getSoftCloseThresholdMinutes() * 60 * 1000L;
                 long millisLeft = Duration.between(LocalDateTime.now(), originalEndTime).toMillis();
 
                 if (millisLeft > 0 && millisLeft <= thresholdMillis) {
                     // Calculate newEndTime based on roundedNow
-                    LocalDateTime potentialNewEndTime = roundedNow.plusMinutes(timingProperties.getSoftClose().getExtensionMinutes());
+                    LocalDateTime potentialNewEndTime = roundedNow.plusMinutes(timingProperties.getSoftCloseExtensionMinutes());
                     LocalDateTime newEndTimeRounded = DateTimeUtil.roundToMicrosecond(potentialNewEndTime); // Explicitly round the new potential end time
 
                     if (newEndTimeRounded.isAfter(originalEndTime)) { // Compare rounded with (already rounded) original
@@ -613,12 +584,10 @@ public class TimedAuctionServiceImpl implements TimedAuctionService {
             // Optional: Publish internal event
             publishInternalEvent(auction, "BID_PLACED");
 
-            return true; // Indicate state changed
 
         } else {
             log.info("No change in leader or visible price for auction {}. New max bid from {} did not change outcome yet.",
                     auction.getId(), bidderId);
-            return false; // Indicate no state change occurred
         }
     }
 
@@ -654,13 +623,11 @@ public class TimedAuctionServiceImpl implements TimedAuctionService {
     // Placeholder for internal event publishing (e.g., to different queues for background tasks)
     private void publishInternalEvent(TimedAuction auction, String eventType) {
         log.debug("Placeholder: Publishing internal event '{}' for auction {}", eventType, auction.getId());
-        // rabbitTemplate.convertAndSend(RabbitMqConfig.TD_AUCTION_EVENTS_EXCHANGE, "td.auction.event." + eventType.toLowerCase(), eventPayload);
     }
 
 
     private long calculateTimeLeftMs(TimedAuction auction, LocalDateTime roundedNow) {
         if (auction.getStatus() == AuctionStatus.ACTIVE && auction.getEndTime() != null) {
-            // auction.getEndTime() should already be rounded if entity setter or save logic handles it
             long timeLeft = Duration.between(roundedNow, auction.getEndTime()).toMillis();
             return Math.max(0, timeLeft);
         }
@@ -757,14 +724,6 @@ public class TimedAuctionServiceImpl implements TimedAuctionService {
         return text.substring(0, maxLength) + "...";
     }
 
-    /**
-     * Creates a new comment or reply on a timed auction.
-     *
-     * @param auctionId  The ID of the auction being commented on.
-     * @param userId     The ID of the user posting the comment.
-     * @param commentDto DTO containing comment text and optional parentId.
-     * @return The created CommentDto.
-     */
     @Override
     @Transactional
     public CommentDto createComment(UUID auctionId, String userId, CreateCommentDto commentDto) {
@@ -838,14 +797,6 @@ public class TimedAuctionServiceImpl implements TimedAuctionService {
         return auctionMapper.mapToCommentDto(savedComment);
     }
 
-    /**
-     * Retrieves comments for a specific auction.
-     * Currently fetches all comments and builds a nested structure one level deep.
-     * Consider pagination for top-level comments if performance becomes an issue.
-     *
-     * @param auctionId The ID of the auction.
-     * @return A list of top-level CommentDto objects, each potentially containing direct replies.
-     */
     @Override
     @Transactional(readOnly = true)
     public List<CommentDto> getComments(UUID auctionId) {
@@ -913,7 +864,6 @@ public class TimedAuctionServiceImpl implements TimedAuctionService {
                 SetJoin<TimedAuction, Long> categoryJoin = root.joinSet("productCategoryIdsSnapshot", JoinType.INNER);
                 predicates.add(categoryJoin.in(categoryIds));
 
-                // If using join, we need distinct results or group by
                 query.distinct(true);
 
             }
@@ -927,12 +877,6 @@ public class TimedAuctionServiceImpl implements TimedAuctionService {
         return auctionPage.map(auctionMapper::mapToTimedAuctionSummaryDto);
     }
 
-    /**
-     * Fetches summary details for a list of auction IDs.
-     *
-     * @param auctionIds Set of UUIDs representing the auction IDs.
-     * @return List of TimedAuctionSummaryDto objects for the specified auction IDs.
-     */
     @Override
     @Transactional(readOnly = true)
     public List<TimedAuctionSummaryDto> getAuctionSummariesByIds(Set<UUID> auctionIds) {
@@ -998,5 +942,50 @@ public class TimedAuctionServiceImpl implements TimedAuctionService {
 
         Page<TimedAuction> auctionPage = timedAuctionRepository.findAll(spec, pageable);
         return auctionPage.map(auctionMapper::mapToTimedAuctionSummaryDto);
+    }
+
+    @Override
+    @Transactional
+    public CommentDto editComment(UUID auctionId, Long commentId, String userId, UpdateCommentDto updateDto) {
+        log.info("User {} attempting to edit comment {} for auction {}", userId, commentId, auctionId);
+
+        AuctionComment comment = auctionCommentRepository.findById(commentId)
+                .orElseThrow(() -> new CommentNotFoundException("Comment not found: " + commentId));
+
+        if (!comment.getTimedAuctionId().equals(auctionId)) {
+            throw new IllegalArgumentException("Comment does not belong to the specified auction.");
+        }
+
+        if (!comment.getUserId().equals(userId)) {
+            log.warn("User {} attempted to edit a comment belonging to user {}", userId, comment.getUserId());
+            throw new InvalidAuctionStateException("You can only edit your own comments.");
+        }
+
+        comment.setCommentText(updateDto.getCommentText());
+        AuctionComment updatedComment = auctionCommentRepository.save(comment);
+        log.info("Comment {} updated successfully by user {}", commentId, userId);
+
+        return auctionMapper.mapToCommentDto(updatedComment);
+    }
+
+    @Override
+    @Transactional
+    public void deleteComment(UUID auctionId, Long commentId, String userId) {
+        log.info("User {} attempting to delete comment {} from auction {}", userId, commentId, auctionId);
+
+        AuctionComment comment = auctionCommentRepository.findById(commentId)
+                .orElseThrow(() -> new CommentNotFoundException("Comment not found: " + commentId));
+
+        if (!comment.getTimedAuctionId().equals(auctionId)) {
+            throw new IllegalArgumentException("Comment does not belong to the specified auction.");
+        }
+
+        if (!comment.getUserId().equals(userId)) {
+            log.warn("User {} attempted to delete a comment belonging to user {}", userId, comment.getUserId());
+            throw new InvalidAuctionStateException("You can only delete your own comments.");
+        }
+
+        auctionCommentRepository.delete(comment);
+        log.info("Comment {} and its replies (if any) deleted successfully by user {}", commentId, userId);
     }
 }

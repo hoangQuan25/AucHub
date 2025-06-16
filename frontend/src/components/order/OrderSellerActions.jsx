@@ -1,5 +1,4 @@
 import React from 'react';
-// Assuming FaBoxOpen is used for the decision action icon
 import { FaShippingFast, FaCheckCircle, FaExclamationTriangle, FaRedo, FaTimes, FaBoxOpen } from 'react-icons/fa';
 
 function OrderSellerActions({
@@ -12,8 +11,8 @@ function OrderSellerActions({
   isAwaitingSellerFulfillmentConfirmation,
   onOpenMarkAsShippedModal,
   onOpenMarkAsDeliveredModal,
-  onOpenSellerDecisionModal, // NEW: handler for seller decision
-  canSellerMakeDecision      // NEW: flag to control decision button visibility
+  onOpenSellerDecisionModal, 
+  canSellerMakeDecision      
 }) {
   if (!order) return null;
 
@@ -120,18 +119,6 @@ function OrderSellerActions({
           </button>
         )}
 
-        {/* Issue Reporting (commented out for future) */}
-        {/* {canReportIssue && (
-          <button
-            onClick={onOpenReportIssueModal}
-            disabled={isProcessing}
-            className={`px-4 py-2 bg-yellow-500 text-white rounded text-sm font-medium shadow transition-colors flex items-center gap-2 ${
-              isProcessing ? 'opacity-50 cursor-not-allowed' : 'hover:bg-yellow-600'
-            }`}
-          >
-            <FaExclamationTriangle /> Report Issue
-          </button>
-        )} */}
       </div>
     </div>
   );

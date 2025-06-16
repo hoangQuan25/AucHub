@@ -19,12 +19,10 @@ import java.security.Principal;
 import java.util.*;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
-// ... (keep other imports)
 
 @Component
 public class AuctionViewerCountListener {
 
-    // ... (keep logger and static final fields) ...
     private static final Logger logger = LoggerFactory.getLogger(AuctionViewerCountListener.class);
 
     private static final Pattern AUCTION_DATA_TOPIC_PATTERN =
@@ -49,7 +47,6 @@ public class AuctionViewerCountListener {
         logger.info("AuctionViewerCountListener initialized to use Redis for viewer tracking.");
     }
 
-    // ... (the rest of your AuctionViewerCountListener code remains the same as the last version I provided) ...
     @PostConstruct
     private void init() {
         setOps = redisTemplate.opsForSet();
