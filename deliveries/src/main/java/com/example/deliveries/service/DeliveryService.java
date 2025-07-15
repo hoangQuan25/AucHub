@@ -24,6 +24,8 @@ public interface DeliveryService {
 
     Delivery requestReturnByBuyer(UUID deliveryId, String buyerId, ReturnRequestDto returnRequest);
 
+    void processEstimatedDeliveryArrival(UUID deliveryId);
+
     void processAutoCompletion(UUID deliveryId, LocalDateTime originalConfirmationDeadline);
 
     Delivery reportDeliveryIssue(UUID deliveryId, String sellerId, ReportDeliveryIssueRequestDto requestDto);

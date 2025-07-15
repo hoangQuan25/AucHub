@@ -5,6 +5,7 @@ import com.example.products.dto.CategoryDto;
 import com.example.products.dto.CreateProductDto;
 import com.example.products.dto.ProductDto;
 import com.example.products.dto.UpdateProductDto;
+import com.example.products.entity.ProductStatus;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 
@@ -14,9 +15,10 @@ public interface ProductService {
     ProductDto createProduct(String sellerId, CreateProductDto dto);
     List<ProductDto> getProductsBySeller(String sellerId);
     List<CategoryDto> getAllCategories();
-    Page<ProductDto> getProductsBySellerAndStatus(String sellerId, Boolean isSold, Pageable pageable);
+    Page<ProductDto> getProductsBySellerAndStatus(String sellerId, ProductStatus status, Pageable pageable);
     ProductDto updateProduct(String sellerId, Long productId, UpdateProductDto dto);
     void deleteProduct(String sellerId, Long productId);
     ProductDto getProductById(Long productId);
-    ProductDto markProductAsSold(Long productId);
+    ProductStatus getProductStatus(Long productId);
+    void updateProductStatus(Long productId, ProductStatus newStatus);
 }

@@ -25,6 +25,7 @@ import SellerDecisionModal from "../components/SellerDecisionModal";
 import StartAuctionModal from "../components/StartAuctionModal";
 import RequestReturnModal from "../components/order/RequestReturnModal";
 import OrderReturnDetails from "../components/order/OrderReturnDetails";
+import EstimatedDeliveryInfo from "../components/delivery/EstimatedDeliveryInfo";
 
 const STRIPE_PUBLISHABLE_KEY = import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY;
 const stripePromise = loadStripe(STRIPE_PUBLISHABLE_KEY);
@@ -40,7 +41,7 @@ function OrderDetailPage() {
   const [userProfile, setUserProfile] = useState(null);
   const [deliveryDetails, setDeliveryDetails] = useState(null); // For storing fetched delivery info
   const [isLoadingDelivery, setIsLoadingDelivery] = useState(false);
-  
+
   const [isPaymentConfirmOpen, setIsPaymentConfirmOpen] = useState(false);
   const [isCancelConfirmOpen, setIsCancelConfirmOpen] = useState(false);
   const [isConfirmFulfillmentOpen, setIsConfirmFulfillmentOpen] =
@@ -86,6 +87,9 @@ function OrderDetailPage() {
   const [isReturnModalOpen, setIsReturnModalOpen] = useState(false);
   const [returnRequestError, setReturnRequestError] = useState("");
   const [isSubmittingReturn, setIsSubmittingReturn] = useState(false);
+  const [isConfirmReceiptOpen, setIsConfirmReceiptOpen] = useState(false);
+  const [isConfirmReturnReceivedOpen, setIsConfirmReturnReceivedOpen] =
+    useState(false);
 
   const fetchUserProfile = useCallback(async () => {
     if (initialized && keycloak.authenticated) {
@@ -221,7 +225,7 @@ function OrderDetailPage() {
           appearance: { theme: "stripe" },
         });
         if (intent.status === "succeeded") {
-          alert("Payment with saved card succeeded!");
+          // alert("Payment with saved card succeeded!");
           await refreshAllDetails();
         } else if (
           intent.status === "requires_action" ||
@@ -281,7 +285,7 @@ function OrderDetailPage() {
     setModalError("");
     try {
       await apiClient.post(`/orders/${order.id}/buyer-cancel-attempt`);
-      alert("Your cancellation request has been submitted.");
+      // alert("Your cancellation request has been submitted.");
       setIsCancelConfirmOpen(false);
       await refreshAllDetails();
     } catch (err) {
@@ -298,6 +302,17 @@ function OrderDetailPage() {
     setModalError("");
     setIsConfirmFulfillmentOpen(true);
   };
+
+  const handleOpenConfirmReceiptModal = () => {
+    setBuyerActionError("");
+    setIsConfirmReceiptOpen(true);
+  };
+
+  const handleOpenConfirmReturnReceivedModal = () => {
+    setModalError(""); // Clear any previous errors
+    setIsConfirmReturnReceivedOpen(true);
+  };
+
   const closeConfirmFulfillmentModal = () => setIsConfirmFulfillmentOpen(false);
   const handleConfirmFulfillment = async () => {
     if (!order || !keycloak.subject || keycloak.subject !== order.sellerId) {
@@ -308,7 +323,7 @@ function OrderDetailPage() {
     setModalError("");
     try {
       await apiClient.post(`/orders/my-sales/${order.id}/confirm-fulfillment`);
-      alert("Order fulfillment confirmed.");
+      // alert("Order fulfillment confirmed.");
       closeConfirmFulfillmentModal();
       await refreshAllDetails();
     } catch (err) {
@@ -350,8 +365,7 @@ function OrderDetailPage() {
 
   const handleOpenMarkAsShippedModal = () => {
     if (!deliveryDetails && order?.status !== "AWAITING_SHIPMENT") {
-      
-      alert("Delivery details not available or order not ready for shipment.");
+      // alert("Delivery details not available or order not ready for shipment.");
       return;
     }
     setMarkAsShippedError("");
@@ -367,13 +381,12 @@ function OrderDetailPage() {
     setIsSellerDecisionModalOpen(true);
   };
 
-
   const handleOpenSellerDecisionModalOnDetail = () => {
     if (!order || !isSeller || order.status !== "AWAITING_SELLER_DECISION") {
       console.warn("Conditions not met to open seller decision modal.");
       return;
     }
-    setModalError(""); 
+    setModalError("");
     setIsSellerDecisionModalOpen(true);
   };
 
@@ -393,7 +406,7 @@ function OrderDetailPage() {
       !orderFromModal.items ||
       orderFromModal.items.length === 0
     ) {
-      alert("Error: Order item details are missing. Cannot reopen auction.");
+      // alert("Error: Order item details are missing. Cannot reopen auction.");
       setIsSellerDecisionModalOpen(false); // Ensure decision modal is closed
       return;
     }
@@ -405,9 +418,9 @@ function OrderDetailPage() {
     const productImageUrlForReopen = firstItem.imageUrl;
 
     if (!productIdForReopen) {
-      alert(
-        "Error: Product ID is missing from order details. Cannot reopen auction."
-      );
+      // alert(
+      // "Error: Product ID is missing from order details. Cannot reopen auction."
+      // );
       setIsSellerDecisionModalOpen(false); // Ensure decision modal is closed
       return;
     }
@@ -430,16 +443,14 @@ function OrderDetailPage() {
     const reopenedFromOrderInfo = productToAuction; // Contains originalOrderId
     setProductToAuction(null);
 
-    alert(
-      `New auction (ID: ${createdAuctionDto.id}) started! This order (ID: ${reopenedFromOrderInfo?.originalOrderId}) should now be updated to reflect this.`
-    );
+    // alert(
+    //   `New auction (ID: ${createdAuctionDto.id}) started! This order (ID: ${reopenedFromOrderInfo?.originalOrderId}) should now be updated to reflect this.`
+    // );
     console.log(
       `Frontend (OrderDetailPage): New auction ${createdAuctionDto.id} started. Original order ${reopenedFromOrderInfo?.originalOrderId} should be finalized by backend processes.`
     );
 
     await refreshAllDetails();
-
-  
   };
 
   const handleCloseSellerDecisionModal = async (decisionWasMade = false) => {
@@ -450,7 +461,6 @@ function OrderDetailPage() {
   };
 
   const handleConfirmMarkAsShipped = async (shippingData) => {
-
     const currentDeliveryId = deliveryDetails?.deliveryId; // Get deliveryId from fetched delivery details
 
     if (!currentDeliveryId) {
@@ -467,7 +477,7 @@ function OrderDetailPage() {
         `/deliveries/${currentDeliveryId}/ship`,
         shippingData
       );
-      alert("Order marked as shipped successfully!");
+      // alert("Order marked as shipped successfully!");
       setIsMarkAsShippedModalOpen(false);
       await refreshAllDetails(); // Refresh both order and delivery details
     } catch (err) {
@@ -486,7 +496,7 @@ function OrderDetailPage() {
       !deliveryDetails ||
       deliveryDetails.deliveryStatus !== "SHIPPED_IN_TRANSIT"
     ) {
-      alert("Order is not in 'Shipped - In Transit' status.");
+      // alert("Order is not in 'Shipped - In Transit' status.");
       return;
     }
     setMarkAsDeliveredError("");
@@ -509,7 +519,7 @@ function OrderDetailPage() {
       await apiClient.post(`/deliveries/${currentDeliveryId}/mark-delivered`, {
         notes: deliveredNotes,
       });
-      alert("Order successfully marked as delivered!");
+      // alert("Order successfully marked as delivered!");
       setIsMarkAsDeliveredModalOpen(false);
       await refreshAllDetails(); // Refresh order and delivery details
     } catch (err) {
@@ -528,6 +538,7 @@ function OrderDetailPage() {
       setBuyerActionError(
         "Cannot confirm receipt. Delivery details missing or not authorized."
       );
+      setIsConfirmReceiptOpen(false);
       return;
     }
     setIsConfirmingReceipt(true);
@@ -537,7 +548,7 @@ function OrderDetailPage() {
       await apiClient.post(
         `/deliveries/${deliveryDetails.deliveryId}/buyer-confirm-receipt`
       );
-      alert("Thank you for confirming receipt!");
+      setIsConfirmReceiptOpen(false);
       await refreshAllDetails(); // Refresh to get updated delivery status
     } catch (err) {
       console.error("Error confirming receipt:", err);
@@ -545,9 +556,9 @@ function OrderDetailPage() {
         err.response?.data?.message ||
           "Failed to confirm receipt. Please try again."
       );
-      alert(err.response?.data?.message || "Failed to confirm receipt.");
+      // alert(err.response?.data?.message || "Failed to confirm receipt.");
     } finally {
-      setIsConfirmingReceipt(false);
+      setIsConfirmReceiptOpen(false);
     }
   };
 
@@ -592,9 +603,9 @@ function OrderDetailPage() {
         `/deliveries/${deliveryDetails.deliveryId}/request-return`, // Uses deliveryId
         returnData
       );
-      alert(
-        "Your return request has been submitted. The seller will be notified."
-      );
+      // alert(
+      //   "Your return request has been submitted. The seller will be notified."
+      // );
       setIsReturnModalOpen(false);
       await refreshAllDetails();
     } catch (err) {
@@ -608,25 +619,25 @@ function OrderDetailPage() {
   };
 
   const handleConfirmReturnReceived = async () => {
-    // Ensure deliveryDetails and deliveryId are available
     if (!deliveryDetails?.deliveryId || !isSeller) {
-      alert("Action not authorized or delivery details missing.");
+      setModalError("Action not authorized or delivery details missing.");
       return;
     }
-    setIsProcessing(true); 
+    setIsProcessing(true);
+    setModalError(""); // Clear error before trying
+
     try {
       await apiClient.post(
-        `/deliveries/${deliveryDetails.deliveryId}/confirm-return-received` // Uses deliveryId
+        `/deliveries/${deliveryDetails.deliveryId}/confirm-return-received`
       );
-      alert(
-        "Confirmation successful. A refund will now be processed for the buyer."
-      );
+
+      setIsConfirmReturnReceivedOpen(false); // Close modal on success
       await refreshAllDetails();
     } catch (err) {
       console.error("Failed to confirm return received:", err);
-      alert(
-        err.response?.data?.message || "An error occurred. Please try again."
-      );
+      const errorMsg =
+        err.response?.data?.message || "An error occurred. Please try again.";
+      setModalError(errorMsg); // Set error to display in the modal
     } finally {
       setIsProcessing(false);
     }
@@ -635,13 +646,21 @@ function OrderDetailPage() {
   const isSeller = order && keycloak.subject === order.sellerId;
   const isBuyer = order && keycloak.subject === order.currentBidderId;
 
-  const isReturnInProgress = deliveryDetails?.deliveryStatus?.startsWith("RETURN_");
+  const isReturnInProgress =
+    deliveryDetails?.deliveryStatus?.startsWith("RETURN_");
 
-  const isOrderReturnedOrRefunding = order?.status === 'ORDER_RETURNED' || order?.status === 'RETURN_APPROVED_BY_SELLER' || order?.status === 'REFUND_FAILED';
+  const isOrderReturnedOrRefunding =
+    order?.status === "ORDER_RETURNED" ||
+    order?.status === "RETURN_APPROVED_BY_SELLER" ||
+    order?.status === "REFUND_FAILED";
 
-  const canRequestReturn = isBuyer && deliveryDetails?.deliveryStatus === "AWAITING_BUYER_CONFIRMATION";
+  const canRequestReturn =
+    isBuyer &&
+    deliveryDetails?.deliveryStatus === "AWAITING_BUYER_CONFIRMATION";
 
-  const showBuyerDeliveryActions = isBuyer && deliveryDetails?.deliveryStatus === "AWAITING_BUYER_CONFIRMATION";
+  const showBuyerDeliveryActions =
+    isBuyer &&
+    deliveryDetails?.deliveryStatus === "AWAITING_BUYER_CONFIRMATION";
 
   const isAwaitingBuyerPayment =
     order &&
@@ -737,7 +756,7 @@ function OrderDetailPage() {
             onSuccess={async (paymentIntent) => {
               alert("Payment confirmed successfully!");
               setShowCheckoutForm(false);
-              await refreshAllDetails();
+              window.location.reload();
             }}
             onError={(stripeErrorMsg) =>
               alert(`Payment Error: ${stripeErrorMsg}`)
@@ -759,15 +778,16 @@ function OrderDetailPage() {
       <OrderHeader order={order} />
       <OrderItems items={order?.items} currency={order?.currency} />
 
-      {(isReturnInProgress || isOrderReturnedOrRefunding) && deliveryDetails && (
-        <OrderReturnDetails
-          order={order}
-          deliveryDetails={deliveryDetails}
-          isSeller={isSeller}
-          onConfirmReturnReceived={handleConfirmReturnReceived}
-          isProcessing={isProcessing}
-        />
-      )}
+      {(isReturnInProgress || isOrderReturnedOrRefunding) &&
+        deliveryDetails && (
+          <OrderReturnDetails
+            order={order}
+            deliveryDetails={deliveryDetails}
+            isSeller={isSeller}
+            onConfirmReturnReceived={handleOpenConfirmReturnReceivedModal}
+            isProcessing={isProcessing}
+          />
+        )}
 
       {isAwaitingBuyerPayment && (
         <OrderPaymentDetails
@@ -779,15 +799,20 @@ function OrderDetailPage() {
           isProcessing={isProcessing}
           paymentProcessing={paymentProcessing}
           onDeclinePurchase={handleOpenCancelConfirm}
-          onInitiatePayment={handleOpenPaymentAttempt} // For saved card or direct new card (if modal is skipped)
+          onInitiatePayment={async (...args) => {
+            await handleOpenPaymentAttempt(...args);
+            window.location.reload();
+          }}
           onOpenPaymentModal={() => setIsPaymentConfirmOpen(true)} // To open the choice modal
         />
       )}
 
+      <EstimatedDeliveryInfo deliveryDetails={deliveryDetails} />
+
       {showBuyerDeliveryActions && (
         <BuyerDeliveryActions
           deliveryDetails={deliveryDetails}
-          onConfirmReceipt={handleConfirmReceiptByBuyer}
+          onConfirmReceipt={handleOpenConfirmReceiptModal}
           onOpenReturnModal={handleOpenReturnModal}
           isLoadingConfirm={isConfirmingReceipt}
           isLoadingReturn={isRequestingReturn}
@@ -799,22 +824,24 @@ function OrderDetailPage() {
         </div>
       )}
 
-      {isSeller && (
-        <OrderSellerActions
-          order={order}
-          isProcessing={isProcessing}
-          deliveryDetails={deliveryDetails}
-          onOpenSellerCancelModal={openSellerCancelModal}
-          onOpenConfirmFulfillmentModal={openConfirmFulfillmentModal}
-          isAwaitingSellerFulfillmentConfirmation={
-            isAwaitingSellerFulfillmentConfirmation
-          }
-          onOpenMarkAsShippedModal={handleOpenMarkAsShippedModal}
-          onOpenMarkAsDeliveredModal={handleOpenMarkAsDeliveredModal}
-          onOpenSellerDecisionModal={handleOpenSellerDecisionModal}
-          canSellerMakeDecision={canSellerMakeDecision}
-        />
-      )}
+      {isSeller &&
+        order?.status !== "COMPLETED" && order?.status !== "CANCELLED_BY_SELLER" && 
+        deliveryDetails?.deliveryStatus !== "AWAITING_BUYER_CONFIRMATION" && (
+          <OrderSellerActions
+            order={order}
+            isProcessing={isProcessing}
+            deliveryDetails={deliveryDetails}
+            onOpenSellerCancelModal={openSellerCancelModal}
+            onOpenConfirmFulfillmentModal={openConfirmFulfillmentModal}
+            isAwaitingSellerFulfillmentConfirmation={
+              isAwaitingSellerFulfillmentConfirmation
+            }
+            onOpenMarkAsShippedModal={handleOpenMarkAsShippedModal}
+            onOpenMarkAsDeliveredModal={handleOpenMarkAsDeliveredModal}
+            onOpenSellerDecisionModal={handleOpenSellerDecisionModal}
+            canSellerMakeDecision={canSellerMakeDecision}
+          />
+        )}
 
       {isSeller && isInShippingPhase && deliveryDetails && (
         <BuyerShippingInfo deliveryDetails={deliveryDetails} />
@@ -920,6 +947,18 @@ function OrderDetailPage() {
         error={modalError}
       />
       <ConfirmationModal
+        isOpen={isConfirmReceiptOpen}
+        onClose={() => setIsConfirmReceiptOpen(false)}
+        onConfirm={handleConfirmReceiptByBuyer}
+        title="Confirm Item Receipt"
+        message="Are you sure you have received your item? This action will complete the order and cannot be undone."
+        confirmText="Yes, I've Received It"
+        cancelText="Cancel"
+        confirmButtonClass="bg-green-600 hover:bg-green-700"
+        isLoading={isConfirmingReceipt}
+        error={buyerActionError}
+      />
+      <ConfirmationModal
         isOpen={isSellerCancelOpen}
         onClose={closeSellerCancelModal}
         onConfirm={handleSellerCancel}
@@ -984,6 +1023,18 @@ function OrderDetailPage() {
         deliveryDetails={deliveryDetails} // Pass for context display
         isLoading={isMarkingAsDelivered}
         apiError={markAsDeliveredError}
+      />
+      <ConfirmationModal
+        isOpen={isConfirmReturnReceivedOpen}
+        onClose={() => setIsConfirmReturnReceivedOpen(false)}
+        onConfirm={handleConfirmReturnReceived}
+        title="Confirm Return Received"
+        message="Are you sure you have received the returned item? This action is IRREVERSIBLE and will trigger the refund process to the buyer."
+        confirmText="Yes, Confirm and Start Refund"
+        cancelText="Cancel"
+        confirmButtonClass="bg-green-600 hover:bg-green-700"
+        isLoading={isProcessing}
+        error={modalError}
       />
       {order &&
         order.sellerId && ( // Condition relies on order and order.sellerId being present

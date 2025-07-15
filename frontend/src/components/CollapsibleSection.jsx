@@ -21,7 +21,9 @@ const CollapsibleSection = ({ title, defaultOpen = false, children }) => {
 
       <div
         className={`transition-all duration-300 ease-in-out ${
-          open ? "max-h-[1000px] py-3 px-5" : "max-h-0 overflow-hidden px-5"
+          open
+            ? "max-h-[1000px] overflow-y-auto py-3 px-5" // Added overflow-y-auto
+            : "max-h-0 overflow-hidden px-5"
         } text-sm text-gray-700`}
       >
         {children}

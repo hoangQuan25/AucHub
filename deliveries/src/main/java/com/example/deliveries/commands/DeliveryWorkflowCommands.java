@@ -11,4 +11,7 @@ public interface DeliveryWorkflowCommands {
             LocalDateTime originalConfirmationDeadline // For context/logging
     ) {}
 
+    record CheckDeliveryStatusCommand(
+            UUID deliveryId
+    ) {}
 }

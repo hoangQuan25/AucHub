@@ -3,6 +3,7 @@ package com.example.notifications.service.impl;
 import com.example.notifications.client.LiveAuctionServiceClient;
 import com.example.notifications.client.TimedAuctionServiceClient;
 import com.example.notifications.client.UserServiceClient;
+import com.example.notifications.client.dto.EmailPreferenceRequest;
 import com.example.notifications.client.dto.LiveAuctionSummaryDto;
 import com.example.notifications.client.dto.TimedAuctionSummaryDto;
 import com.example.notifications.client.dto.UserBasicInfoDto; // Assuming this DTO is available
@@ -20,10 +21,13 @@ import com.example.notifications.repository.NotificationRepository; // DB Repo
 import com.example.notifications.service.NotificationService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
+import org.springframework.mail.SimpleMailMessage;
+import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.messaging.simp.SimpMessagingTemplate; // For WebSocket messages
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional; // Import if needed
@@ -44,6 +48,8 @@ import java.util.stream.Stream;
 @Slf4j
 public class NotificationServiceImpl implements NotificationService {
 
+    private final JavaMailSender mailSender;
+
     private final NotificationRepository notificationRepository;
     private final SimpMessagingTemplate messagingTemplate;
     private final UserServiceClient userServiceClient;
@@ -51,6 +57,9 @@ public class NotificationServiceImpl implements NotificationService {
     private final AuctionFollowerRepository auctionFollowerRepository;
     private final TimedAuctionServiceClient timedAuctionServiceClient;
     private final LiveAuctionServiceClient liveAuctionServiceClient;
+
+    @Value("${spring.mail.username}")
+    private String mailFromAddress;
 
     private static final String TYPE_AUCTION_STARTED = "AUCTION_STARTED"; // Added for consistency
     private static final String TYPE_AUCTION_ENDED = "AUCTION_ENDED";
@@ -245,18 +254,7 @@ public class NotificationServiceImpl implements NotificationService {
     @Transactional
     public void processUserPaymentDefaulted(UserPaymentDefaultedEvent event) {
         log.debug("Processing UserPaymentDefaultedEvent for order ID: {}, user: {}", event.getOrderId(), event.getDefaultedUserId());
-        // Business decision: Do we send a direct notification to the user who defaulted?
-        // It might be perceived negatively. Often, the consequence (e.g., seller needs to decide)
-        // is notified to other parties.
-        // For now, let's log it. If a direct notification is desired:
-        /*
-        String productTitle = "(Product related to order " + event.getOrderId().toString().substring(0,8) + ")";
-        // Potentially fetch product title if crucial and not in event, but avoid if possible for perf.
-        String userMessage = String.format("Payment for order concerning auction '%s' was not completed by the deadline. Order ID: %s.",
-                                           event.getAuctionId().toString().substring(0,8), event.getOrderId().toString().substring(0,8));
-        saveAndSendNotification(event.getDefaultedUserId(), TYPE_USER_PAYMENT_DEFAULTED, userMessage, event.getAuctionId(), null);
-        log.info("Sent UserPaymentDefaulted notification to user {}", event.getDefaultedUserId());
-        */
+
         log.info("UserPaymentDefaultedEvent processed for user {}. No direct user notification sent by default.", event.getDefaultedUserId());
         // The impact of this default is usually covered by notifications like SELLER_DECISION_REQUIRED or ORDER_PAYMENT_DUE to next bidder.
     }
@@ -306,9 +304,7 @@ public class NotificationServiceImpl implements NotificationService {
     @Transactional
     public void processOrderCancelled(OrderCancelledEvent event) {
         log.debug("Processing OrderCancelledEvent for order ID: {}", event.getOrderId());
-        // String productTitle = truncate(event.getProductTitleSnapshot(), 50); // Product title is not in OrderCancelledEvent DTO
-        // We might need to adjust OrderCancelledEvent DTO or fetch product title if it's essential for the message.
-        // For now, using auction ID and order ID.
+
         String baseMessage = String.format("Order %s (related to auction %s) has been cancelled. Reason: %s.",
                 event.getOrderId().toString().substring(0,8),
                 event.getAuctionId().toString().substring(0,8),
@@ -338,8 +334,6 @@ public class NotificationServiceImpl implements NotificationService {
             return;
         }
 
-        // Format amount (assuming amountRefunded is in smallest unit, e.g., cents or base unit for VND)
-        // This is a simplified formatting. For production, consider a robust currency formatting library or util.
         String formattedAmount;
         try {
             BigDecimal amountDecimal;
@@ -352,8 +346,6 @@ public class NotificationServiceImpl implements NotificationService {
             // Using NumberFormat for basic currency display
             NumberFormat currencyFormatter = NumberFormat.getCurrencyInstance(new Locale("vi", "VN")); // Example for VND
             if (!"vnd".equalsIgnoreCase(event.getCurrency())) {
-                // Attempt to use a generic locale or one based on event.getCurrency() if possible
-                // This part might need more sophisticated currency handling if you support many.
                 currencyFormatter = NumberFormat.getCurrencyInstance(Locale.US); // Fallback or determine by currency
                 currencyFormatter.setCurrency(java.util.Currency.getInstance(event.getCurrency().toUpperCase()));
             }
@@ -371,9 +363,6 @@ public class NotificationServiceImpl implements NotificationService {
                 event.getOrderId().toString().substring(0, 8),
                 event.getRefundId());
 
-        // Assuming auctionId is not directly relevant for a refund notification,
-        // but if your Order entity (fetched via OrderService if needed) has it, you could pass it.
-        // For now, passing orderId as relatedAuctionId for consistency if needed by saveAndSend or null.
         saveAndSendNotification(event.getBuyerId(), TYPE_REFUND_SUCCEEDED, message, null, null, event.getOrderId(), null);
 
         log.info("Processed RefundSucceededEvent for order {}, notified buyer {}.", event.getOrderId(), event.getBuyerId());
@@ -515,7 +504,7 @@ public class NotificationServiceImpl implements NotificationService {
 
         // Notify Buyer
         String buyerMessage = String.format(
-                "Item Delivered! Your order #%s (%s) was marked as delivered around %s. Please confirm receipt within 3 days via the order details page.",
+                "Item Delivered! Your order #%s (%s) was marked as delivered around %s. Please confirm receipt within 7 days via the order details page.",
                 orderIdShort, productInfo, deliveredAtStr
         );
         saveAndSendNotification(event.getBuyerId(), TYPE_DELIVERY_AWAITING_BUYER_CONFIRMATION, buyerMessage, null, null,  event.getOrderId(), null);
@@ -529,6 +518,30 @@ public class NotificationServiceImpl implements NotificationService {
 
         log.info("Processed DeliveryAwaitingBuyerConfirmationEvent for delivery {}, notified buyer {} and seller {}.",
                 event.getDeliveryId(), event.getBuyerId(), event.getSellerId());
+    }
+
+    @Override
+    @Transactional
+    public void processOrderCompleted(NotificationEvents.OrderCompletedEvent event) {
+        log.debug("Processing OrderCompletedEvent for order ID: {}", event.getOrderId());
+        String orderIdShort = event.getOrderId() != null ? event.getOrderId().toString().substring(0, 8) : "N/A";
+
+        String message = String.format(
+                "Order #%s has been completed. Buyer: %s.",
+                orderIdShort,
+                event.getBuyerId() != null ? event.getBuyerId() : "unknown"
+        );
+
+        saveAndSendNotification(
+                event.getSellerId(),
+                "ORDER_COMPLETED",
+                message,
+                null,
+                null,
+                event.getOrderId(),
+                null
+        );
+        log.info("Processed OrderCompletedEvent for order {}, notified seller {}.", event.getOrderId(), event.getSellerId());
     }
 
     @Override
@@ -637,13 +650,6 @@ public class NotificationServiceImpl implements NotificationService {
     }
 
 
-    /**
-     * Retrieves a paginated list of notifications for a specific user.
-     *
-     * @param userId   The ID of the user whose notifications are being fetched.
-     * @param pageable Pagination and sorting information.
-     * @return A Page containing NotificationDto objects.
-     */
     @Override
     @Transactional(readOnly = true) // Read-only transaction
     public Page<NotificationDto> getUserNotifications(String userId, Pageable pageable) {
@@ -657,12 +663,6 @@ public class NotificationServiceImpl implements NotificationService {
         return notificationPage.map(notificationMapper::mapEntityToDto); // Use a helper mapping function
     }
 
-    /**
-     * Gets the count of unread notifications for a user.
-     *
-     * @param userId The ID of the user.
-     * @return The number of unread notifications.
-     */
     @Override
     @Transactional(readOnly = true)
     public long getUnreadNotificationCount(String userId) {
@@ -671,13 +671,6 @@ public class NotificationServiceImpl implements NotificationService {
         // Note: Could potentially optimize with a smaller query or caching if needed frequently
     }
 
-    /**
-     * Marks a list of specific notifications as read for a user.
-     *
-     * @param userId          The ID of the user owning the notifications.
-     * @param notificationIds A list of notification IDs to mark as read.
-     * @return The number of notifications successfully marked as read.
-     */
     @Override
     @Transactional // Needs transaction as it modifies data
     public int markNotificationsAsRead(String userId, List<Long> notificationIds) {
@@ -692,12 +685,6 @@ public class NotificationServiceImpl implements NotificationService {
         return updatedCount;
     }
 
-    /**
-     * Marks all unread notifications as read for a user.
-     *
-     * @param userId The ID of the user.
-     * @return The number of notifications successfully marked as read.
-     */
     @Override
     @Transactional // Needs transaction as it modifies data
     public int markAllNotificationsAsRead(String userId) {
@@ -708,13 +695,6 @@ public class NotificationServiceImpl implements NotificationService {
         return updatedCount;
     }
 
-    /**
-     * Adds a follow relationship
-     *
-     * @param userId
-     * @param auctionId
-     * @param auctionType
-     */
     @Override
     @Transactional
     public void followAuction(String userId, UUID auctionId, String auctionType) {
@@ -734,12 +714,6 @@ public class NotificationServiceImpl implements NotificationService {
     }
 
 
-    /**
-     * Removes a follow relationship
-     *
-     * @param userId
-     * @param auctionId
-     */
     @Override
     @Transactional
     public void unfollowAuction(String userId, UUID auctionId) {
@@ -753,11 +727,6 @@ public class NotificationServiceImpl implements NotificationService {
         }
     }
 
-    /**
-     * Gets the set of auction IDs followed by a user
-     *
-     * @param userId
-     */
     @Override
     @Transactional(readOnly = true)
     public Set<UUID> getFollowedAuctionIds(String userId) {
@@ -765,11 +734,6 @@ public class NotificationServiceImpl implements NotificationService {
         return auctionFollowerRepository.findAuctionIdsByUserId(userId);
     }
 
-    /**
-     * Gets user IDs following a specific auction (used internally)
-     *
-     * @param auctionId
-     */
     @Override
     @Transactional(readOnly = true)
     public List<String> getFollowersForAuction(UUID auctionId) {
@@ -778,18 +742,6 @@ public class NotificationServiceImpl implements NotificationService {
     }
 
 
-
-    /**
-     * Retrieves details for auctions followed by a user, supporting filtering and pagination.
-     * This orchestrates calls to auction services.
-     *
-     * @param userId
-     * @param status
-     * @param ended
-     * @param categoryIds
-     * @param from
-     * @param pageable
-     */
     @Override
     @Transactional(readOnly = true)
     public Page<FollowingAuctionSummaryDto> getFollowingAuctions(
@@ -917,6 +869,20 @@ public class NotificationServiceImpl implements NotificationService {
         return new PageImpl<>(pageContent, pageable, filteredList.size());
     }
 
+    @Override
+    @Transactional
+    public void updateEmailPreference(String userId, boolean enabled) {
+        try {
+            EmailPreferenceRequest request = new EmailPreferenceRequest();
+            request.setEnabled(enabled);
+            userServiceClient.updateUserEmailPreference(userId, request);
+            log.info("Updated email preference for user {} to {}", userId, enabled);
+        } catch (Exception e) {
+            log.error("Failed to update email preference for user {}: {}", userId, e.getMessage(), e);
+            throw e;
+        }
+    }
+
     private Map<String, String> getUsernamesFromIds(List<String> userIds) {
         if (CollectionUtils.isEmpty(userIds)) {
             return Collections.emptyMap();
@@ -1003,24 +969,38 @@ public class NotificationServiceImpl implements NotificationService {
 
     //  Email Sending Logic ---
     private void sendEmailNotification(String userId, String message) {
-        // 1. Fetch user email (handle potential errors/not found)
         try {
+            // 1. Fetch user info (which now includes email preference)
             Map<String, UserBasicInfoDto> userInfoMap = userServiceClient.getUsersBasicInfoByIds(Collections.singletonList(userId));
             UserBasicInfoDto userInfo = userInfoMap.get(userId);
-            if (userInfo != null && userInfo.getEmail() != null && !userInfo.getEmail().isBlank()) {
-                String email = userInfo.getEmail();
-                log.info("Attempting to send email notification to user {} at {}", userId, email);
-                // 2. Construct and Send Email using JavaMailSender
-                // SimpleMailMessage mail = new SimpleMailMessage();
-                // mail.setTo(email);
-                // mail.setFrom("noreply@your-auction-site.com"); // Use configured sender
-                // mail.setSubject("Auction Notification");
-                // mail.setText(message);
-                // mailSender.send(mail);
-                // log.info("Email notification seemingly sent to user {}", userId);
-            } else {
-                log.warn("Could not send email notification to user {}: User info or email not found.", userId);
+
+            // 2. Check if user exists, has an email, AND has enabled notifications
+            if (userInfo == null) {
+                log.warn("Could not send email notification to user {}: User info not found.", userId);
+                return;
             }
+            if (!userInfo.isEmailNotificationsEnabled()) {
+                log.debug("Skipping email for user {} because their notifications are disabled.", userId);
+                return;
+            }
+            if (userInfo.getEmail() == null || userInfo.getEmail().isBlank()) {
+                log.warn("Could not send email to user {}: email address is missing.", userId);
+                return;
+            }
+
+            // 3. Construct and Send Email
+            String userEmail = userInfo.getEmail();
+            log.info("Attempting to send email notification to user {} at {}", userId, userEmail);
+
+            SimpleMailMessage mail = new SimpleMailMessage();
+            mail.setFrom(mailFromAddress);
+            mail.setTo(userEmail);
+            mail.setSubject("You have a new notification from AucHub");
+            mail.setText(message);
+
+            mailSender.send(mail);
+            log.info("Email notification sent successfully to user {}", userId);
+
         } catch (Exception e) {
             log.error("Failed to fetch user info or send email notification for user {}: {}", userId, e.getMessage(), e);
         }

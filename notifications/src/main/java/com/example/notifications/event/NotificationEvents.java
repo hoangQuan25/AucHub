@@ -175,8 +175,19 @@ public final class NotificationEvents {
         LocalDateTime eventTimestamp;
         UUID orderId;
         String sellerId;
-        String buyerId; // Or buyerUsernameSnapshot if available and preferred
+        String buyerId;
         String productTitleSnapshot;
+    }
+
+    @Value
+    @Builder
+    public static class OrderCompletedEvent {
+        UUID eventId;
+        LocalDateTime eventTimestamp;
+        UUID orderId;
+        Long productId; // Crucial for product-service
+        String sellerId;
+        String buyerId;
     }
 
     @Value

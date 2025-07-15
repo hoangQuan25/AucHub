@@ -11,6 +11,7 @@ import com.example.liveauctions.config.AuctionTimingProperties;
 import com.example.liveauctions.config.RabbitMqConfig; // Constants for RabbitMQ
 import com.example.liveauctions.dto.*;
 import com.example.liveauctions.dto.event.NewLiveAuctionFromReopenedOrderEventDto;
+import com.example.liveauctions.dto.event.ProductLockedInAuctionEventDto;
 import com.example.liveauctions.entity.AuctionStatus;
 import com.example.liveauctions.entity.Bid;
 import com.example.liveauctions.entity.LiveAuction;
@@ -113,7 +114,25 @@ public class LiveAuctionServiceImpl implements LiveAuctionService {
         LiveAuction savedAuction = liveAuctionRepository.save(auction);
         log.info("Auction entity saved with ID: {} and status: {}", savedAuction.getId(), savedAuction.getStatus());
 
-        // --- 7. Schedule Start or Handle Immediate Start ---
+        // =========== 7. PUBLISH PRODUCT STATUS UPDATE EVENT (NEW LOGIC) ===========
+        // This event tells the Products service to change the status immediately.
+        try {
+            ProductLockedInAuctionEventDto statusEvent = ProductLockedInAuctionEventDto.builder()
+                    .eventId(UUID.randomUUID())
+                    .productId(savedAuction.getProductId())
+                    .build();
+
+            rabbitTemplate.convertAndSend(
+                    RabbitMqConfig.PRODUCT_LIFECYCLE_EXCHANGE,
+                    RabbitMqConfig.PRODUCT_LOCKED_ROUTING_KEY,
+                    statusEvent
+            );
+            log.info("Published ProductLockedInAuctionEvent for product {} to set status to IN_AUCTION", savedAuction.getProductId());
+        } catch (Exception e) {
+            log.error("CRITICAL: Failed to publish status update for product {}. This may lead to data inconsistency.", savedAuction.getProductId(), e);
+        }
+
+        // --- 8. Schedule Start or Handle Immediate Start ---
         if (savedAuction.getStatus() == AuctionStatus.SCHEDULED) {
             // Delegate start scheduling to the service
             schedulingService.scheduleAuctionStart(savedAuction);
@@ -353,7 +372,7 @@ public class LiveAuctionServiceImpl implements LiveAuctionService {
 
             // 4-a Soft-close anti-sniping
             if (sc.isEnabled() && millisLeft > 0 && millisLeft <= sc.getThresholdSeconds() * 1_000L) {
-                // CORRECT WAY: Extend from the auction's CURRENT end time
+                // Extend from the auction's CURRENT end time
                 LocalDateTime potentialNewEndTime = auction.getEndTime().plusSeconds(sc.getExtensionSeconds());
                 // Update the auction's end time directly
                 auction.setEndTime(potentialNewEndTime);

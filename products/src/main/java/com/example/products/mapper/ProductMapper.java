@@ -31,7 +31,7 @@ public class ProductMapper {
         dto.setCondition(product.getCondition()); // Map condition
         dto.setImageUrls(product.getImageUrls() != null ? List.copyOf(product.getImageUrls()) : Collections.emptyList()); // Map image URLs (create copy)
         dto.setCategories(categoryMapper.toCategoryDtoSet(product.getCategories())); // Use CategoryMapper for nested mapping
-        dto.setIsSold(product.isSold());
+        dto.setStatus(product.getStatus());
         dto.setCreatedAt(product.getCreatedAt());
         dto.setUpdatedAt(product.getUpdatedAt());
         return dto;

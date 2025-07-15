@@ -7,6 +7,7 @@ import com.example.products.dto.ProductDto;
 import com.example.products.dto.UpdateProductDto;
 import com.example.products.entity.Category;
 import com.example.products.entity.Product;
+import com.example.products.entity.ProductStatus;
 import com.example.products.exception.ProductNotFoundException;
 import com.example.products.mapper.CategoryMapper;
 import com.example.products.mapper.ProductMapper;
@@ -147,19 +148,25 @@ public class ProductServiceImpl implements ProductService {
     }
 
     @Override
+    @Transactional(readOnly = true)
+    public ProductStatus getProductStatus(Long productId) {
+        log.debug("Fetching status for product ID: {}", productId);
+        return productRepository.findById(productId)
+                .map(Product::getStatus)
+                .orElseThrow(() -> new ProductNotFoundException("Product not found with ID: " + productId));
+    }
+
+    @Override
     @Transactional
-    public ProductDto markProductAsSold(Long productId) {
-        log.info("Marking product ID: {} as SOLD", productId);
+    public void updateProductStatus(Long productId, ProductStatus newStatus) {
+        log.info("Updating status for product ID: {} to {}", productId, newStatus);
         Product product = productRepository.findById(productId)
                 .orElseThrow(() -> new ProductNotFoundException("Product not found: " + productId));
-        if (product.isSold()) {
-            log.warn("Product ID: {} is already marked as SOLD.", productId);
-            return productMapper.toProductDto(product); // Or handle as appropriate
-        }
-        product.setSold(true); // Set the boolean flag
-        Product savedProduct = productRepository.save(product);
-        log.info("Product ID: {} successfully marked as SOLD.", savedProduct.getId());
-        return productMapper.toProductDto(savedProduct);
+
+        log.info("Product {} status transition: {} -> {}", productId, product.getStatus(), newStatus);
+        product.setStatus(newStatus);
+        productRepository.save(product);
+        log.info("Product {} status successfully updated to {}", productId, newStatus);
     }
 
     @Override
@@ -182,15 +189,15 @@ public class ProductServiceImpl implements ProductService {
     // In ProductServiceImpl.java
     @Override
     @Transactional(readOnly = true)
-    public Page<ProductDto> getProductsBySellerAndStatus(String sellerId, Boolean isSold, Pageable pageable) {
-        log.debug("Fetching products for seller ID: {} with isSold: {} and pagination: {}", sellerId, isSold, pageable);
+    public Page<ProductDto> getProductsBySellerAndStatus(String sellerId, ProductStatus status, Pageable pageable) {
+        log.debug("Fetching products for seller ID: {} with isSold: {} and pagination: {}", sellerId, status, pageable);
 
         Specification<Product> spec = (root, query, criteriaBuilder) -> {
             List<jakarta.persistence.criteria.Predicate> predicates = new ArrayList<>();
             predicates.add(criteriaBuilder.equal(root.get("sellerId"), sellerId));
 
-            if (isSold != null) {
-                predicates.add(criteriaBuilder.equal(root.get("isSold"), isSold));
+            if (status != null) {
+                predicates.add(criteriaBuilder.equal(root.get("status"), status));
             }
             // if isSold is null, it fetches all (sold and not sold)
 

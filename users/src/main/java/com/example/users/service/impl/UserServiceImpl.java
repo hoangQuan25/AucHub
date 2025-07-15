@@ -9,6 +9,7 @@ import com.example.users.config.RabbitMqConfig;
 import com.example.users.dto.*;
 import com.example.users.dto.event.UserBannedEventDto;
 import com.example.users.dto.event.UserUpdatedEventDto;
+import com.example.users.dto.request.StripeSetupConfirmationRequestDto;
 import com.example.users.entity.User;
 import com.example.users.exception.ResourceNotFoundException;
 import com.example.users.exception.UserNotFoundException;
@@ -372,5 +373,16 @@ public class UserServiceImpl implements UserService {
         } catch (Exception e) {
             log.error("Failed to publish UserUpdatedEvent for user {}: {}", user.getId(), e.getMessage());
         }
+    }
+
+    @Override
+    @Transactional
+    public void updateUserEmailPreference(String userId, boolean isEnabled) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new UserNotFoundException("User not found"));
+
+        user.setEmailNotificationsEnabled(isEnabled);
+
+        userRepository.save(user);
     }
 }

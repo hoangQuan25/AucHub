@@ -5,7 +5,7 @@ import CountdownTimer from '../CountdownTimer';
 function BuyerDeliveryActions({
   deliveryDetails,
   onConfirmReceipt,
-  onOpenReturnModal, // <<< PROP RENAMED
+  onOpenReturnModal, 
   isLoadingConfirm,
   isLoadingReturn,
 }) {
@@ -74,7 +74,7 @@ function BuyerDeliveryActions({
           {isLoadingConfirm ? 'Processing...' : "Confirm Item Received"}
         </button>
         <button
-          onClick={onOpenReturnModal} // <<< ONCLICK HANDLER UPDATED
+          onClick={onOpenReturnModal}
           disabled={isLoadingConfirm || isLoadingReturn || deadlineHasPassed}
           className={`px-5 py-2.5 bg-orange-500 text-white rounded-md hover:bg-orange-600 text-sm font-semibold shadow transition-colors flex items-center justify-center
              ${(isLoadingConfirm || isLoadingReturn || deadlineHasPassed) ? 'opacity-50 cursor-not-allowed' : ''}`}

@@ -28,4 +28,6 @@ public class UserBasicInfoDto {
     private String defaultCardBrand; // e.g., "Visa", "Mastercard"
     private String defaultCardLast4; // e.g., "4242"
 
+    private boolean emailNotificationsEnabled;
+
 }

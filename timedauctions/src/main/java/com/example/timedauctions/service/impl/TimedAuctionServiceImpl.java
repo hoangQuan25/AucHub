@@ -12,6 +12,7 @@ import com.example.timedauctions.config.AuctionTimingProperties;
 import com.example.timedauctions.config.RabbitMqConfig;
 import com.example.timedauctions.dto.*;
 import com.example.timedauctions.dto.event.NewTimedAuctionFromReopenedOrderEventDto;
+import com.example.timedauctions.dto.event.ProductLockedInAuctionEventDto;
 import com.example.timedauctions.entity.*;
 import com.example.timedauctions.event.NotificationEvents;
 import com.example.timedauctions.exception.*; // Create custom exceptions
@@ -135,7 +136,7 @@ public class TimedAuctionServiceImpl implements TimedAuctionService {
                 .startTime(roundedEffectiveStartTime)
                 .endTime(roundedEndTime)
                 .status(initialStatus)
-                .reserveMet(false)
+                .reserveMet(createDto.getReservePrice() == null)
                 // .softCloseEnabled(true) // Set based on global config or future DTO field
                 .build();
 
@@ -143,7 +144,24 @@ public class TimedAuctionServiceImpl implements TimedAuctionService {
         TimedAuction savedAuction = timedAuctionRepository.save(auction);
         log.info("Timed Auction entity saved with ID: {} and status: {}", savedAuction.getId(), savedAuction.getStatus());
 
-        // 7. Schedule Start/End via RabbitMQ Delayed Messages
+        // =========== 7. PUBLISH PRODUCT LOCK EVENT (NEW LOGIC) ===========
+        try {
+            ProductLockedInAuctionEventDto statusEvent = ProductLockedInAuctionEventDto.builder()
+                    .eventId(UUID.randomUUID())
+                    .productId(savedAuction.getProductId())
+                    .build();
+
+            rabbitTemplate.convertAndSend(
+                    RabbitMqConfig.PRODUCT_LIFECYCLE_EXCHANGE,
+                    RabbitMqConfig.PRODUCT_LOCKED_ROUTING_KEY,
+                    statusEvent
+            );
+            log.info("Published ProductLockedInAuctionEvent for product {} to set status to IN_AUCTION", savedAuction.getProductId());
+        } catch (Exception e) {
+            log.error("CRITICAL: Failed to publish lock status update for product {}. Data may be inconsistent.", savedAuction.getProductId(), e);
+        }
+
+        // 8. Schedule Start/End via RabbitMQ Delayed Messages
         if (savedAuction.getStatus() == AuctionStatus.SCHEDULED) {
             auctionSchedulingService.scheduleAuctionStart(savedAuction);
         } else if (savedAuction.getStatus() == AuctionStatus.ACTIVE) {
@@ -545,7 +563,7 @@ public class TimedAuctionServiceImpl implements TimedAuctionService {
             auction.setHighestBidderId(winnerProxy.getBidderId());
             auction.setHighestBidderUsernameSnapshot(winnerUsername);
             auction.setCurrentBidIncrement(getIncrement(newVisiblePrice)); // Increment needed for NEXT bid
-            boolean reserveNowMet = auction.getReservePrice() != null && newVisiblePrice.compareTo(auction.getReservePrice()) >= 0;
+            boolean reserveNowMet = auction.getReservePrice() == null || (newVisiblePrice.compareTo(auction.getReservePrice()) >= 0);
             if (!auction.isReserveMet() && reserveNowMet) {
                 log.info("Reserve price met for auction {}", auction.getId());
             }

@@ -43,7 +43,7 @@ const mainCategoryData = [
   },
   {
     id: 4,
-    name: "Electronics (Limited)",
+    name: "Electronics",
     Icon: FaBolt,
     description: "Small Appliances, Audio",
     link: "/search?categories=4",

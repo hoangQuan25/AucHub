@@ -20,6 +20,7 @@ public class RabbitMqConfig {
     // Events exchange might be shared or separate
     public static final String TD_AUCTION_EVENTS_EXCHANGE = "td_auction_events_exchange";
     public static final String NOTIFICATIONS_EXCHANGE = "notifications_exchange";
+    public static final String PRODUCT_LIFECYCLE_EXCHANGE = "product_lifecycle_exchange";
 
     public static final String TD_AUCTION_START_QUEUE = "td_auction_start_queue";
     // dk exec rabbitmq rabbitmqctl purge_queue td_auction_start_queue
@@ -40,6 +41,8 @@ public class RabbitMqConfig {
     public static final String AUCTION_OUTBID_ROUTING_KEY = "auction.timed.outbid";
     public static final String COMMENT_REPLIED_ROUTING_KEY = "comment.timed.replied";
     public static final String AUCTION_TIMED_REOPENED_ORDER_CREATED_ROUTING_KEY = "auction.timed.reopened_order.created";
+
+    public static final String PRODUCT_LOCKED_ROUTING_KEY = "product.event.locked";
 
     public static final String AUCTION_ENDED_ROUTING_KEY_PREFIX = "auction.";
     public static final String AUCTION_STARTED_ROUTING_KEY_PREFIX = "auction.";
@@ -73,6 +76,11 @@ public class RabbitMqConfig {
     TopicExchange notificationsExchange() {
         // Declare the topic exchange used for publishing notification events
         return new TopicExchange(NOTIFICATIONS_EXCHANGE);
+    }
+
+    @Bean
+    TopicExchange productLifecycleExchange() {
+        return new TopicExchange(PRODUCT_LIFECYCLE_EXCHANGE);
     }
 
     @Bean

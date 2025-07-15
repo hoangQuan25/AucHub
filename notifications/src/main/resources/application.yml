@@ -5,12 +5,10 @@ spring:
   application:
     name: notifications
   profiles:
-    # Set default profile for local development
     active: "dev"
   # === Database Configuration ===
   datasource:
     url: jdbc:mysql://localhost:3306/notification_schema
-    # Use placeholders for credentials - set values in .env or environment variables
     username: notifications_svc_user
     password: quan12345656915691
     driverClassName: com.mysql.cj.jdbc.Driver
@@ -27,6 +25,17 @@ spring:
     listener:
       simple:
         missing-queues-fatal: false
+  mail:
+    host: ${MAIL_HOST}
+    port: ${MAIL_PORT:587}
+    username: ${MAIL_USERNAME}
+    password: ${MAIL_PASSWORD}
+    properties:
+      mail:
+        smtp:
+          auth: true
+          starttls:
+            enable: true
 
   # === Redis Configuration ===
   data:
@@ -37,7 +46,6 @@ spring:
         # Single node example
         single-server-config:
           address: "redis://127.0.0.1:6379"
-      # password: ${REDIS_PASSWORD:} # Uncomment and set via placeholder if your Redis requires a password
 
 # === Eureka Client Configuration ===
 eureka:
@@ -47,14 +55,14 @@ eureka:
     fetchRegistry: true
     registerWithEureka: true
     serviceUrl:
-      defaultZone: http://${HOSTNAME}:8070/eureka/ # Point to your Eureka Server
+      defaultZone: http://${HOSTNAME}:8070/eureka/
 
 # === Management & Actuator ===
 management:
   endpoints:
     web:
       exposure:
-        include: "*" # Expose all actuator endpoints
+        include: "*"
   health:
     readiness-state:
       enabled: true
@@ -74,15 +82,10 @@ management:
 # === Logging ===
 logging:
   level:
-    # Set a sensible default root level (e.g., INFO)
     root: INFO
-    # --- Key packages for WebFlux and WebSocket debugging ---
-    # Core WebFlux request handling, mapping, dispatching
     org.springframework.web.reactive: DEBUG
     org.springframework.security: DEBUG
-    # Underlying Netty server handling requests/connections
     reactor.netty.http.server: DEBUG
-    # Your application's specific code (handlers, config, services)
     com.example.liveauctions: DEBUG
   pattern:
     level: "%5p [${spring.application.name},%X{trace_id},%X{span_id}] %m%n"
@@ -94,4 +97,5 @@ info:
     name: "Notification Service"
     description: "Handles real-time notifications"
     version: "1.0.0"
+
 

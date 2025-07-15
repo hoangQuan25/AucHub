@@ -1,12 +1,10 @@
 // src/main/java/com/example/users/controller/UserController.java
 package com.example.users.controller;
 
-import com.example.users.client.PaymentServiceClient;
-import com.example.users.client.dto.ConfirmStripePaymentMethodRequestClientDto;
-import com.example.users.client.dto.CreateStripeSetupIntentRequestClientDto;
-import com.example.users.client.dto.CreateStripeSetupIntentResponseClientDto;
-import com.example.users.client.dto.StripePaymentMethodDetailsClientDto;
 import com.example.users.dto.*;
+import com.example.users.dto.request.AvatarUpdateRequestDto;
+import com.example.users.dto.request.EmailPreferenceRequest;
+import com.example.users.dto.request.StripeSetupConfirmationRequestDto;
 import com.example.users.service.SellerReviewService;
 import com.example.users.service.UserService;
 import jakarta.validation.Valid;
@@ -19,7 +17,6 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity; // Keep
 import org.springframework.web.bind.annotation.*; // Keep
 
-import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 
@@ -148,5 +145,14 @@ public class UserController {
             log.error("Error confirming payment method setup for user {}: {}", userId, e.getMessage(), e);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("Failed to save payment method.");
         }
+    }
+
+    @PutMapping("/preferences/email")
+    public ResponseEntity<Void> updateUserEmailPreference(
+            @RequestHeader(USER_ID_HEADER) String userId,
+            @RequestBody EmailPreferenceRequest request) {
+        log.info("PUT /preferences/email for user ID: {} to {}", userId, request.isEnabled());
+        userService.updateUserEmailPreference(userId, request.isEnabled());
+        return ResponseEntity.noContent().build();
     }
 }

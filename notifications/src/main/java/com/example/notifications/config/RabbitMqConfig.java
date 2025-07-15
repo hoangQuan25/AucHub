@@ -50,6 +50,7 @@ public class RabbitMqConfig {
     public static final String USER_BANNED_NOTIFICATION_QUEUE = "q.notification.user.banned";
     public static final String DELIVERY_RETURN_REQUESTED_QUEUE = "q.notification.delivery.return.requested";
     public static final String DELIVERY_RETURN_APPROVED_QUEUE = "q.notification.delivery.return.approved";
+    public static final String ORDER_COMPLETED_QUEUE = "q.order_completed_notification";
 
     // --- Routing Keys for Order & User Event Notifications (New - must match publisher in OrderService) ---
     public static final String ORDER_EVENT_CREATED_ROUTING_KEY = "order.event.created";
@@ -69,6 +70,7 @@ public class RabbitMqConfig {
     public static final String USER_EVENT_BANNED_ROUTING_KEY = "user.event.banned";
     public static final String DELIVERY_EVENT_RETURN_REQUESTED_ROUTING_KEY = "delivery.event.return.requested";
     public static final String DELIVERY_EVENT_RETURN_APPROVED_ROUTING_KEY = "delivery.event.return.approved";
+    public static final String ORDER_EVENT_COMPLETED_ROUTING_KEY = "order.event.completed";
 
     // --- Dead Letter Exchange and Queue ---
     public static final String MAIN_DLX_EXCHANGE = "dlx.main_exchange"; // Dead Letter Exchange
@@ -282,6 +284,14 @@ public class RabbitMqConfig {
     }
 
     @Bean
+    Queue orderCompletedQueue() {
+        return QueueBuilder.durable(ORDER_COMPLETED_QUEUE)
+                .withArgument("x-dead-letter-exchange", MAIN_DLX_EXCHANGE)
+                .withArgument("x-dead-letter-routing-key", MAIN_DLQ_ROUTING_KEY)
+                .build();
+    }
+
+    @Bean
     public Queue mainDeadLetterQueue() {
         return QueueBuilder.durable(MAIN_DEAD_LETTER_QUEUE)
                 .build();
@@ -435,6 +445,13 @@ public class RabbitMqConfig {
         return BindingBuilder.bind(deliveryReturnApprovedQueue)
                 .to(deliveriesEventsExchange)
                 .with(DELIVERY_EVENT_RETURN_APPROVED_ROUTING_KEY);
+    }
+
+    @Bean
+    Binding orderCompletedBinding(Queue orderCompletedQueue, TopicExchange ordersEventsExchange) {
+        return BindingBuilder.bind(orderCompletedQueue)
+                .to(ordersEventsExchange)
+                .with(ORDER_EVENT_COMPLETED_ROUTING_KEY);
     }
 
     @Bean

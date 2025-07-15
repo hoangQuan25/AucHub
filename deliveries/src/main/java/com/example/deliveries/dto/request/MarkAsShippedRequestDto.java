@@ -9,5 +9,8 @@ public class MarkAsShippedRequestDto {
     @NotBlank(message = "Tracking number is required.")
     private String trackingNumber;
 
+    @NotBlank(message = "Estimated delivery date is required.")
+    private String estimatedDeliveryDate;
+
     private String notes; // Optional
 }

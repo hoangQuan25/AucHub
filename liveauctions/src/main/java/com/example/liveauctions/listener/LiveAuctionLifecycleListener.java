@@ -79,7 +79,6 @@ public class LiveAuctionLifecycleListener {
                 }
             } else {
                 log.warn("[Listener - Live] Start command for auction {} received early. Start time: {}. Re-queueing/Ignoring? (Currently ignored)", auctionId, auction.getStartTime());
-                // Basic behavior is ACK and ignore. More robust might re-schedule with shorter delay.
             }
         } else {
             log.warn("[Listener - Live] Auction {} not SCHEDULED when start command received. Status: {}. Ignoring.", auctionId, auction.getStatus());
@@ -158,9 +157,7 @@ public class LiveAuctionLifecycleListener {
                 log.info("[Listener - Live] Published final state for ended auction {}", auctionId);
             } catch (Exception e) {
                 log.error("[Listener - Live] Failed to publish end state for auction {}: {}", auctionId, e.getMessage(), e);
-                // Allow transaction to commit even if publish fails? Or rethrow? Currently logs and continues.
             }
-            // TODO: Publish specific notification event (AuctionEndedEvent) to NOTIFICATIONS_EXCHANGE
              publishAuctionEndedNotification(endedAuction);
 
         } else {

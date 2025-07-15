@@ -3,9 +3,6 @@ package com.example.liveauctions.listener;
 import com.example.liveauctions.config.RabbitMqConfig;
 import com.example.liveauctions.dto.LiveAuctionStateDto;
 import com.example.liveauctions.dto.event.AuctionStateUpdateEvent;
-// import com.example.liveauctions.websocket.WebSocketSessionManager; // REMOVE this
-import com.example.liveauctions.repository.LiveAuctionRepository;
-import com.example.liveauctions.service.WebSocketEventPublisher;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.amqp.core.ExchangeTypes;
@@ -13,7 +10,7 @@ import org.springframework.amqp.rabbit.annotation.Exchange;
 import org.springframework.amqp.rabbit.annotation.Queue;
 import org.springframework.amqp.rabbit.annotation.QueueBinding;
 import org.springframework.amqp.rabbit.annotation.RabbitListener;
-import org.springframework.messaging.simp.SimpMessagingTemplate; // Import this
+import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Component;
 
 @Component
@@ -46,17 +43,14 @@ public class AuctionEventListener {
                 .timeLeftMs(event.getTimeLeftMs())
                 .endTime(event.getEndTime())
                 .reserveMet(event.isReserveMet())
-                .newBid(event.getNewBid())               // NEW
-                .winnerId(event.getWinnerId())           // NEW
-                .winningBid(event.getWinningBid())       // NEW
+                .newBid(event.getNewBid())
+                .winnerId(event.getWinnerId())
+                .winningBid(event.getWinningBid())
                 .build();
 
-        // Define the STOMP destination topic for this specific auction
         String destination = "/topic/auctions/" + event.getAuctionId();
 
         try {
-            // Send the DTO to the specific STOMP destination.
-            // Spring handles serialization to JSON automatically here.
             messagingTemplate.convertAndSend(destination, stateDto);
             log.debug("Broadcasted state update via STOMP to destination '{}'", destination);
 

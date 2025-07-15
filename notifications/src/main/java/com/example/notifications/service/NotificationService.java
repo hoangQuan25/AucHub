@@ -42,6 +42,7 @@ public interface NotificationService {
     void processDeliveryDelivered(DeliveryEvents.DeliveryDeliveredEventDto event);
     void processDeliveryAwaitingBuyerConfirmation(DeliveryEvents.DeliveryAwaitingBuyerConfirmationEventDto event);
     void processDeliveryIssueReported(DeliveryEvents.DeliveryIssueReportedEventDto event);
+    void processOrderCompleted(NotificationEvents.OrderCompletedEvent event);
 
     void processUserBanned(NotificationEvents.UserBannedEvent event);
 
@@ -76,5 +77,7 @@ public interface NotificationService {
             LocalDateTime from, // Can be null
             Pageable pageable
     );
+
+    void updateEmailPreference(String userId, boolean enabled);
 
 }

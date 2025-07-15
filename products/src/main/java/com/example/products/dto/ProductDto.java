@@ -1,6 +1,7 @@
 package com.example.products.dto;
 
 import com.example.products.entity.ProductCondition;
+import com.example.products.entity.ProductStatus;
 import lombok.Data;
 import java.time.LocalDateTime;
 import java.util.List;
@@ -13,7 +14,7 @@ public class ProductDto {
     private String description;
     private String sellerId;
     private ProductCondition condition; // Add condition
-    private Boolean isSold;
+    private ProductStatus status;
     private List<String> imageUrls;
     private Set<CategoryDto> categories;
     private LocalDateTime createdAt;

@@ -21,6 +21,7 @@ public class RabbitMqConfig {
     // --- Queues Consumed by THIS Deliveries Service ---
     public static final String ORDER_READY_FOR_SHIPPING_DELIVERY_QUEUE = "q.delivery.order.readyforshipping";
     public static final String DELIVERY_AUTO_COMPLETE_COMMAND_QUEUE = "q.delivery.command.auto_complete";
+    public static final String DELIVERY_STATUS_CHECK_COMMAND_QUEUE = "q.delivery.command.status_check";
 
     // --- Routing Keys Consumed by THIS Deliveries Service ---
     public static final String ORDER_EVENT_READY_FOR_SHIPPING_ROUTING_KEY = "order.event.ready-for-shipping";
@@ -36,6 +37,7 @@ public class RabbitMqConfig {
     public static final String DELIVERY_EVENT_RETURN_REQUESTED_ROUTING_KEY = "delivery.event.return.requested";
     public static final String DELIVERY_AUTO_COMPLETE_SCHEDULE_ROUTING_KEY = "delivery.schedule.auto-complete";
     public static final String DELIVERY_EVENT_AUTO_COMPLETED_ROUTING_KEY = "delivery.event.auto.completed"; // For future auto-completion
+    public static final String DELIVERY_STATUS_CHECK_SCHEDULE_ROUTING_KEY = "delivery.schedule.status-check";
     public static final String DELIVERY_EVENT_RETURN_APPROVED_ROUTING_KEY = "delivery.event.return.approved";
     public static final String DELIVERY_EVENT_REFUND_REQUIRED_ROUTING_KEY = "delivery.event.refund.required";
 
@@ -89,6 +91,14 @@ public class RabbitMqConfig {
     }
 
     @Bean
+    Queue deliveryStatusCheckCommandQueue() {
+        return QueueBuilder.durable(DELIVERY_STATUS_CHECK_COMMAND_QUEUE)
+                .withArgument("x-dead-letter-exchange", MAIN_DLX_EXCHANGE)
+                .withArgument("x-dead-letter-routing-key", MAIN_DLQ_ROUTING_KEY)
+                .build();
+    }
+
+    @Bean
     Queue deliveryAutoCompleteCommandQueue() {
         return QueueBuilder.durable(DELIVERY_AUTO_COMPLETE_COMMAND_QUEUE)
                 .withArgument("x-dead-letter-exchange", MAIN_DLX_EXCHANGE)
@@ -107,8 +117,17 @@ public class RabbitMqConfig {
     @Bean
     public Binding orderReadyForShippingDeliveryBinding(Queue orderReadyForShippingDeliveryQueue, TopicExchange ordersEventsExchange) {
         return BindingBuilder.bind(orderReadyForShippingDeliveryQueue)
-                .to(ordersEventsExchange) // Listen on the exchange OrdersService publishes to
+                .to(ordersEventsExchange)
                 .with(ORDER_EVENT_READY_FOR_SHIPPING_ROUTING_KEY);
+    }
+
+    @Bean
+    Binding deliveryStatusCheckScheduleBinding(Queue deliveryStatusCheckCommandQueue, CustomExchange deliveriesScheduleExchange) {
+        return BindingBuilder
+                .bind(deliveryStatusCheckCommandQueue)
+                .to(deliveriesScheduleExchange)
+                .with(DELIVERY_STATUS_CHECK_SCHEDULE_ROUTING_KEY)
+                .noargs();
     }
 
     @Bean

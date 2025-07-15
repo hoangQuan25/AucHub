@@ -83,6 +83,9 @@ public class User {
     @Column(name = "current_ban_level", nullable = false)
     private int currentBanLevel = 0;
 
+    @Column(name = "email_notifications_enabled", nullable = false)
+    private boolean emailNotificationsEnabled = true;
+
     @CreationTimestamp
     @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;

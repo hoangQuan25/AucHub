@@ -1,5 +1,12 @@
-import React from 'react';
-import { FaShippingFast, FaCheckCircle, FaExclamationTriangle, FaRedo, FaTimes, FaBoxOpen } from 'react-icons/fa';
+import React from "react";
+import {
+  FaShippingFast,
+  FaCheckCircle,
+  FaExclamationTriangle,
+  FaRedo,
+  FaTimes,
+  FaBoxOpen,
+} from "react-icons/fa";
 
 function OrderSellerActions({
   order,
@@ -11,8 +18,8 @@ function OrderSellerActions({
   isAwaitingSellerFulfillmentConfirmation,
   onOpenMarkAsShippedModal,
   onOpenMarkAsDeliveredModal,
-  onOpenSellerDecisionModal, 
-  canSellerMakeDecision      
+  onOpenSellerDecisionModal,
+  canSellerMakeDecision,
 }) {
   if (!order) return null;
 
@@ -21,11 +28,9 @@ function OrderSellerActions({
 
   const canMarkAsShipped =
     orderStatus === "AWAITING_SHIPMENT" &&
-    (
-      !currentDeliveryStatus ||
+    (!currentDeliveryStatus ||
       currentDeliveryStatus === "PENDING_PREPARATION" ||
-      currentDeliveryStatus === "READY_FOR_SHIPMENT"
-    );
+      currentDeliveryStatus === "READY_FOR_SHIPMENT");
 
   const canMarkAsDelivered = currentDeliveryStatus === "SHIPPED_IN_TRANSIT";
 
@@ -41,14 +46,15 @@ function OrderSellerActions({
       <h3 className="text-md font-semibold text-gray-700 mb-3">
         Seller Actions:
       </h3>
-      <div className="flex flex-wrap items-center gap-3">
+      <div className="flex flex-col sm:flex-row flex-wrap gap-3 justify-center">
         {/* Pre-Payment Cancellation */}
-        {(orderStatus === "AWAITING_WINNER_PAYMENT" || orderStatus === "AWAITING_NEXT_BIDDER_PAYMENT") && (
+        {(orderStatus === "AWAITING_WINNER_PAYMENT" ||
+          orderStatus === "AWAITING_NEXT_BIDDER_PAYMENT") && (
           <button
             onClick={onOpenSellerCancelModal}
             disabled={isProcessing}
-            className={`px-4 py-2 bg-red-500 text-white rounded text-sm font-medium transition-colors ${
-              isProcessing ? 'opacity-50 cursor-not-allowed' : 'hover:bg-red-600'
+            className={`flex-1 min-w-[180px] px-5 py-2.5 bg-red-500 text-white rounded-lg hover:bg-red-600 text-sm font-semibold shadow transition-colors text-center ${
+              isProcessing ? "opacity-50 cursor-not-allowed" : ""
             }`}
           >
             Cancel Sale (Pre-Payment)
@@ -61,8 +67,8 @@ function OrderSellerActions({
             <button
               onClick={onOpenConfirmFulfillmentModal}
               disabled={isProcessing}
-              className={`px-4 py-2 bg-green-500 text-white rounded text-sm font-medium transition-colors ${
-                isProcessing ? 'opacity-50 cursor-not-allowed' : 'hover:bg-green-600'
+              className={`flex-1 min-w-[180px] px-5 py-2.5 bg-green-600 text-white rounded-lg hover:bg-green-700 text-sm font-semibold shadow transition-colors text-center ${
+                isProcessing ? "opacity-50 cursor-not-allowed" : ""
               }`}
             >
               Confirm for Shipping
@@ -70,8 +76,8 @@ function OrderSellerActions({
             <button
               onClick={onOpenSellerCancelModal}
               disabled={isProcessing}
-              className={`px-4 py-2 bg-red-500 text-white rounded text-sm font-medium transition-colors ${
-                isProcessing ? 'opacity-50 cursor-not-allowed' : 'hover:bg-red-600'
+              className={`flex-1 min-w-[180px] px-5 py-2.5 bg-red-500 text-white rounded-lg hover:bg-red-600 text-sm font-semibold shadow transition-colors text-center ${
+                isProcessing ? "opacity-50 cursor-not-allowed" : ""
               }`}
             >
               Cancel Order & Refund
@@ -80,27 +86,28 @@ function OrderSellerActions({
         )}
 
         {/* Seller Decision */}
-        {orderStatus === "AWAITING_SELLER_DECISION" && canSellerMakeDecision && (
-          <button
-            onClick={onOpenSellerDecisionModal}
-            disabled={isProcessing}
-            className={`px-4 py-2 bg-yellow-500 text-white rounded text-sm font-medium shadow transition-colors flex items-center gap-2 ${
-              isProcessing ? 'opacity-50 cursor-not-allowed' : 'hover:bg-yellow-600'
-            }`}
-          >
-            <FaBoxOpen /> Process Decision
-          </button>
-        )}
+        {orderStatus === "AWAITING_SELLER_DECISION" &&
+          canSellerMakeDecision && (
+            <button
+              onClick={onOpenSellerDecisionModal}
+              disabled={isProcessing}
+              className={`flex-1 min-w-[180px] px-5 py-2.5 bg-yellow-500 text-white rounded-lg hover:bg-yellow-600 text-sm font-semibold shadow transition-colors flex items-center justify-center gap-2 ${
+                isProcessing ? "opacity-50 cursor-not-allowed" : ""
+              }`}
+            >
+              <FaBoxOpen /> Process Decision
+            </button>
+          )}
 
         {/* Delivery Actions */}
         {canMarkAsShipped && (
           <button
             onClick={onOpenMarkAsShippedModal}
             disabled={isProcessing || isMarkingAsShipped}
-            className={`px-4 py-2 bg-blue-600 text-white rounded text-sm font-medium shadow transition-colors flex items-center gap-2 ${
+            className={`flex-1 min-w-[180px] px-5 py-2.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-sm font-semibold shadow transition-colors flex items-center justify-center gap-2 text-center ${
               isProcessing || isMarkingAsShipped
-                ? 'opacity-50 cursor-not-allowed'
-                : 'hover:bg-blue-700'
+                ? "opacity-50 cursor-not-allowed"
+                : ""
             }`}
           >
             <FaShippingFast /> Mark as Shipped
@@ -111,14 +118,13 @@ function OrderSellerActions({
           <button
             onClick={onOpenMarkAsDeliveredModal}
             disabled={isProcessing}
-            className={`px-4 py-2 bg-green-600 text-white rounded text-sm font-medium shadow transition-colors flex items-center gap-2 ${
-              isProcessing ? 'opacity-50 cursor-not-allowed' : 'hover:bg-green-700'
+            className={`flex-1 min-w-[180px] px-5 py-2.5 bg-green-600 text-white rounded-lg hover:bg-green-700 text-sm font-semibold shadow transition-colors flex items-center justify-center gap-2 text-center ${
+              isProcessing ? "opacity-50 cursor-not-allowed" : ""
             }`}
           >
             <FaCheckCircle /> Mark as Delivered
           </button>
         )}
-
       </div>
     </div>
   );

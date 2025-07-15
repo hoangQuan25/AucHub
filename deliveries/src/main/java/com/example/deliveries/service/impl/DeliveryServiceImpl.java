@@ -22,7 +22,9 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Duration;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.LocalTime;
 import java.util.NoSuchElementException;
 import java.util.Set;
 import java.util.UUID;
@@ -62,7 +64,6 @@ public class DeliveryServiceImpl implements DeliveryService {
                 .shippingPhoneNumber(event.getShippingPhoneNumber())
                 .productInfoSnapshot(event.getProductTitleSnapshot()) // Keep it simple or build a more detailed snapshot
                 .deliveryStatus(DeliveryStatus.PENDING_PREPARATION)
-                // courierName, trackingNumber, shippedAt, deliveredAt will be set later
                 .build();
 
         Delivery savedDelivery = deliveryRepository.save(delivery);
@@ -86,7 +87,7 @@ public class DeliveryServiceImpl implements DeliveryService {
 
         // Validate current status (e.g., can only mark as shipped if PENDING_PREPARATION or READY_FOR_SHIPMENT)
         if (delivery.getDeliveryStatus() != DeliveryStatus.PENDING_PREPARATION &&
-                delivery.getDeliveryStatus() != DeliveryStatus.READY_FOR_SHIPMENT) { // Add READY_FOR_SHIPMENT if you use it
+                delivery.getDeliveryStatus() != DeliveryStatus.READY_FOR_SHIPMENT) {
             log.warn("Delivery {} is not in a state to be marked as shipped. Current status: {}", deliveryId, delivery.getDeliveryStatus());
             throw new IllegalStateException("Delivery cannot be marked as shipped from its current state.");
         }
@@ -95,6 +96,14 @@ public class DeliveryServiceImpl implements DeliveryService {
         delivery.setCourierName(requestDto.getCourierName());
         delivery.setTrackingNumber(requestDto.getTrackingNumber());
         delivery.setShippedAt(DateTimeUtil.roundToMicrosecond(LocalDateTime.now()));
+        if (requestDto.getEstimatedDeliveryDate() != null) {
+            LocalDate estimatedDate = LocalDate.parse(requestDto.getEstimatedDeliveryDate());
+            delivery.setEstimatedDeliveryAt(estimatedDate.atTime(LocalTime.MAX));
+            deliveryRepository.save(delivery);
+
+            scheduleDeliveryStatusCheck(delivery);
+        }
+
         if (requestDto.getNotes() != null && !requestDto.getNotes().isBlank()) {
             delivery.setNotes(requestDto.getNotes());
         }
@@ -414,6 +423,58 @@ public class DeliveryServiceImpl implements DeliveryService {
             log.error("Error publishing DeliveryAwaitingBuyerConfirmationEvent for deliveryId {}: {}", delivery.getDeliveryId(), e.getMessage(), e);
         }
     }
+
+    private void scheduleDeliveryStatusCheck(Delivery delivery) {
+        if (delivery.getEstimatedDeliveryAt() == null) return;
+
+        long delayMillis = Duration.between(LocalDateTime.now(), delivery.getEstimatedDeliveryAt()).toMillis();
+
+        if (delayMillis > 0) {
+            DeliveryWorkflowCommands.CheckDeliveryStatusCommand command =
+                    new DeliveryWorkflowCommands.CheckDeliveryStatusCommand(delivery.getDeliveryId());
+
+            log.info("Scheduling delivery status check for delivery {} in {} ms (At: {})",
+                    delivery.getDeliveryId(), delayMillis, delivery.getEstimatedDeliveryAt());
+
+            rabbitTemplate.convertAndSend(
+                    RabbitMqConfig.DELIVERIES_SCHEDULE_EXCHANGE,
+                    RabbitMqConfig.DELIVERY_STATUS_CHECK_SCHEDULE_ROUTING_KEY, // Cần tạo key này
+                    command,
+                    message -> {
+                        message.getMessageProperties().setHeader("x-delay", delayMillis);
+                        return message;
+                    }
+            );
+        } else {
+            processEstimatedDeliveryArrival(delivery.getDeliveryId());
+        }
+    }
+
+    @Override
+    @Transactional
+    public void processEstimatedDeliveryArrival(UUID deliveryId) {
+        log.info("Processing estimated delivery arrival for delivery ID: {}", deliveryId);
+        Delivery delivery = deliveryRepository.findById(deliveryId)
+                .orElseThrow(() -> new NoSuchElementException("Delivery not found for status check: " + deliveryId));
+
+        if (delivery.getDeliveryStatus() == DeliveryStatus.SHIPPED_IN_TRANSIT) {
+            log.info("Delivery {} is still in transit on estimated arrival date. Auto-transitioning to AWAITING_BUYER_CONFIRMATION.", deliveryId);
+
+            delivery.setDeliveryStatus(DeliveryStatus.AWAITING_BUYER_CONFIRMATION);
+            delivery.setDeliveredAt(DateTimeUtil.roundToMicrosecond(LocalDateTime.now()));
+            delivery.setAutoTransitionedAt(delivery.getDeliveredAt());
+
+            String note = "System auto-transitioned status to Awaiting Buyer Confirmation based on estimated delivery date.";
+            delivery.setNotes(delivery.getNotes() == null ? note : delivery.getNotes() + "; " + note);
+
+            Delivery updatedDelivery = deliveryRepository.save(delivery);
+
+            publishDeliveryAwaitingBuyerConfirmationEvent(updatedDelivery);
+        } else {
+            log.info("Skipping auto-transition for delivery {}. Status is already '{}'.", deliveryId, delivery.getDeliveryStatus());
+        }
+    }
+
 
     private void scheduleAutoCompletionCheck(Delivery delivery) {
         LocalDateTime roundedNow = DateTimeUtil.roundToMicrosecond(LocalDateTime.now());

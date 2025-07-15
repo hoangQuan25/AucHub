@@ -27,7 +27,7 @@ function OrderItems({ items, currency }) {
             <div className="flex-grow">
               <h3 className="font-semibold text-gray-900 mb-1">{item.title}</h3>
               {item.variation && <p className="text-xs text-gray-500">{item.variation}</p>}
-              <p className="text-sm text-gray-600">Quantity: {item.quantity}</p>
+              {/* <p className="text-sm text-gray-600">Quantity: {item.quantity}</p> */}
               <p className="text-sm font-medium text-gray-800">
                 Unit Price: {item.price?.toLocaleString("vi-VN")}{" "}
                 {currency || "VNĐ"}

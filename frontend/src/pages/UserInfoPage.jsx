@@ -12,6 +12,7 @@ import UserAddressSection from "../components/user/UserAddressSection";
 import UserPaymentMethodSection from "../components/user/UserPaymentMethodSection";
 import UserSellerSection from "../components/user/UserSellerSection";
 import UserBanStatusSection from "../components/user/UserBanStatusSection";
+import UserPreferencesSection from "../components/user/UserPreferencesSection";
 
 const STRIPE_PUBLISHABLE_KEY =
   "pk_test_51RN788QoAglQPjjvhupJXkisXj7R7wt7epc8hYTUbDBTCxumwAownPBKNMM8NfNVza13yVVf6SrfAnmAxoiJtfRw00cIVf2LIl";
@@ -46,6 +47,12 @@ function UserInfoPage() {
   const [isAvatarUploading, setIsAvatarUploading] = useState(false);
   const [avatarUploadError, setAvatarUploadError] = useState("");
 
+  const [emailNotificationsEnabled, setEmailNotificationsEnabled] =
+    useState(false);
+  const [isPreferenceSaving, setIsPreferenceSaving] = useState(false);
+  const [preferenceError, setPreferenceError] = useState("");
+  const [preferenceSuccess, setPreferenceSuccess] = useState("");
+
   const CLOUDINARY_CLOUD_NAME = "dkw4hauo9"; // Your Cloudinary cloud name
   const CLOUDINARY_UPLOAD_PRESET = "auction_preset"; // Your Upload Preset NAME
   const CLOUDINARY_UPLOAD_URL = `https://api.cloudinary.com/v1_1/${CLOUDINARY_CLOUD_NAME}/image/upload`;
@@ -58,9 +65,14 @@ function UserInfoPage() {
         setProfileLoading(true);
         const response = await apiClient.get("/users/me");
         setProfileData(response.data);
+
+        setEmailNotificationsEnabled(
+          response.data.emailNotificationsEnabled || false
+        );
+
         setPaymentMethodError("");
         setPaymentMethodSuccess("");
-        setEditError(""); // Clear edit errors on profile refresh
+        setEditError("");
         setEditSuccess("");
       } catch (err) {
         console.error("Failed during token update or profile fetch:", err);
@@ -241,7 +253,7 @@ function UserInfoPage() {
           payload.sellerDescription = updatedData.sellerDescription;
         }
       }
-      
+
       const response = await apiClient.put("/users/me", payload);
       setProfileData(response.data);
       setEditSuccess("Profile updated successfully!");
@@ -325,11 +337,39 @@ function UserInfoPage() {
     );
   }
 
+  const handleToggleEmailNotifications = async () => {
+    setIsPreferenceSaving(true);
+    setPreferenceError("");
+    setPreferenceSuccess("");
+    const newPreference = !emailNotificationsEnabled;
+
+    try {
+      await apiClient.put("/notifications/preferences/email", {
+        enabled: newPreference,
+      });
+
+      setPreferenceSuccess("Email preference updated successfully!");
+
+      await fetchProfile();
+
+      setTimeout(() => setPreferenceSuccess(""), 3000);
+    } catch (err) {
+      console.error("Failed to update email preference:", err);
+      setPreferenceError(
+        err.response?.data?.message || "Failed to save setting."
+      );
+      setTimeout(() => setPreferenceError(""), 5000);
+    } finally {
+      setIsPreferenceSaving(false);
+    }
+  };
 
   return (
-    <div className="bg-slate-50 min-h-screen"> {/* Added a light background to the whole page */}
-      <div className="container mx-auto p-4 md:p-8">
-        {profileData &&  profileData.banEndsAt && (
+    <div className="bg-slate-50 min-h-screen">
+      {" "}
+      {/* Added a light background to the whole page */}
+      <div className="container mx-auto p-4 md:p-8 pb-40">
+        {profileData && profileData.banEndsAt && (
           <UserBanStatusSection banEndsAt={profileData.banEndsAt} />
         )}
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8">
@@ -369,28 +409,38 @@ function UserInfoPage() {
         )}
 
         {profileData ? (
-          <div className="space-y-8"> {/* Consistent spacing for all main sections */}
+          <div className="space-y-8">
+            {" "}
+            {/* Consistent spacing for all main sections */}
             <UserProfileInfoSection
               profileData={profileData}
               onAvatarUpload={handleAvatarUpload}
             />
-
+            <UserPreferencesSection
+              emailNotificationsEnabled={emailNotificationsEnabled}
+              onToggleEmailNotifications={handleToggleEmailNotifications}
+              isSaving={isPreferenceSaving}
+              error={preferenceError}
+              success={preferenceSuccess}
+            />
             {/* Grid layout for Address, Payment, and Seller sections */}
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-              <div className="lg:col-span-1"> {/* Or lg:col-span-2 for wider address */}
-                <UserAddressSection profileData={profileData} />
+              <div className="lg:col-span-1">
+                <div className="h-full max-h-[250px] overflow-auto">
+                  <UserAddressSection profileData={profileData} />
+                </div>
               </div>
-
-              {/* Payment and Seller Sections - stacked in the remaining column(s) */}
-              <div className="lg:col-span-2 space-y-8"> 
-                <UserPaymentMethodSection
-                  profileData={profileData}
-                  onAddOrUpdatePaymentMethod={handleAddOrUpdatePaymentMethod}
-                  isAddingPaymentMethod={isAddingPaymentMethod}
-                  paymentMethodError={paymentMethodError}
-                  paymentMethodSuccess={paymentMethodSuccess}
-                  stripePromise={stripePromise}
-                />
+              <div className="lg:col-span-2 space-y-8">
+                <div className="h-full max-h-[200px] overflow-auto">
+                  <UserPaymentMethodSection
+                    profileData={profileData}
+                    onAddOrUpdatePaymentMethod={handleAddOrUpdatePaymentMethod}
+                    isAddingPaymentMethod={isAddingPaymentMethod}
+                    paymentMethodError={paymentMethodError}
+                    paymentMethodSuccess={paymentMethodSuccess}
+                    stripePromise={stripePromise}
+                  />
+                </div>
                 <UserSellerSection
                   isSeller={profileData.seller || profileData.isSeller}
                   onPromptBecomeSeller={promptBecomeSeller}
@@ -437,7 +487,7 @@ function UserInfoPage() {
             onClose={() => {
               setIsStripeSetupModalOpen(false);
               setSetupIntentClientSecret(null);
-              setPaymentMethodError(""); 
+              setPaymentMethodError("");
             }}
             clientSecret={setupIntentClientSecret}
             onSuccess={handleStripeSetupSuccess}

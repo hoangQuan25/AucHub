@@ -2,13 +2,11 @@
 import React from 'react';
 import { FaTruckLoading, FaCheckCircle, FaExclamationTriangle, FaBoxOpen } from 'react-icons/fa'; // Example icons
 
-// You might want a mapping for delivery statuses to user-friendly text, similar to orderStatusMap
-// src/constants/deliveryConstants.js (or orderConstants.js)
 export const deliveryStatusMap = {
   PENDING_PREPARATION: 'Pending Preparation',
   READY_FOR_SHIPMENT: 'Ready for Shipment',
   SHIPPED_IN_TRANSIT: 'Shipped - In Transit',
-  DELIVERED: 'Delivered (Awaiting Confirmation)', // Or keep as 'Delivered'
+  DELIVERED: 'Delivered (Awaiting Confirmation)', 
   AWAITING_BUYER_CONFIRMATION: 'Delivered - Awaiting Your Confirmation',
   RECEIPT_CONFIRMED_BY_BUYER: 'Completed - Receipt Confirmed',
   COMPLETED_AUTO: 'Completed (Auto-confirmed)',

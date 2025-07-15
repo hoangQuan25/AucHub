@@ -4,6 +4,7 @@ package com.example.products.controller;
 import com.example.products.dto.CreateProductDto;
 import com.example.products.dto.ProductDto;
 import com.example.products.dto.UpdateProductDto;
+import com.example.products.entity.ProductStatus;
 import com.example.products.service.ProductService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -61,13 +62,13 @@ public class ProductController {
         return ResponseEntity.ok(products);
     }
 
-    @GetMapping("/seller/{sellerId}/products") // e.g., /api/products/seller/{sellerId}/products
+    @GetMapping("/seller/{sellerId}/products")
     public ResponseEntity<Page<ProductDto>> getPublicProductsBySeller(
             @PathVariable String sellerId,
-            @RequestParam(name = "isSold", required = false) Boolean isSold,
+            @RequestParam(name = "status", required = false) ProductStatus status,
             @PageableDefault(size = 12, sort = "createdAt", direction = Sort.Direction.DESC) Pageable pageable) {
         log.info("Fetching public products for sellerId: {} with pagination {}", sellerId, pageable);
-        Page<ProductDto> products = productService.getProductsBySellerAndStatus(sellerId, isSold, pageable);
+        Page<ProductDto> products = productService.getProductsBySellerAndStatus(sellerId, status, pageable);
         log.info("Found {} products for sellerId: {}", products.getTotalElements(), sellerId);
         return ResponseEntity.ok(products);
     }
@@ -78,5 +79,11 @@ public class ProductController {
         log.info("Received GET /api/products/{} request", productId);
         ProductDto product = productService.getProductById(productId);
         return ResponseEntity.ok(product);
+    }
+
+    @GetMapping("/{productId}/status")
+    public ResponseEntity<ProductStatus> getProductStatus(@PathVariable Long productId) {
+        ProductStatus status = productService.getProductStatus(productId);
+        return ResponseEntity.ok(status);
     }
 }

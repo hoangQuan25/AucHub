@@ -1,6 +1,6 @@
 // src/components/ProductDetailModal.jsx
 import React from 'react';
-import { FaEdit, FaTrashAlt, FaRocket, FaTimes, FaCheckCircle } from 'react-icons/fa';
+import { FaEdit, FaTrashAlt, FaRocket, FaTimes, FaCheckCircle, FaLock, FaHourglassHalf } from 'react-icons/fa';
 
 function ProductDetailModal({
   isOpen,
@@ -38,10 +38,19 @@ function ProductDetailModal({
 
         <h2 className="text-2xl sm:text-3xl font-bold mb-4 border-b pb-3 pr-10">
           {product.title}
-          {/* Prominent SOLD badge near title for all viewers if product is sold */}
-          {product.isSold && (
+          {product.status === 'SOLD' && (
             <span className="ml-3 text-sm font-bold bg-green-600 text-white px-2.5 py-1 rounded-md align-middle inline-flex items-center">
               <FaCheckCircle className="mr-1.5" /> SOLD
+            </span>
+          )}
+          {product.status === 'IN_AUCTION' && (
+             <span className="ml-3 text-sm font-bold bg-blue-600 text-white px-2.5 py-1 rounded-md align-middle inline-flex items-center">
+              <FaLock className="mr-1.5" /> IN AUCTION
+            </span>
+          )}
+          {product.status === 'AWAITING_COMPLETION' && (
+             <span className="ml-3 text-sm font-bold bg-yellow-500 text-white px-2.5 py-1 rounded-md align-middle inline-flex items-center">
+              <FaHourglassHalf className="mr-1.5" /> PROCESSING SALE
             </span>
           )}
         </h2>
@@ -106,7 +115,7 @@ function ProductDetailModal({
         {/* Action Buttons - MODIFIED LOGIC */}
         <div className="mt-8 pt-5 border-t border-gray-200 flex flex-col sm:flex-row justify-end items-center space-y-3 sm:space-y-0 sm:space-x-3">
           {/* Owner-specific action buttons ONLY if product is NOT sold */}
-          {isOwner && !product.isSold && (
+          {isOwner && product.status === 'AVAILABLE' && (
             <>
               {onEdit && (
                 <button

@@ -51,8 +51,9 @@ public class Product {
     )
     private Set<Category> categories = new HashSet<>();
 
+    @Enumerated(EnumType.STRING)
     @Column(nullable = false)
-    private boolean isSold = false; // Flag to indicate if the product is sold
+    private ProductStatus status = ProductStatus.AVAILABLE;
 
     @CreationTimestamp
     @Column(nullable = false)

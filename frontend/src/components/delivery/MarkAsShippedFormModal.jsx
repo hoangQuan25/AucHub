@@ -1,43 +1,55 @@
 // src/components/delivery/MarkAsShippedFormModal.jsx
-import React, { useState, useEffect } from 'react';
-import { FaShippingFast, FaTimes } from 'react-icons/fa'; 
+import React, { useState, useEffect } from "react";
+import { FaShippingFast, FaTimes } from "react-icons/fa";
 
 function MarkAsShippedFormModal({
   isOpen,
   onClose,
   onSubmit, // (shippingData) => void
-  orderId,    // For display
+  orderId, // For display
   deliveryId, // For display or context
   isLoading,
-  apiError,   // To display errors from submission attempts
+  apiError, // To display errors from submission attempts
 }) {
-  const [courierName, setCourierName] = useState('');
-  const [trackingNumber, setTrackingNumber] = useState('');
-  const [notes, setNotes] = useState('');
-  const [formError, setFormError] = useState('');
+  const [courierName, setCourierName] = useState("");
+  const [trackingNumber, setTrackingNumber] = useState("");
+  const [notes, setNotes] = useState("");
+  const [estimatedDate, setEstimatedDate] = useState("");
+  const [formError, setFormError] = useState("");
 
   // Reset form when modal opens or order/delivery context changes
   useEffect(() => {
     if (isOpen) {
-      setCourierName('');
-      setTrackingNumber('');
-      setNotes('');
-      setFormError('');
+      setCourierName("");
+      setTrackingNumber("");
+      setEstimatedDate("");
+      setNotes("");
+      setFormError("");
     }
   }, [isOpen]);
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    setFormError(''); // Clear previous form error
+    setFormError(""); // Clear previous form error
     if (!courierName.trim()) {
-      setFormError('Courier Name is required.');
+      setFormError("Courier Name is required.");
       return;
     }
     if (!trackingNumber.trim()) {
-      setFormError('Tracking Number is required.');
+      setFormError("Tracking Number is required.");
       return;
     }
-    onSubmit({ courierName, trackingNumber, notes });
+    if (!estimatedDate) {
+      // Validation mới
+      setFormError("Estimated Delivery Date is required.");
+      return;
+    }
+    onSubmit({
+      courierName,
+      trackingNumber,
+      notes,
+      estimatedDeliveryDate: estimatedDate,
+    });
   };
 
   if (!isOpen) {
@@ -74,12 +86,26 @@ function MarkAsShippedFormModal({
         {/* Modal Body - Form */}
         <form onSubmit={handleSubmit} className="px-6 py-5 space-y-4">
           <p className="text-sm text-gray-600">
-            Order ID: <span className="font-medium text-gray-700">{orderId ? orderId.substring(0, 8) : 'N/A'}</span> <br />
-            {deliveryId && <>Delivery ID: <span className="font-medium text-gray-700">{deliveryId.substring(0,8)}</span></>}
+            Order ID:{" "}
+            <span className="font-medium text-gray-700">
+              {orderId ? orderId.substring(0, 8) : "N/A"}
+            </span>{" "}
+            <br />
+            {deliveryId && (
+              <>
+                Delivery ID:{" "}
+                <span className="font-medium text-gray-700">
+                  {deliveryId.substring(0, 8)}
+                </span>
+              </>
+            )}
           </p>
-          
+
           <div>
-            <label htmlFor="modal-courierName" className="block text-sm font-medium text-gray-700 mb-1">
+            <label
+              htmlFor="modal-courierName"
+              className="block text-sm font-medium text-gray-700 mb-1"
+            >
               Courier Name <span className="text-red-500">*</span>
             </label>
             <input
@@ -95,7 +121,10 @@ function MarkAsShippedFormModal({
           </div>
 
           <div>
-            <label htmlFor="modal-trackingNumber" className="block text-sm font-medium text-gray-700 mb-1">
+            <label
+              htmlFor="modal-trackingNumber"
+              className="block text-sm font-medium text-gray-700 mb-1"
+            >
               Tracking Number <span className="text-red-500">*</span>
             </label>
             <input
@@ -111,7 +140,33 @@ function MarkAsShippedFormModal({
           </div>
 
           <div>
-            <label htmlFor="modal-shippingNotes" className="block text-sm font-medium text-gray-700 mb-1">
+            <label
+              htmlFor="modal-estimatedDate"
+              className="block text-sm font-medium text-gray-700 mb-1"
+            >
+              Estimated Delivery Date <span className="text-red-500">*</span>
+            </label>
+            <input
+              type="date"
+              id="modal-estimatedDate"
+              value={estimatedDate}
+              onChange={(e) => setEstimatedDate(e.target.value)}
+              min={new Date().toISOString().split("T")[0]}
+              className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+              disabled={isLoading}
+              required
+            />
+            <p className="text-xs text-gray-500 mt-1">
+              The system will auto-start the 7-day buyer confirmation on this
+              date.
+            </p>
+          </div>
+
+          <div>
+            <label
+              htmlFor="modal-shippingNotes"
+              className="block text-sm font-medium text-gray-700 mb-1"
+            >
               Optional Notes for Buyer
             </label>
             <textarea
@@ -126,10 +181,14 @@ function MarkAsShippedFormModal({
           </div>
 
           {formError && (
-            <p className="text-xs text-red-600 bg-red-50 p-2 rounded-md">{formError}</p>
+            <p className="text-xs text-red-600 bg-red-50 p-2 rounded-md">
+              {formError}
+            </p>
           )}
           {apiError && (
-            <p className="text-xs text-red-600 bg-red-50 p-2 rounded-md">{apiError}</p>
+            <p className="text-xs text-red-600 bg-red-50 p-2 rounded-md">
+              {apiError}
+            </p>
           )}
         </form>
 
@@ -146,16 +205,34 @@ function MarkAsShippedFormModal({
           <button
             type="submit" // Important: This button will now trigger the form's onSubmit
             onClick={handleSubmit} // Also call handleSubmit directly in case form tag doesn't capture it
-            disabled={isLoading || !courierName.trim() || !trackingNumber.trim()}
+            disabled={
+              isLoading || !courierName.trim() || !trackingNumber.trim()
+            }
             className="px-4 py-2 text-sm font-medium text-white bg-blue-600 border border-transparent rounded-md shadow-sm hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {isLoading ? (
-              <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+              <svg
+                className="animate-spin -ml-1 mr-2 h-4 w-4 text-white"
+                xmlns="http://www.w3.org/2000/svg"
+                fill="none"
+                viewBox="0 0 24 24"
+              >
+                <circle
+                  className="opacity-25"
+                  cx="12"
+                  cy="12"
+                  r="10"
+                  stroke="currentColor"
+                  strokeWidth="4"
+                ></circle>
+                <path
+                  className="opacity-75"
+                  fill="currentColor"
+                  d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                ></path>
               </svg>
             ) : (
-              'Confirm & Notify Buyer'
+              "Confirm & Notify Buyer"
             )}
           </button>
         </div>

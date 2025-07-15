@@ -27,4 +27,15 @@ public class DeliveryWorkflowListener {
             throw e;
         }
     }
+
+    @RabbitListener(queues = RabbitMqConfig.DELIVERY_STATUS_CHECK_COMMAND_QUEUE)
+    public void handleDeliveryStatusCheck(@Payload DeliveryWorkflowCommands.CheckDeliveryStatusCommand command) {
+        log.info("Received CheckDeliveryStatusCommand for deliveryId: {}", command.deliveryId());
+        try {
+            deliveryService.processEstimatedDeliveryArrival(command.deliveryId());
+        } catch (Exception e) {
+            log.error("Error processing CheckDeliveryStatusCommand for delivery {}: {}", command.deliveryId(), e.getMessage(), e);
+            throw e;
+        }
+    }
 }

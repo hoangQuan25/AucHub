@@ -24,6 +24,8 @@ public class DeliveryDetailDto {
     private DeliveryStatus deliveryStatus;
     private String courierName;
     private String trackingNumber;
+    private LocalDateTime estimatedDeliveryAt;
+    private LocalDateTime autoTransitionedAt;
     private LocalDateTime shippedAt;
     private LocalDateTime deliveredAt;
     private String returnCourier;

@@ -50,6 +50,7 @@ public class UserMapper {
                 .defaultCardLast4(user.getDefaultCardLast4())
                 .defaultCardExpiryMonth(user.getDefaultCardExpiryMonth())
                 .defaultCardExpiryYear(user.getDefaultCardExpiryYear())
+                .emailNotificationsEnabled(user.isEmailNotificationsEnabled())
                 // Ban info
                 .isBanned(isBanned)
                 .banEndsAt(banEndsAt)
@@ -98,6 +99,7 @@ public class UserMapper {
                 // Displayable default card info
                 .defaultCardBrand(user.getDefaultCardBrand())
                 .defaultCardLast4(user.getDefaultCardLast4())
+                .emailNotificationsEnabled(user.isEmailNotificationsEnabled())
                 .build();
     }
 

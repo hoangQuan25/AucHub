@@ -26,6 +26,8 @@ public class DeliveryMapper {
                 .deliveryStatus(delivery.getDeliveryStatus())
                 .courierName(delivery.getCourierName())
                 .trackingNumber(delivery.getTrackingNumber())
+                .estimatedDeliveryAt(delivery.getEstimatedDeliveryAt())
+                .autoTransitionedAt(delivery.getAutoTransitionedAt())
                 .shippedAt(delivery.getShippedAt())
                 .deliveredAt(delivery.getDeliveredAt())
                 .returnCourier(delivery.getReturnCourier())

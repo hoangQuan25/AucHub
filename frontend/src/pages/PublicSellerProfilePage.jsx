@@ -238,6 +238,7 @@ function PublicSellerProfilePage() {
   );
 
   const fetchSellerProducts = useCallback(
+    // The 'filter' parameter will now be 'ALL', 'AVAILABLE', 'IN_AUCTION', etc.
     async (page = 0, filter = "ALL") => {
       if (!sellerProfile?.id) return;
       setIsLoadingProducts(true);
@@ -246,21 +247,15 @@ function PublicSellerProfilePage() {
         const params = {
           page: page,
           size: LISTING_PAGE_SIZE,
-          sort: "createdAt,desc",
+          sort: "updatedAt,desc", // Sort by last updated to see recent changes
         };
-        if (selectedCatIds.size > 0) {
-          // Apply category filter to products if selected
-          params.categoryIds = Array.from(selectedCatIds).join(",");
-        }
 
-        if (filter === "FOR_SALE") {
-          params.isSold = false;
-        } else if (filter === "SOLD") {
-          params.isSold = true;
+        if (filter !== "ALL") {
+          params.status = filter;
         }
 
         const response = await apiClient.get(
-          `/products/seller/${sellerProfile.id}/products`,
+          `/products/seller/${sellerProfile.id}/products`, // This endpoint should now accept a 'status' param
           { params }
         );
         setProducts(response.data.content || []);
@@ -275,8 +270,8 @@ function PublicSellerProfilePage() {
         setIsLoadingProducts(false);
       }
     },
-    [sellerProfile?.id, selectedCatIds, LISTING_PAGE_SIZE]
-  ); 
+    [sellerProfile?.id, LISTING_PAGE_SIZE]
+  );
 
   const fetchAllSellerAuctions = useCallback(
     async (
@@ -687,7 +682,9 @@ function PublicSellerProfilePage() {
 
   const handleProductFilterChange = useCallback((newFilter) => {
     setCurrentProductFilter(newFilter);
-    setProductPage(0); // Reset to the first page when filter changes
+    console.log("Product filter changed to:", newFilter);
+    fetchSellerProducts(0, newFilter); 
+    setProductPage(0);
   }, []);
 
   const renderTabContent = () => {

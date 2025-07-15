@@ -2,6 +2,7 @@
 package com.example.users.service;
 
 import com.example.users.dto.*;
+import com.example.users.dto.request.StripeSetupConfirmationRequestDto;
 
 import java.util.List;
 import java.util.Map;
@@ -37,4 +38,6 @@ public interface UserService {
     void processFirstWinnerPaymentDefault(String userId);
 
     UserBanStatusDto getUserBanStatus(String userId);
+
+    void updateUserEmailPreference(String userId, boolean isEnabled);
 }

@@ -38,6 +38,7 @@ public class UserDto {
     private String defaultCardLast4;
     private String defaultCardExpiryMonth;
     private String defaultCardExpiryYear;
+    private boolean emailNotificationsEnabled;
 
     private boolean isBanned;
     private LocalDateTime banEndsAt;

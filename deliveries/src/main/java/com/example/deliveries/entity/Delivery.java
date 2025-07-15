@@ -62,6 +62,10 @@ public class Delivery {
     @Column(length = 100) // Max length for tracking number
     private String trackingNumber;
 
+    private LocalDateTime estimatedDeliveryAt;
+
+    private LocalDateTime autoTransitionedAt;
+
     private LocalDateTime shippedAt;
     private LocalDateTime deliveredAt;
 

@@ -130,4 +130,18 @@ public class NotificationController {
         return ResponseEntity.noContent().build(); // 204 No Content is appropriate for DELETE success
     }
 
+    @PutMapping("/preferences/email")
+    public ResponseEntity<Void> updateEmailPreference(
+            @RequestHeader(USER_ID_HEADER) String userId,
+            @RequestBody Map<String, Boolean> request) {
+        Boolean enabled = request.get("enabled");
+        if (enabled == null) {
+            log.warn("User {} sent bad request for email preference update.", userId);
+            return ResponseEntity.badRequest().build();
+        }
+        log.info("User {} is setting email preference to: {}", userId, enabled);
+        notificationService.updateEmailPreference(userId, enabled);
+        return ResponseEntity.ok().build();
+    }
+
 }

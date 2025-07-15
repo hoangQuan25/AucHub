@@ -6,9 +6,11 @@ import { FaTags, FaPlusCircle, FaFilter } from 'react-icons/fa'; // Added FaFilt
 
 // Define filter options - can be moved to a constants file if used elsewhere
 const PRODUCT_STATUS_FILTERS = [
-  { key: 'ALL', label: 'All Products' },
-  { key: 'FOR_SALE', label: 'For Sale' }, // Corresponds to isSold = false
-  { key: 'SOLD', label: 'Sold' },       // Corresponds to isSold = true
+  { key: 'ALL', label: 'All Items' },
+  { key: 'AVAILABLE', label: 'Available for Auction' },
+  { key: 'IN_AUCTION', label: 'Currently in Auction' },
+  { key: 'AWAITING_COMPLETION', label: 'Processing Sale' },
+  { key: 'SOLD', label: 'Sold & Completed' },
 ];
 
 const SellerProductsSection = ({

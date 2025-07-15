@@ -49,43 +49,43 @@ function OrderPaymentDetails({
         <CountdownTimer endTimeMillis={new Date(order.paymentDeadline).getTime()} />
       </div>
 
-      <div className="flex flex-col space-y-3 sm:flex-row sm:space-y-0 sm:space-x-3 sm:justify-end">
-        <button
-          onClick={onDeclinePurchase}
-          disabled={isProcessing || paymentProcessing}
-          className="px-5 py-2.5 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 text-sm font-semibold shadow-sm transition-colors"
-        >
-          Decline Purchase
-        </button>
+      <div className="flex flex-col sm:flex-row gap-3 justify-center mt-4">
+  <button
+    onClick={onDeclinePurchase}
+    disabled={isProcessing || paymentProcessing}
+    className="flex-1 px-5 py-2.5 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 text-sm font-semibold shadow-sm transition-colors text-center min-w-[180px]"
+  >
+    Decline Purchase
+  </button>
 
-        {userProfile?.hasDefaultPaymentMethod && userProfile.defaultCardLast4 ? (
-          <button
-            onClick={() => onInitiatePayment(true)} // true for useSavedCard
-            disabled={isProcessing || paymentProcessing}
-            className="inline-flex items-center justify-center gap-2 px-5 py-2.5 bg-teal-600 text-white rounded-lg hover:bg-teal-700 text-sm font-semibold shadow transition-colors"
-          >
-            <FaHistory /> Pay with {userProfile.defaultCardBrand} ****{userProfile.defaultCardLast4}
-          </button>
-        ) : (
-          <button
-            onClick={onOpenPaymentModal} // This will open the modal defined in OrderDetailPage
-            disabled={isProcessing || paymentProcessing}
-            className="inline-flex items-center justify-center gap-2 px-5 py-2.5 bg-teal-600 text-white rounded-lg hover:bg-teal-700 text-sm font-semibold shadow transition-colors"
-          >
-            <FaCreditCard /> Make Payment
-          </button>
-        )}
+  {userProfile?.hasDefaultPaymentMethod && userProfile.defaultCardLast4 ? (
+    <button
+      onClick={() => onInitiatePayment(true)}
+      disabled={isProcessing || paymentProcessing}
+      className="flex-1 inline-flex items-center justify-center gap-2 px-5 py-2.5 bg-teal-600 text-white rounded-lg hover:bg-teal-700 text-sm font-semibold shadow transition-colors text-center min-w-[180px]"
+    >
+      <FaHistory /> Pay with {userProfile.defaultCardBrand} ****{userProfile.defaultCardLast4}
+    </button>
+  ) : (
+    <button
+      onClick={onOpenPaymentModal}
+      disabled={isProcessing || paymentProcessing}
+      className="flex-1 inline-flex items-center justify-center gap-2 px-5 py-2.5 bg-teal-600 text-white rounded-lg hover:bg-teal-700 text-sm font-semibold shadow transition-colors text-center min-w-[180px]"
+    >
+      <FaCreditCard /> Make Payment
+    </button>
+  )}
 
-        {userProfile?.hasDefaultPaymentMethod && (
-            <button
-              onClick={() => onInitiatePayment(false)} // false for new card
-              disabled={isProcessing || paymentProcessing}
-              className="inline-flex items-center justify-center gap-2 px-5 py-2.5 bg-slate-600 text-white rounded-lg hover:bg-slate-700 text-sm font-semibold shadow transition-colors text-center"
-            >
-              Use a Different Card
-            </button>
-        )}
-      </div>
+  {userProfile?.hasDefaultPaymentMethod && (
+    <button
+      onClick={() => onInitiatePayment(false)}
+      disabled={isProcessing || paymentProcessing}
+      className="flex-1 inline-flex items-center justify-center gap-2 px-5 py-2.5 bg-slate-600 text-white rounded-lg hover:bg-slate-700 text-sm font-semibold shadow transition-colors text-center min-w-[180px]"
+    >
+      Use a Different Card
+    </button>
+  )}
+</div>
     </div>
   );
 }

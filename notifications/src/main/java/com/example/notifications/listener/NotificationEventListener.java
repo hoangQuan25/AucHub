@@ -224,6 +224,17 @@ public class NotificationEventListener {
         }
     }
 
+    @RabbitListener(queues = RabbitMqConfig.ORDER_COMPLETED_QUEUE)
+    public void handleOrderCompleted(@Payload OrderCompletedEvent event) {
+        log.info("Received OrderCompletedEvent: orderId={}, buyerId={}, sellerId={}",
+                event.getOrderId(), event.getBuyerId(), event.getSellerId());
+        try {
+            notificationService.processOrderCompleted(event);
+        } catch (Exception e) {
+            log.error("Error processing OrderCompletedEvent for order {}: {}", event.getOrderId(), e.getMessage(), e);
+        }
+    }
+
     @RabbitListener(queues = RabbitMqConfig.USER_BANNED_NOTIFICATION_QUEUE)
     public void handleUserBanned(@Payload UserBannedEvent event) { // Use the new DTO
         log.info("Received UserBannedEvent: userId={}, banEndsAt={}, level={}",
